@@ -1,0 +1,278 @@
+#include "grid.h"
+
+namespace PDtools
+{
+//------------------------------------------------------------------------------
+Grid::Grid(const Domain &domain, double gridspacing):
+    dim(domain.dim), m_gridspacing(gridspacing),
+    m_periodicBoundaries(domain.periodicBoundaries())
+{
+    m_boundaryLength = domain.boundaryLength();
+    m_boundary = domain.boundaries();
+}
+//------------------------------------------------------------------------------
+Grid::Grid(const vector<pair<double, double>> &boundary, double gridspacing):
+    dim(boundary.size()),
+    m_gridspacing(gridspacing),
+    m_boundary(boundary)
+{
+    for(int d=0; d<dim; d++)
+    {
+        m_boundaryLength.push_back(m_boundary[d].second - m_boundary[d].first);
+    }
+}
+//------------------------------------------------------------------------------
+Grid::Grid(const vector<pair<double, double> > &boundary, double gridspacing,
+           const ivec3 &periodicBoundaries):
+    Grid(boundary, gridspacing)
+{
+    m_periodicBoundaries = periodicBoundaries;
+}
+//------------------------------------------------------------------------------
+void Grid::initialize()
+{
+    update();
+    createGrid();
+    setNeighbours();
+}
+//------------------------------------------------------------------------------
+void Grid::createGrid()
+{
+    double x_len = m_boundaryLength[0];
+    double y_len = m_boundaryLength[1];
+    double z_len = m_boundaryLength[2];
+
+    // Finding the optimal length
+    int nx = floor(x_len/m_gridspacing) > 0 ? floor(x_len/m_gridspacing) : 1;
+    int ny = floor(y_len/m_gridspacing) > 0 ? floor(y_len/m_gridspacing) : 1;
+    int nz = floor(z_len/m_gridspacing) > 0 ? floor(z_len/m_gridspacing) : 1;
+
+    m_gridSpacing = {x_len/nx, y_len/ny, z_len/nz };
+    m_nGrid = {nx, ny, nz};
+    vector<ivec> inner_points;
+    vector<ivec> boundary_points;
+
+    for(int d=0;d<3; d++)
+    {
+        if(m_periodicBoundaries[d])
+        {
+            inner_points.push_back(linspace<ivec>(1, m_nGrid(d), m_nGrid(d)));
+            boundary_points.push_back({0, m_nGrid(d) + 1});
+            m_nGrid(d) += 2;
+            m_boundary[d].first -= m_gridSpacing(d);
+            m_boundary[d].second += m_gridSpacing(d);
+        }
+        else
+        {
+            inner_points.push_back(linspace<ivec>(0, m_nGrid(d)-1, m_nGrid(d)));
+            boundary_points.push_back({});
+        }
+    }
+
+    // Setting the grid
+    for(int x:inner_points[X])
+    {
+        for(int y:inner_points[Y])
+        {
+            for(int z:inner_points[Z])
+            {
+                // id = x + nx*y + nx*ny*z;
+                // Center of gridpoint
+                vec3 center = {
+                     m_boundary[X].first + m_gridSpacing(X)*(x + 0.5)
+                    ,m_boundary[Y].first + m_gridSpacing(Y)*(y + 0.5)
+                    ,m_boundary[Z].first + m_gridSpacing(Z)*(z + 0.5)};
+
+                int id = gridId(center);
+                m_gridpoints[id] = GridPoint(id, center, false);
+            }
+        }
+    }
+
+    // Boundary conditions
+    for(int d=0; d<3; d++)
+    {
+        ivec3 xyz = {0, 0, 0};
+
+        for(int point_0:boundary_points[d])
+        {
+            vector<int> inn_p = {0, 1, 2};
+            inn_p.erase(inn_p.begin() + d);
+
+            ivec p1 = join_cols(inner_points[inn_p[0]], boundary_points[inn_p[0]]);
+            for(int point_1:p1)
+            {
+                ivec p2 = join_cols(inner_points[inn_p[1]], boundary_points[inn_p[1]]);
+
+                for(int point_2:p2)
+                {
+                    xyz(d) = point_0;
+                    xyz(inn_p[0]) = point_1;
+                    xyz(inn_p[1]) = point_2;
+
+                    // Center of gridpoint
+                    vec3 center = {
+                         m_boundary[X].first + m_gridSpacing(X)*(xyz(X) + 0.5)
+                        ,m_boundary[Y].first + m_gridSpacing(Y)*(xyz(Y) + 0.5)
+                        ,m_boundary[Z].first + m_gridSpacing(Z)*(xyz(Z) + 0.5)};
+
+                    int id = gridId(center);
+                    m_gridpoints[id] = GridPoint(id, center, true);
+                }
+            }
+        }
+    }
+}
+//------------------------------------------------------------------------------
+void Grid::setNeighbours()
+{
+    vector<int> shift;
+    shift.push_back(-1);
+    shift.push_back(0);
+    shift.push_back(1);
+
+    // Creating all possible permuations of (-1,0,1)^3
+    vector<ivec3> permuations;
+    for(int a:shift)
+    {
+        for(int b:shift)
+        {
+            for(int c:shift)
+            {
+                permuations.push_back(ivec3({a, b, c}));
+            }
+        }
+    }
+
+    // Setting the neighbours --------------------------------------------------
+    for(pair<int, GridPoint> id_gridpoint:m_gridpoints)
+    {
+        const int id = id_gridpoint.first;
+        GridPoint & gridpoint = m_gridpoints[id];
+
+        if(gridpoint.isGhost())
+            continue;
+
+        const vec3 center = gridpoint.center();
+        ivec3 l_gridId = {0, 0, 0};
+        for(int d=0; d<dim; d++)
+            l_gridId(d) = int((center(d) - m_boundary[d].first)/m_gridSpacing(d));
+
+        vector<pair<int, GridPoint&> > neighbours;
+        ivec3 gridId_neigh = {0, 0, 0};
+
+
+        for(ivec3 & shift_xyz:permuations)
+        {
+            gridId_neigh = l_gridId + shift_xyz;
+            vector<bool> outOfBounds = {false, false, false};
+
+            for(int d=0; d<3; d++)
+            {
+                if(m_periodicBoundaries[d])
+                {
+                    if(gridId_neigh(d) == m_nGrid(d)-1)
+                    {
+                        gridId_neigh[d] = 0;
+                        outOfBounds[d] = false;
+                    }
+                    else if(gridId_neigh[d] == 0)
+                    {
+                        gridId_neigh[d] = m_nGrid(d)-1;
+                        outOfBounds[d] = false;
+                    }
+                }
+                else
+                {
+                    if(gridId_neigh(d) >= m_nGrid(d) || gridId_neigh[d] < 0)
+                        outOfBounds[d] = true;
+                }
+            }
+
+            if(outOfBounds[X] || outOfBounds[Y] || outOfBounds[Z])
+                continue;
+
+            vec3 coord_neigh;
+            coord_neigh = center + shift_xyz % m_gridSpacing;
+            int id_neighbour = gridId(coord_neigh);
+
+            if(id_neighbour == id)
+                continue;
+
+            neighbours.push_back(pair<int, GridPoint&>(id_neighbour, m_gridpoints[id_neighbour]));
+
+        }
+        gridpoint.setNeighbours(neighbours);
+    }
+}
+//------------------------------------------------------------------------------
+int Grid::gridId(const vec3 &r) const
+{
+    ivec3 i;
+
+    for(int d=0; d<dim; d++)
+    {
+        i(d) = int((r(d) - m_boundary[d].first)/m_gridSpacing(d));
+
+        // Handling the boundary extremals
+        if(i(d) >= m_nGrid(d))
+        {
+            i(d) = m_nGrid(d) - 1;
+        }
+        else if(i(d) < 0)
+        {
+            i(d) = 0;
+        }
+    }
+    return i(X) + m_nGrid(X)*i(Y) + m_nGrid(X)*m_nGrid(Y)*i(Z);
+}
+//------------------------------------------------------------------------------
+void Grid::update()
+{
+    //    m_boundaryLength = m_domain.boundaryLength();
+    //    m_boundary = m_domain.boundaries();
+}
+
+//------------------------------------------------------------------------------
+void Grid::placeParticlesInGrid(Particles &particles)
+{
+    clearParticles();
+
+    for(auto id_pos:particles.pIds())
+    {
+        int pos = id_pos.second;
+        const vec3 &r = particles.r().col(pos);
+        int gId = gridId(r);
+        m_gridpoints[gId].addParticle(id_pos);
+    }
+}
+//------------------------------------------------------------------------------
+void Grid::clearParticles()
+{
+    for(pair<int, GridPoint> id_gridpoint:m_gridpoints)
+    {
+        id_gridpoint.second.clearParticles();
+    }
+}
+//------------------------------------------------------------------------------
+//Grid::~Grid()
+//{
+////    m_gridpoints.clear();
+//}
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Gridpoint functions
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+GridPoint::GridPoint()
+//    _id(-9999), _center(vec), _ghost(false)
+{
+//------------------------------------------------------------------------------
+}GridPoint::GridPoint(int id, vec3 center, bool ghost):
+    m_id(id), m_center(center), m_ghost(ghost)
+{
+}
+//------------------------------------------------------------------------------
+}
