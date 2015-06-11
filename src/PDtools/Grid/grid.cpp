@@ -1,7 +1,16 @@
 #include "grid.h"
 
+#include "Domain/domain.h"
+#include "Particles/particles.h"
+#include <map>
+
 namespace PDtools
 {
+//------------------------------------------------------------------------------
+Grid::Grid()
+{
+
+}
 //------------------------------------------------------------------------------
 Grid::Grid(const Domain &domain, double gridspacing):
     dim(domain.dim), m_gridspacing(gridspacing),
@@ -79,12 +88,13 @@ void Grid::createGrid()
                 // id = x + nx*y + nx*ny*z;
                 // Center of gridpoint
                 vec3 center = {
-                     m_boundary[X].first + m_gridSpacing(X)*(x + 0.5)
+                    m_boundary[X].first + m_gridSpacing(X)*(x + 0.5)
                     ,m_boundary[Y].first + m_gridSpacing(Y)*(y + 0.5)
                     ,m_boundary[Z].first + m_gridSpacing(Z)*(z + 0.5)};
 
                 int id = gridId(center);
-                m_gridpoints[id] = GridPoint(id, center, false);
+                m_gridpoints[id] = new GridPoint(id, center, false);
+                m_myGridPoints.push_back(id);
             }
         }
     }
@@ -112,12 +122,12 @@ void Grid::createGrid()
 
                     // Center of gridpoint
                     vec3 center = {
-                         m_boundary[X].first + m_gridSpacing(X)*(xyz(X) + 0.5)
+                        m_boundary[X].first + m_gridSpacing(X)*(xyz(X) + 0.5)
                         ,m_boundary[Y].first + m_gridSpacing(Y)*(xyz(Y) + 0.5)
                         ,m_boundary[Z].first + m_gridSpacing(Z)*(xyz(Z) + 0.5)};
 
                     int id = gridId(center);
-                    m_gridpoints[id] = GridPoint(id, center, true);
+                    m_gridpoints[id] = new GridPoint(id, center, true);
                 }
             }
         }
@@ -145,10 +155,10 @@ void Grid::setNeighbours()
     }
 
     // Setting the neighbours --------------------------------------------------
-    for(pair<int, GridPoint> id_gridpoint:m_gridpoints)
+    for(pair<int, GridPoint*> id_gridpoint:m_gridpoints)
     {
         const int id = id_gridpoint.first;
-        GridPoint & gridpoint = m_gridpoints[id];
+        GridPoint & gridpoint = *m_gridpoints[id];
 
         if(gridpoint.isGhost())
             continue;
@@ -158,7 +168,7 @@ void Grid::setNeighbours()
         for(int d=0; d<dim; d++)
             l_gridId(d) = int((center(d) - m_boundary[d].first)/m_gridSpacing(d));
 
-        vector<pair<int, GridPoint&> > neighbours;
+        vector<GridPoint*> neighbours;
         ivec3 gridId_neigh = {0, 0, 0};
 
 
@@ -199,8 +209,7 @@ void Grid::setNeighbours()
             if(id_neighbour == id)
                 continue;
 
-            neighbours.push_back(pair<int, GridPoint&>(id_neighbour, m_gridpoints[id_neighbour]));
-
+            neighbours.push_back(m_gridpoints[id_neighbour]);
         }
         gridpoint.setNeighbours(neighbours);
     }
@@ -237,28 +246,35 @@ void Grid::update()
 void Grid::placeParticlesInGrid(Particles &particles)
 {
     clearParticles();
+    const mat & rParticles = particles.r();
 
-    for(auto id_pos:particles.pIds())
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
+    for(int i=0; i<particles.nParticles(); i++)
     {
-        int pos = id_pos.second;
-        const vec3 &r = particles.r().col(pos);
+        pair<int, int> id_pos(i, i);
+        const vec3 &r = rParticles.col(id_pos.second);
         int gId = gridId(r);
-        m_gridpoints[gId].addParticle(id_pos);
+#ifdef USE_OPENMP
+#pragma omp critical
+#endif
+        m_gridpoints[gId]->addParticle(id_pos);
     }
 }
 //------------------------------------------------------------------------------
 void Grid::clearParticles()
 {
-    for(pair<int, GridPoint> id_gridpoint:m_gridpoints)
+    for(pair<int, GridPoint*> id_gridpoint:m_gridpoints)
     {
-        id_gridpoint.second.clearParticles();
+        id_gridpoint.second->clearParticles();
     }
 }
 //------------------------------------------------------------------------------
-//Grid::~Grid()
-//{
-////    m_gridpoints.clear();
-//}
+Grid::~Grid()
+{
+    //    m_gridpoints.clear();
+}
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -269,10 +285,94 @@ void Grid::clearParticles()
 GridPoint::GridPoint()
 //    _id(-9999), _center(vec), _ghost(false)
 {
-//------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------
 }GridPoint::GridPoint(int id, vec3 center, bool ghost):
     m_id(id), m_center(center), m_ghost(ghost)
 {
 }
+//------------------------------------------------------------------------------
+// Other grid dependent functions
+//------------------------------------------------------------------------------
+
+void updateVerletList(const string &verletStringId,
+                      Particles & particles,
+                      Grid & grid,
+                      double radius)
+{
+    double radiusSquared = radius*radius;
+
+    int verletId = particles.getVerletId(verletStringId);
+    const unordered_map<int, GridPoint*> &gridpoints = grid.gridpoints();
+    const mat & R = particles.r();
+    const vector<int> &mygridPoints = grid.myGridPoints();
+    particles.clearVerletList(verletId);
+
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+    for(int i=0; i<mygridPoints.size(); i++)
+    {
+        double dx, dy, dz;
+        int gridId = mygridPoints.at(i);
+        const GridPoint & gridPoint = *gridpoints.at(gridId);
+
+        for(const pair<int, int> & idCol_i:gridPoint.particles())
+        {
+            int id_i = idCol_i.first;
+            vector<int> verletList;
+            const vec & r_i = R.col(idCol_i.second);
+
+            for(const pair<int, int> & idCol_j:gridPoint.particles())
+            {
+                int id_j = idCol_j.first;
+                if(id_i == id_j)
+                    continue;
+
+                const vec & r_j = R.col(idCol_j.second);
+                dx = r_i(0) - r_j(0);
+                dy = r_i(1) - r_j(1);
+                dz = r_i(2) - r_j(2);
+
+                double drSquared = dx*dx + dy*dy + dz*dz;
+
+                if(drSquared < radiusSquared)
+                {
+                    verletList.push_back(id_j);
+                }
+            }
+
+            // Neighbouring cells
+            const vector<GridPoint*> & neighbours = gridPoint.neighbours();
+
+            for(const GridPoint *neighbour:neighbours)
+            {
+                for(const pair<int, int> & idCol_j:neighbour->particles())
+                {
+                    const vec & r_j = R.col(idCol_j.second);
+                    dx = r_i(0) - r_j(0);
+                    dy = r_i(1) - r_j(1);
+                    dz = r_i(2) - r_j(2);
+
+                    double drSquared = dx*dx + dy*dy + dz*dz;
+
+                    if(drSquared < radiusSquared)
+                    {
+                        verletList.push_back(idCol_j.first);
+                    }
+                }
+            }
+
+#ifdef USE_OPENMP
+#pragma omp critical
+            {
+                particles.setVerletList(id_i, verletList, verletId);
+            }
+#else
+            particles.setVerletList(id_i, verletList, verletId);
+#endif
+        }
+    }
+}
+
 //------------------------------------------------------------------------------
 }

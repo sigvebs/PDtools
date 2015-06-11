@@ -4,32 +4,33 @@ namespace PDtools
 {
 //------------------------------------------------------------------------------
 PDsharedData::PDsharedData():
-    domain(NULL),
-    pdGrid(NULL),
-    particles(NULL)
+    m_domain(NULL),
+    m_pdGrid(NULL),
+    m_particles(NULL)
 {
 
 }
 //------------------------------------------------------------------------------
 PDsharedData::~PDsharedData()
 {
-    if(domain != NULL)
+    if(m_domain != NULL)
     {
-        delete domain;
+        delete m_domain;
     }
-    if(pdGrid != NULL)
+    if(m_pdGrid != NULL)
     {
-        delete pdGrid;
+        delete m_pdGrid;
     }
-    if(particles != NULL)
+    if(m_particles != NULL)
     {
-        delete particles;
+        delete m_particles;
     }
 }
 //------------------------------------------------------------------------------
 void PDsharedData::registerNew(const string &key, double value)
 {
-    assert(m_data.count(key) == 0);    m_data[key] = value;
+    assert(m_data.count(key) == 0);
+    m_data[key] = value;
 }
 //------------------------------------------------------------------------------
 void PDsharedData::updateData(const string &key, double value)

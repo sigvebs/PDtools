@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include <PDtools.h>
+#include <PdFunctions/pdfunctions.h>
+
 extern std::vector<string> geometries;
 
 using namespace PDtools;
@@ -79,4 +81,86 @@ TEST_F(PD_PARTICLES_FIXTURE, PD_LOAD_XYZ)
                     << "The data in Testparticles does not match the data read from file";
         }
     }
+
+}
+
+TEST_F(PD_PARTICLES_FIXTURE, PD_SAVE_AND_LOAD_XYZ)
+{
+    LoadPdParticles loadPDParticles;
+    PD_Particles particles = loadPDParticles.load(geometries[2], "xyz");
+
+
+
+    SaveParticles save_lmp("lmp");
+    save_lmp.writeToFile(particles, string(TEST_SAVE_PATH) + "/testFromPD.lmp");
+}
+
+TEST_F(PD_PARTICLES_FIXTURE, CREATE_PD_CONNECTIONS)
+{
+    using namespace std;
+    using namespace arma;
+
+    LoadPdParticles loadParticles;
+    PD_Particles particles;
+    particles = loadParticles.load(geometries[0], "xyz");
+//    particles = loadParticles.load(geometries[4], "xyz");
+
+    vector<pair<double,double>> boundaries;
+
+    // Dots - geometry[0]
+    pair<double,double> x_limits(0., 1.);
+    pair<double,double> y_limits(0., 0.9);
+    pair<double,double> z_limits(0., 1.);
+    double gridspacing = 0.18*2;
+    double radius = 0.95*gridspacing;
+
+    // Bunny - geometry[1]
+    //    pair<double,double> x_limits(0., 1.);
+    //    pair<double,double> y_limits(0., 0.9);
+    //    pair<double,double> z_limits(0., 1.);
+    //    double gridspacing = 0.018*2;
+    //    double radius = 0.95*gridspacing;
+
+    //    // funny - geometry[2]
+    //    pair<double,double> x_limits(0., 1.);
+    //    pair<double,double> y_limits(0., 0.9);
+    //    pair<double,double> z_limits(0., 1.);
+    //    double gridspacing = 0.008*2.5;
+    //    double radius = 0.95*gridspacing;
+
+    // Hole - geometry[4]
+    //    pair<double,double> x_limits(0., 0.0487619);
+    //    pair<double,double> y_limits(0., 0.0488042);
+    //    pair<double,double> z_limits(0., 0.001);
+    //    double gridspacing = 0.0022*3;;
+    //    double radius = 0.95*gridspacing;
+
+    boundaries = {x_limits, y_limits, z_limits};
+
+    Grid grid(boundaries, gridspacing);
+    grid.initialize();
+    grid.placeParticlesInGrid(particles);
+
+    setPdConnections(particles, grid, radius);
+
+    // Saving the results
+    particles.registerParameter("connections");
+    int connectionsID = particles.parameters("connections");
+    particles.registerParameter("gridID");
+    int gridID = particles.parameters("gridID");
+
+    const unordered_map<int, int> & pIds = particles.pIds();
+    const mat & R = particles.r();
+    mat & data = particles.data();
+
+    for(const pair<int, int> &idCol:pIds)
+    {
+        int gridId = grid.gridId(R.col(idCol.second));
+        data(idCol.second, gridID) = gridId;
+        data(idCol.second, connectionsID) = particles.pdConnections(idCol.first).size();
+    }
+    SaveParticles save_lmp("lmp");
+    save_lmp.writeToFile(particles, string(TEST_SAVE_PATH) + "/pdConnections.lmp");
+    SaveParticles save_xyz("xyz");
+    save_xyz.writeToFile(particles, string(TEST_SAVE_PATH) + "/pdConnections.xyz");
 }

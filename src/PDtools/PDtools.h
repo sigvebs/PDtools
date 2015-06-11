@@ -9,5 +9,7 @@
 #include "Domain/domain.h"
 #include "Grid/grid.h"
 #include "data/pdshareddata.h"
+#include "Solver/solver.h"
+//#include "PDtools/Solver/solver.h"
 
 #endif // PDTOOLS_H
