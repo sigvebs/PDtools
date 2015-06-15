@@ -45,8 +45,8 @@ QMAKE_CXXFLAGS_DEBUG += $$COMMON_CXXFLAGS
 
 #LIBS += -L$$TOP_OUT_PWD/src/PDtools -lPDtools
 
-QMAKE_CXXFLAGS += -vec-report=5
-QMAKE_LFLAGS += -vec-report=5
+#QMAKE_CXXFLAGS += -vec-report=5
+#QMAKE_LFLAGS += -vec-report=5
 
 #-------------------------------------------------------------------------------
 # Custom defines

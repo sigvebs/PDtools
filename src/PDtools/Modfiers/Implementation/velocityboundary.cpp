@@ -32,6 +32,13 @@ void VelocityBoundary::evaluateStepTwo()
     for(pair<int, int> &idCol:m_boundaryParticles)
     {
         int col_i = idCol.second;
+        v(0, col_i) = 0.0;
+        F(0, col_i) = 0.0;
+        v(1, col_i) = 0.0;
+        F(1, col_i) = 0.0;
+        v(2, col_i) = 0.0;
+        F(2, col_i) = 0.0;
+
         v(m_boundaryOrientation, col_i) = m_v;
         F(m_boundaryOrientation, col_i) = 0.0;
     }

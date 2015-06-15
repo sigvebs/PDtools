@@ -51,6 +51,7 @@ void PdSolver::initialize()
     m_cfg.lookupValue("G0", G0);
     m_cfg.lookupValue("rho", rho);
 
+
     //--------------------------------------------------------------------------
     // Setting the domain
     //--------------------------------------------------------------------------
@@ -161,7 +162,6 @@ void PdSolver::initialize()
     m_particles.registerParameter("radius");
 
     bool calculateMicromodulus = m_cfg.lookupValue("calculateMicromodulus", calculateMicromodulus);
-
     //--------------------------------------------------------------------------
     // Setting the Forces
     //--------------------------------------------------------------------------
@@ -198,7 +198,13 @@ void PdSolver::initialize()
     //--------------------------------------------------------------------------
     // Recalcuating particle properties
     //--------------------------------------------------------------------------
-    surfaceCorrection(m_particles, forces, k, nu, dim);
+
+    int applySurfaceCorrection = 0;
+    m_cfg.lookupValue("applySurfaceCorrection", applySurfaceCorrection);
+    if(applySurfaceCorrection)
+    {
+        surfaceCorrection(m_particles, forces, k, nu, dim);
+    }
 
     if(!useS0fromCfg)
     {

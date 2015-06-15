@@ -28,6 +28,7 @@ void VelocityVerletIntegrator::integrateStepOne()
     mat & v = m_particles->v();
     mat & F = m_particles->F();
     const mat & data = m_particles->data();
+    double dtRhoHalf = 0.5*m_dt;
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
@@ -36,7 +37,7 @@ void VelocityVerletIntegrator::integrateStepOne()
     {
         int col_i = i;
         double rho = data(col_i, m_colRho);
-        double dtRho = 0.5*m_dt/rho;
+        double dtRho = dtRhoHalf/rho;
 
         for(int d=0; d<m_dim; d++)
         {
@@ -53,6 +54,8 @@ void VelocityVerletIntegrator::integrateStepTwo()
     mat & v = m_particles->v();
     const mat & F = m_particles->F();
     const mat & data = m_particles->data();
+    double dtRhoHalf = 0.5*m_dt;
+
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
@@ -61,7 +64,7 @@ void VelocityVerletIntegrator::integrateStepTwo()
     {
         int col_i = i;
         double rho = data(col_i, m_colRho);
-        double dtRho = 0.5*m_dt/rho;
+        double dtRho = dtRhoHalf/rho;
 
         for(int d=0; d<m_dim; d++)
         {

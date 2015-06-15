@@ -65,21 +65,17 @@ void PmbFracture::evaluateStepOne(const pair<int, int> &id_col)
         if((*m_data)(col_j, m_indexUnbreakable) >= 1)
             continue;
 
-        double s = con.second[m_indexStretch];
+        double stretch = con.second[m_indexStretch];
         double s00 = con.second[m_indexS00];
         double s0_j = (*m_data)(col_j, m_indexS0);
         double s0 = std::min(s0_i, s0_j);
 
-        if(s > s0)
+        if(stretch > s0)
         {
             removeParticles.push_back(&con);
         }
 
-        double s0_tmp = s00;
-        if(s < 0)
-        {
-            s0_tmp -= m_alpha*s;
-        }
+        double s0_tmp = s00 - m_alpha*stretch;
         s0_new = std::max(s0_new, s0_tmp);
     }
 

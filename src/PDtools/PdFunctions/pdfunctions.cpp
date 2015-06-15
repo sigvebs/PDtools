@@ -196,7 +196,8 @@ void reCalculatePdFractureCriterion(PD_Particles &particles, double G0,
             int col_i = i;
 
             double c = data(col_i, indexMicromodulus);
-            data(col_i, indexS0) = sqrt(10.*G0/(c*M_PI*delta5));
+            double s0 = sqrt(10.*G0/(c*M_PI*delta5));;
+            data(col_i, indexS0) = s0;
         }
     }
 }
