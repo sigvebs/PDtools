@@ -11,19 +11,21 @@ namespace PDtools
 //------------------------------------------------------------------------------
 void setPdConnections(PD_Particles & particles,
                       Grid & grid,
-                      double radius,
-                      double alpha)
+                      double delta)
 {
-    double radiusSquared = radius*radius;
-    double volumeCorrectionRadius = radius*alpha;
+    const double deltaSquared = delta*delta;
 
     const unordered_map<int, GridPoint*> &gridpoints = grid.gridpoints();
     const vector<int> &mygridPoints = grid.myGridPoints();
     const mat & R = particles.r();
+    const int indexRadius = particles.getParamId("radius");
+    const mat &data  = particles.data();
 
     // The order is important!
     particles.registerPdParameter("dr0");
     particles.registerPdParameter("volumeScaling");
+    particles.registerPdParameter("forceScaling");
+    particles.registerPdParameter("connected");
 
 #ifdef USE_OPENMP
 #pragma omp parallel for
@@ -44,30 +46,33 @@ void setPdConnections(PD_Particles & particles,
 
             for(const pair<int, int> & idCol_j:gridPoint.particles())
             {
-                int id_j = idCol_j.first;
+                const int id_j = idCol_j.first;
+                const int col_j = idCol_j.second;
                 if(id_i == id_j)
                     continue;
 
-                const vec & r_j = R.col(idCol_j.second);
+                const vec & r_j = R.col(col_j);
                 dx = r_i(0) - r_j(0);
                 dy = r_i(1) - r_j(1);
                 dz = r_i(2) - r_j(2);
 
                 double drSquared = dx*dx + dy*dy + dz*dz;
 
-                if(drSquared < radiusSquared)
+                if(drSquared < deltaSquared)
                 {
                     vector<double> connectionData;
 
-                    double dr = sqrt(drSquared);
                     double volumeCorrection = 1.0;
-
-                    if(dr > radius*(1 - alpha))
-                        volumeCorrection = 0.5*(radius*(1 + alpha) - dr)
-                                / volumeCorrectionRadius;
+                    const double dr = sqrt(drSquared);
+                    const double radius_i = data(col_j, indexRadius);
+                    const double rc = delta - 2*radius_i;
+                    if(dr > rc)
+                        volumeCorrection = (delta - dr)/rc;
 
                     connectionData.push_back(dr);
                     connectionData.push_back(volumeCorrection);
+                    connectionData.push_back(1.0); // Force scaling
+                    connectionData.push_back(1.0); // Connected
                     connections[id_j] = connectionData;
                     connectionsVector.push_back(pair<int, vector<double>>(id_j, connectionData) );
                 }
@@ -80,27 +85,30 @@ void setPdConnections(PD_Particles & particles,
             {
                 for(const pair<int, int> & idCol_j:neighbour->particles())
                 {
-                    const vec & r_j = R.col(idCol_j.second);
+                    const int col_j = idCol_j.second;
+                    const vec & r_j = R.col(col_j);
                     dx = r_i(0) - r_j(0);
                     dy = r_i(1) - r_j(1);
                     dz = r_i(2) - r_j(2);
 
                     double drSquared = dx*dx + dy*dy + dz*dz;
 
-                    if(drSquared < radiusSquared)
+                    if(drSquared < deltaSquared)
                     {
                         int id_j = idCol_j.first;
                         vector<double> connectionData;
 
-                        double dr = sqrt(drSquared);
                         double volumeCorrection = 1.0;
-
-                        if(dr > radius*(1 - alpha))
-                            volumeCorrection = 0.5*(radius*(1 + alpha) - dr)
-                                    / volumeCorrectionRadius;
+                        const double dr = sqrt(drSquared);
+                        const double radius_i = data(col_j, indexRadius);
+                        const double rc = delta - 2*radius_i;
+                        if(dr > rc)
+                            volumeCorrection = (delta - dr)/rc;
 
                         connectionData.push_back(dr);
                         connectionData.push_back(volumeCorrection);
+                        connectionData.push_back(1.0); // Force scaling
+                        connectionData.push_back(1.0); // Connected
                         connections[id_j] = connectionData;
                         connectionsVector.push_back(pair<int, vector<double>>(id_j, connectionData) );
                     }
@@ -113,7 +121,7 @@ void setPdConnections(PD_Particles & particles,
                 particles.setPdConnections(id_i, connectionsVector);
             }
 #else
-            particles.setPdConnectionsVector(id_i, connectionsVector);
+            particles.setPdConnections(id_i, connectionsVector);
 #endif
         }
     }
@@ -207,7 +215,7 @@ void calculateRadius(PD_Particles &particles, int dim, double h)
     arma::mat & data = particles.data();
     int indexVolume = particles.getParamId("volume");
     int indexRadius = particles.getParamId("radius");
-    double scale = 0.8;
+    double scale = 0.9;
 
     if(dim == 3)
     {
@@ -247,7 +255,7 @@ void calculateRadius(PD_Particles &particles, int dim, double h)
 }
 //------------------------------------------------------------------------------
 void surfaceCorrection(PD_Particles &particles, vector<Force *> &forces,
-                       double k, double nu, int dim)
+                       double E, double nu, int dim)
 {
     double strain = 0.001;
     vec3 scaleFactor;
@@ -256,9 +264,9 @@ void surfaceCorrection(PD_Particles &particles, vector<Force *> &forces,
     arma::mat g = zeros(particles.nParticles(), dim);
 
     int indexDr0 = particles.getPdParamId("dr0");
-    int indexVolumeScaling = particles.getPdParamId("volumeScaling");
+    int indexForceScaling = particles.getPdParamId("forceScaling");
 
-    // Stretching all particle sin the x-direction
+    // Stretching all particle in the x-direction
     scaleFactor(0) = strain;
     scaleFactor(1) = -nu*strain;
     scaleFactor(2) = -nu*strain;
@@ -302,7 +310,8 @@ void surfaceCorrection(PD_Particles &particles, vector<Force *> &forces,
             }
             g(col_i, a) = W;
         }
-        W_infty += arma::median(g.col(a));
+        double median_g = arma::median(g.col(a));
+        W_infty += median_g;
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
@@ -319,25 +328,22 @@ void surfaceCorrection(PD_Particles &particles, vector<Force *> &forces,
             }
         }
     }
-    W_infty /= dim;
-    int a  = 2;
-    W_infty = 0.5*k*pow(strain, 2)*(1 + (dim-1)*pow(nu, 2));
-    int b  = 2;
-    a = 3;
-    b = 4;
+    W_infty /= (dim);
+    W_infty = 0.5*E*pow(strain, 2);
+
     // Scaling the energy with the median energy, which we assume
     // to be the bulk energy
     for(int a=0; a<dim; a++)
     {
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
         for(int i=0; i<particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             int col_i = idCol.second;
-
-            double W =  W_infty/g(col_i, a);
+            double g_i = g(col_i, a);
+            double W =  W_infty/g_i;
             g(col_i, a) = W;
         }
     }
@@ -371,7 +377,7 @@ void surfaceCorrection(PD_Particles &particles, vector<Force *> &forces,
             }
 
             G = pow(G, -0.5);
-            con.second[indexVolumeScaling] *= G;
+            con.second[indexForceScaling] *= G;
         }
     }
 }

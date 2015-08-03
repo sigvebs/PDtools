@@ -51,7 +51,6 @@ void PdSolver::initialize()
     m_cfg.lookupValue("G0", G0);
     m_cfg.lookupValue("rho", rho);
 
-
     //--------------------------------------------------------------------------
     // Setting the domain
     //--------------------------------------------------------------------------
@@ -77,7 +76,6 @@ void PdSolver::initialize()
         dxdydz[d] = bound.second - bound.first;
         domain.push_back(bound);
     }
-
 
     // TODO: periodic boundaries
     //--------------------------------------------------------------------------
@@ -106,7 +104,6 @@ void PdSolver::initialize()
         }
     }
 
-
     //--------------------------------------------------------------------------
     // Setting the grid
     //--------------------------------------------------------------------------
@@ -116,16 +113,17 @@ void PdSolver::initialize()
         cerr << "'delta' must be set in the configuration file" << endl;
         exit(EXIT_FAILURE);
     }
+    double lc;
+    if(!m_cfg.lookupValue("lc", lc))
+    {
+        cerr << "'lc' must be set in the configuration file" << endl;
+        exit(EXIT_FAILURE);
+    }
 
     double gridspacing = 1.1*delta;
     m_grid = Grid(domain, gridspacing);
     m_grid.initialize();
     m_grid.placeParticlesInGrid(m_particles);
-
-    //--------------------------------------------------------------------------
-    // Setting the PD-connections
-    //--------------------------------------------------------------------------
-    setPdConnections(m_particles, m_grid, delta);
 
     //--------------------------------------------------------------------------
     // Setting particles parameters
@@ -150,7 +148,6 @@ void PdSolver::initialize()
         exit(EXIT_FAILURE);
     }
 
-
     bool useS0fromCfg = false;
     if(m_cfg.lookupValue("s0", s0))
     {
@@ -160,8 +157,14 @@ void PdSolver::initialize()
     m_particles.registerParameter("rho", rho);
     m_particles.registerParameter("s0", s0);
     m_particles.registerParameter("radius");
+    calculateRadius(m_particles, dim, dxdydz[2]);
 
-    bool calculateMicromodulus = m_cfg.lookupValue("calculateMicromodulus", calculateMicromodulus);
+    int calculateMicromodulus = 0;
+    m_cfg.lookupValue("calculateMicromodulus", calculateMicromodulus);
+    //--------------------------------------------------------------------------
+    // Setting the PD-connections
+    //--------------------------------------------------------------------------
+    setPdConnections(m_particles, m_grid, delta);
     //--------------------------------------------------------------------------
     // Setting the Forces
     //--------------------------------------------------------------------------
@@ -177,14 +180,30 @@ void PdSolver::initialize()
         {
             forces.push_back(new PD_bondForce(m_particles));
         }
+        else if(type == "OSP")
+        {
+            forces.push_back(new PD_OSP(m_particles));
+        }
+        else if(type == "PMB")
+        {
+            double alpha;
+
+            if (!cfg_forces[i].lookupValue("alpha", alpha))
+            {
+                cerr << "Error reading the parameters for force '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+
+            forces.push_back(new PD_PMB(m_particles, lc, delta, alpha));
+        }
         else if(type == "gaussian bond force")
         {
             forces.push_back(new PD_bondforceGaussian(m_particles));
         }
         else if(type == "contact force")
         {
-            double verletSearchDistance = 0.5*delta;
-            forces.push_back(new ContactForce(m_particles, m_grid, verletSearchDistance));
+            forces.push_back(new ContactForce(m_particles, m_grid, lc));
         }
     }
 
@@ -194,26 +213,65 @@ void PdSolver::initialize()
         force->numericalInitialization(calculateMicromodulus);
         force->initialize(E, nu, delta, dim, h);
     }
-
     //--------------------------------------------------------------------------
     // Recalcuating particle properties
     //--------------------------------------------------------------------------
-
     int applySurfaceCorrection = 0;
     m_cfg.lookupValue("applySurfaceCorrection", applySurfaceCorrection);
     if(applySurfaceCorrection)
     {
-        surfaceCorrection(m_particles, forces, k, nu, dim);
+        surfaceCorrection(m_particles, forces, E, nu, dim);
     }
 
     if(!useS0fromCfg)
     {
         if(dim == 2)
+        {
             reCalculatePdFractureCriterion(m_particles, G0, delta, h);
+        }
         else
+        {
             reCalculatePdFractureCriterion(m_particles, G0, delta);
+        }
     }
-    calculateRadius(m_particles, dim, dxdydz[2]);
+    //--------------------------------------------------------------------------
+    // Setting the solver
+    //--------------------------------------------------------------------------
+    string solverType = m_cfg.lookup("solverType");
+    int nSteps;
+    double dt;
+
+    if (!m_cfg.lookupValue("nSteps", nSteps))
+    {
+        cerr << "Error reading the 'nSteps' in config file" << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if(solverType == "ADR")
+    {
+        ADR *adrSolver = new ADR();
+        dt = 1.0;
+        double errorThreshold;
+
+        if(!m_cfg.lookupValue("errorThreshold", errorThreshold))
+        {
+            cerr << "Error reading the 'errorThreshold' in config file" << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        adrSolver->setErrorThreshold(errorThreshold);
+        solver = adrSolver;
+    }
+    else if(solverType == "velocity verlet")
+    {
+        solver = new VelocityVerletIntegrator();
+        m_cfg.lookupValue("dt", dt);
+    }
+    else
+    {
+        cerr << "Error: solver not set" << endl;
+        exit(EXIT_FAILURE);
+    }
 
     //--------------------------------------------------------------------------
     // Setting the modifiers
@@ -246,7 +304,7 @@ void PdSolver::initialize()
                      << type << "'" << endl;
                 exit(EXIT_FAILURE);
             }
-            modifiers.push_back(new VelocityBoundary(v, vAxis, area, axis));
+            modifiers.push_back(new VelocityBoundary(v, vAxis, area, axis, dt));
         }
         else if(type == "move particles")
         {
@@ -293,7 +351,7 @@ void PdSolver::initialize()
                      << type << "'" << endl;
                 exit(EXIT_FAILURE);
             }
-            MohrCoulombFracture * failureCriterion = new MohrCoulombFracture(mu, C, T);
+            MohrCoulombFracture * failureCriterion = new MohrCoulombFracture(mu, C, T, dim);
 
             for(Force* force: forces)
             {
@@ -340,7 +398,7 @@ void PdSolver::initialize()
                      << type << "'" << endl;
                 exit(EXIT_FAILURE);
             }
-            ADRmohrCoulombFracture * failureCriterion = new ADRmohrCoulombFracture(mu, C, T);
+            ADRmohrCoulombFracture * failureCriterion = new ADRmohrCoulombFracture(mu, C, T, dim);
 
             for(Force* force: forces)
             {
@@ -349,8 +407,12 @@ void PdSolver::initialize()
 
             qsModifiers.push_back(failureCriterion);
         }
+        else
+        {
+            cerr << "ERROR: modifier '" << type << "' does not exsits." << endl;
+            exit(EXIT_FAILURE);
+        }
     }
-
 
     // Initializing modifiers
     for(Modifier* mod: modifiers)
@@ -370,72 +432,29 @@ void PdSolver::initialize()
         mod->setParticles(m_particles);
         mod->initialize();
     }
-
     //--------------------------------------------------------------------------
-    // Setting the solver
+    // Adding the modifiers and forces to the solver
     //--------------------------------------------------------------------------
-    string solverType = m_cfg.lookup("solverType");
-    int nSteps;
-    double dt;
-
-    if (!m_cfg.lookupValue("nSteps", nSteps))
-    {
-        cerr << "Error reading the 'nSteps' in config file" << endl;
-        exit(EXIT_FAILURE);
-    }
-
-    if(solverType == "ADR")
-    {
-        ADR *adrSolver = new ADR();
-        dt = 1.0;
-        double errorThreshold;
-
-        if(!m_cfg.lookupValue("errorThreshold", errorThreshold))
-        {
-            cerr << "Error reading the 'errorThreshold' in config file" << endl;
-            exit(EXIT_FAILURE);
-        }
-
-        adrSolver->setErrorThreshold(errorThreshold);
-        for(Modifier* mod: qsModifiers)
-        {
-            adrSolver->addQsModifiers(mod);
-        }
-
-        solver = adrSolver;
-    }
-    else if(solverType == "velocity verlet")
-    {
-        solver = new VelocityVerletIntegrator();
-        m_cfg.lookupValue("dt", dt);
-    }
-    else
-    {
-        cerr << "Error: solver not set" << endl;
-        exit(EXIT_FAILURE);
-    }
-
     solver->setMainGrid(m_grid);
     solver->setParticles(m_particles);
     solver->setSteps(nSteps);
     solver->setDt(dt);
 
-    //--------------------------------------------------------------------------
-    // Adding the modifiers and forces to the solver
-    //--------------------------------------------------------------------------
     for(Force* force: forces)
     {
         solver->addForce(force);
     }
-
     for(Modifier* mod: modifiers)
     {
         solver->addModifier(mod);
     }
-
     for(Modifier* mod: spModifiers)
     {
         solver->addSpModifier(mod);
+    }
+    for(Modifier* mod: qsModifiers)
+    {
+        solver->addQsModifiers(mod);
     }
 
     //--------------------------------------------------------------------------
@@ -481,4 +500,3 @@ void PdSolver::solve()
     solver->solve();
 }
 //------------------------------------------------------------------------------
-
