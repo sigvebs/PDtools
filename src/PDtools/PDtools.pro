@@ -45,7 +45,13 @@ HEADERS += \
     SavePdData/Implementations/computeaveragestretch.h \
     Modfiers/Implementation/adrfractureaverage.h \
     Modfiers/Implementation/adrmohrcoulombfracture.h \
-    Force/PdForces/pd_bondforcegaussian.h
+    Force/PdForces/pd_bondforcegaussian.h \
+    Force/PdForces/pd_pmb.h \
+    Force/PdForces/pd_osp.h \
+    Modfiers/Implementation/boundaryforce.h \
+    Modfiers/Implementation/bondenergyfracture.h \
+    Modfiers/Implementation/simplefracture.h \
+    Force/PdForces/pd_lps.h
 
 SOURCES += \
     Grid/grid.cpp \
@@ -79,7 +85,13 @@ SOURCES += \
     SavePdData/Implementations/computeaveragestretch.cpp \
     Modfiers/Implementation/adrfractureaverage.cpp \
     Modfiers/Implementation/adrmohrcoulombfracture.cpp \
-    Force/PdForces/pd_bondforcegaussian.cpp
+    Force/PdForces/pd_bondforcegaussian.cpp \
+    Force/PdForces/pd_pmb.cpp \
+    Force/PdForces/pd_osp.cpp \
+    Modfiers/Implementation/boundaryforce.cpp \
+    Modfiers/Implementation/bondenergyfracture.cpp \
+    Modfiers/Implementation/simplefracture.cpp \
+    Force/PdForces/pd_lps.cpp
 
 #headers.path    = $$OUT_PWD
 #headers.files   += $$HEADERS

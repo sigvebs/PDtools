@@ -22,6 +22,7 @@ private:
     vector<int> m_dataParameters;
     vector<string> m_header;
     bool m_append = false;
+    int m_timestep = 0;
 
 public:
     SaveParticles();
@@ -51,6 +52,11 @@ public:
     void binary(bool binary)
     {
         m_binary = binary;
+    }
+
+    void setTimestep(int timestep)
+    {
+        m_timestep = timestep;
     }
 
 private:

@@ -10,11 +10,12 @@ class VelocityBoundary: public Modifier
 {
 public:
     VelocityBoundary(double velAmplitude, double velOrientation,
-                     pair<double, double> boundary, int boundaryOrientation,
-                     int steps=1);
+                     pair<double, double> boundary, int boundaryOrientation, double dt,
+                     int steps, bool isStatic);
     ~VelocityBoundary();
 
-    void evaluateStepTwo();
+    virtual void evaluateStepOne();
+    virtual void evaluateStepTwo();
     virtual void initialize();
 
 private:
@@ -23,8 +24,11 @@ private:
     int m_velOritentation;
     pair<double, double> m_boundary;
     int m_boundaryOrientation;
+    vector<int> m_otherAxis;
     double m_dv;
     double m_v;
+    double m_dt;
+    bool m_isStatic;
 };
 //------------------------------------------------------------------------------
 }

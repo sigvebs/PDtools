@@ -11,7 +11,7 @@ class Force;
 class MohrCoulombFracture : public Modifier
 {
 public:
-    MohrCoulombFracture(double mu, double C, double T);
+    MohrCoulombFracture(double mu, double C, double T, int dim);
     ~MohrCoulombFracture();
 
     virtual void initialize();
@@ -31,6 +31,8 @@ private:
     int m_indexStress[6];
     int m_dim;
     int m_indexUnbreakable;
+    int m_indexConnected;
+    int m_indexCompute;
 };
 //------------------------------------------------------------------------------
 }

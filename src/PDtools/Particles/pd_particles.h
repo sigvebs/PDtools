@@ -79,7 +79,7 @@ public:
         return m_PdParameters.at(paramId);
     }
 
-    int registerPdParameter(string paramId)
+    int registerPdParameter(string paramId, double value=0)
     {
         if(m_PdParameters.count(paramId) == 1)
         {
@@ -96,7 +96,7 @@ public:
         {
             for(auto &con:m_PdConnections[col])
             {
-                con.second.push_back(0);
+                con.second.push_back(value);
             }
         }
 

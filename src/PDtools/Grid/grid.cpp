@@ -283,10 +283,10 @@ Grid::~Grid()
 
 //------------------------------------------------------------------------------
 GridPoint::GridPoint()
-//    _id(-9999), _center(vec), _ghost(false)
 {
-    //------------------------------------------------------------------------------
-}GridPoint::GridPoint(int id, vec3 center, bool ghost):
+}
+//------------------------------------------------------------------------------
+GridPoint::GridPoint(int id, vec3 center, bool ghost):
     m_id(id), m_center(center), m_ghost(ghost)
 {
 }

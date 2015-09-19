@@ -28,7 +28,10 @@ PD_bondForce::PD_bondForce(PD_Particles &particles):
     m_indexVolume = m_particles.getParamId("volume");
     m_indexDr0 = m_particles.getPdParamId("dr0");
     m_indexVolumeScaling = m_particles.getPdParamId("volumeScaling");
+    m_indexForceScaling = m_particles.registerPdParameter("forceScalingBond", 1);
     m_indexStretch = m_particles.registerPdParameter("stretch");
+    m_indexConnected = m_particles.getPdParamId("connected");
+    m_indexCompute = m_particles.getPdParamId("compute");
 }
 //------------------------------------------------------------------------------
 PD_bondForce::~PD_bondForce()
@@ -100,9 +103,10 @@ void PD_bondForce::calculateForces(const pair<int, int> &idCol)
     m_F(Y, col_i) += f_iy;
     m_F(Z, col_i) += f_iz;
 #else
-    int pId = idCol.first;
-    int col_i = idCol.second;
-    double c_i = m_data(col_i, m_indexMicromodulus);
+    const int pId = idCol.first;
+    const int i = idCol.second;
+    const double c_i = m_data(i, m_indexMicromodulus);
+    const double vol_i = m_data(i, m_indexVolume);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
@@ -111,55 +115,64 @@ void PD_bondForce::calculateForces(const pair<int, int> &idCol)
     for(int d=0; d<m_dim; d++)
     {
         f_i[d] = 0;
-        r_i[d] = m_r(d, col_i);
+        r_i[d] = m_r(d, i);
     }
 
     const int nConnections = PDconnections.size();
     double dr_ij[m_dim];
 
-    for(int j=0; j<nConnections; j++)
+    for(int l_j=0; l_j<nConnections; l_j++)
     {
-        auto &con = PDconnections[j];
-        int id_j = con.first;
-//        int col_j = col_js[j];
-        int col_j = m_pIds[id_j];
+        auto &con = PDconnections[l_j];
+        if(con.second[m_indexConnected] <= 0.5 || !con.second[m_indexCompute])
+            continue;
 
-        double c_j = m_data(col_j, m_indexMicromodulus);
-        double vol_j = m_data(col_j, m_indexVolume);
-        double dr0Len         = con.second[m_indexDr0];
-        double volumeScaling   = con.second[m_indexVolumeScaling];
-        double c_ij = 0.5*(c_i + c_j);
+        const int id_j = con.first;
+        const int j = m_pIds[id_j];
 
-        double drSquared = 0;
+        const double c_j = m_data(j, m_indexMicromodulus);
+        const double vol_j = m_data(j, m_indexVolume);
+        const double dr0         = con.second[m_indexDr0];
+        const double volumeScaling   = con.second[m_indexVolumeScaling];
+        const double g_ij = con.second[m_indexForceScaling];
+        const double c_ij = 0.5*(c_i + c_j)*g_ij;
+
+        double dr2 = 0;
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, col_j) - r_i[d];
-            drSquared += dr_ij[d]*dr_ij[d];
+            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr2 += dr_ij[d]*dr_ij[d];
         }
 
-        double drLen = sqrt(drSquared);
-        double ds = drLen - dr0Len;
+        const double dr = sqrt(dr2);
+        double ds = dr - dr0;
 
         // To avoid roundoff errors
         if (fabs(ds) < THRESHOLD)
             ds = 0.0;
 
-        double stretch = ds/dr0Len;
-        double fbond = c_ij*stretch*vol_j*volumeScaling/drLen;
+        const double s = ds/dr0;
+        const double fbond_ij = c_ij*s*vol_j*volumeScaling/dr;
+#ifdef USE_N3L
+        const double fbond_ji = -c_ij*s*vol_i*volumeScaling/dr;
+#endif
 
         for(int d=0; d<m_dim; d++)
         {
-            f_i[d] += dr_ij[d]*fbond;
+            m_F(d, i) += dr_ij[d]*fbond_ij;
+#ifdef USE_N3L
+            m_F(d, j) += dr_ij[d]*fbond_ji;
+#endif
         }
 
-        con.second[m_indexStretch] = stretch;
+        con.second[m_indexStretch] = s;
     }
 
-    for(int d=0; d<m_dim; d++)
-    {
-        m_F(d, col_i) += f_i[d];
-    }
+//    for(int d=0; d<m_dim; d++)
+//    {
+//        m_F(d, i) += f_i[d];
+//    }
 #endif
     /*
      *     int pId = idCol.first;
@@ -224,45 +237,40 @@ void PD_bondForce::calculateForces(const pair<int, int> &idCol)
 //------------------------------------------------------------------------------
 double PD_bondForce::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
 {
-    int pId = idCol.first;
-    int col_i = idCol.second;
-    double c_i = m_data(col_i, m_indexMicromodulus);
-
-    double dr_ij[3];
-    double x_i = m_r(X, col_i);
-    double y_i = m_r(Y, col_i);
-    double z_i = m_r(Z, col_i);
-
-    double energy = 0;
+    const int pId = idCol.first;
+    const int i = idCol.second;
+    const double c_i = m_data(i, m_indexMicromodulus);
+    double dr_ij[m_dim];
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
+    double energy = 0;
     for(auto &con:PDconnections)
     {
+        if(con.second[m_indexConnected] <= 0.5)
+            continue;
 
-        int id_j = con.first;
-        int col_j = m_pIds[id_j];
+        const int id_j = con.first;
+        const int j = m_pIds[id_j];
 
-        double vol_j = m_data(col_j, m_indexVolume);
-        double dr0Len         = con.second[m_indexDr0];
-        double volumeScaling   = con.second[m_indexVolumeScaling];
-        double c_j = m_data(col_j, m_indexMicromodulus);
+        const double vol_j = m_data(j, m_indexVolume);
+        const double dr0         = con.second[m_indexDr0];
+        const double volumeScaling   = con.second[m_indexVolumeScaling];
+        const double c_j = m_data(j, m_indexMicromodulus);
+        const double g_ij = con.second[m_indexForceScaling];
+        const double c_ij = 0.5*(c_i + c_j)*g_ij;
 
-        double c = 0.5*(c_i + c_j);
+        double dr2 = 0;
 
-        dr_ij[X] = m_r(X, col_j) - x_i;
-        dr_ij[Y] = m_r(Y, col_j) - y_i;
-        dr_ij[Z] = m_r(Z, col_j) - z_i;
+        for(int d=0; d<m_dim; d++)
+        {
+            dr_ij[d] = m_r(d, j) - m_r(d, i);
+            dr2 += dr_ij[d]*dr_ij[d];
+        }
 
-        double drSquared = dr_ij[X]*dr_ij[X] + dr_ij[Y]*dr_ij[Y] + dr_ij[Z]*dr_ij[Z];
-        double drLen = sqrt(drSquared);
-        double ds = drLen - dr0Len;
-
-        // To avoid roundoff errors
-        if (fabs(ds) < THRESHOLD)
-            ds = 0.0;
-
-        energy += c*(ds*ds)/dr0Len*vol_j*volumeScaling;
+        const double dr = sqrt(dr2);
+        const double s = (dr - dr0)/dr0;
+        energy += c_ij*(s*s)*dr0*vol_j*volumeScaling;
     }
 
     return 0.25*energy;
@@ -277,266 +285,148 @@ void PD_bondForce::calculatePotentialEnergy(const std::pair<int, int> &idCol, in
 //------------------------------------------------------------------------------
 void PD_bondForce::calculateStress(const std::pair<int, int> &idCol, const int (&indexStress)[6])
 {
-    int pId = idCol.first;
-    int col_i = idCol.second;
-    double c_i = m_data(col_i, m_indexMicromodulus);
+    const int pId = idCol.first;
+    const int i = idCol.second;
+    const double c_i = m_data(i, m_indexMicromodulus);
+    const double vol_i = m_data(i, m_indexVolume);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
-    double x_i = m_r(X, col_i);
-    double y_i = m_r(Y, col_i);
-    double z_i = m_r(Z, col_i);
-    double dr_ij[3];
-    double f[3];
-
-    for(auto &con:PDconnections)
+    double r_i[m_dim];
+    for(int d=0; d<m_dim; d++)
     {
-        int id_j = con.first;
-        int col_j = m_pIds[id_j];
+        r_i[d] = m_r(d, i);
+    }
 
-        double c_j = m_data(col_j, m_indexMicromodulus);
-        double vol_j = m_data(col_j, m_indexVolume);
-        double dr0Len = con.second[m_indexDr0];
-        double volumeScaling = con.second[m_indexVolumeScaling];
-        double c_ij = 0.5*(c_i + c_j);
+    double dr_ij[m_dim];
+//    double f[m_dim];
 
-        dr_ij[X] = m_r(X, col_j) - x_i;
-        dr_ij[Y] = m_r(Y, col_j) - y_i;
-        dr_ij[Z] = m_r(Z, col_j) - z_i;
+    const int nConnections = PDconnections.size();
 
-        double drSquared = dr_ij[X]*dr_ij[X] + dr_ij[Y]*dr_ij[Y] + dr_ij[Z]*dr_ij[Z];
-        double drLen = sqrt(drSquared);
-        double ds = drLen - dr0Len;
+    for(int l_j=0; l_j<nConnections; l_j++)
+    {
+        auto &con = PDconnections[l_j];
+        if(con.second[m_indexConnected] <= 0.5 || !con.second[m_indexCompute])
+            continue;
 
-        // To avoid roundoff errors
-        if (fabs(ds) < THRESHOLD)
-            ds = 0.0;
+        const int id_j = con.first;
+        const int j = m_pIds[id_j];
 
-        double stretch = ds/dr0Len;
-        stretch = con.second[m_indexStretch];
-        double fbond = c_ij*stretch*vol_j*volumeScaling/drLen;
+        const double c_j = m_data(j, m_indexMicromodulus);
+        const double vol_j = m_data(j, m_indexVolume);
+        const double dr0 = con.second[m_indexDr0];
+        const double volumeScaling = con.second[m_indexVolumeScaling];
+        const double g_ij = con.second[m_indexForceScaling];
+        const double c_ij = 0.5*(c_i + c_j)*g_ij;
 
-        f[X] = dr_ij[X]*fbond;
-        f[Y] = dr_ij[Y]*fbond;
-        f[Z] = dr_ij[Z]*fbond;
+        double dr2 = 0;
 
-        m_data(col_i, indexStress[0]) += 0.5*f[X]*dr_ij[X];
-        m_data(col_i, indexStress[1]) += 0.5*f[Y]*dr_ij[Y];
-        m_data(col_i, indexStress[2]) += 0.5*f[Z]*dr_ij[Z];
-        m_data(col_i, indexStress[3]) += 0.5*f[X]*dr_ij[Y];
-        m_data(col_i, indexStress[4]) += 0.5*f[X]*dr_ij[Z];
-        m_data(col_i, indexStress[5]) += 0.5*f[Z]*dr_ij[Z];
+        for(int d=0; d<m_dim; d++)
+        {
+            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr2 += dr_ij[d]*dr_ij[d];
+        }
+
+        const double dr = sqrt(dr2);
+//        const double s = (dr - dr0)/dr0;
+        const double s = con.second[m_indexStretch];
+        const double bond_ij = c_ij*s*vol_j*volumeScaling/dr;
+#ifdef USE_N3L
+        const double bond_ji = c_ij*s*vol_i*volumeScaling/dr;
+#endif
+        m_data(i, indexStress[0]) += 0.5*bond_ij*dr_ij[X]*dr_ij[X];
+        m_data(i, indexStress[1]) += 0.5*bond_ij*dr_ij[Y]*dr_ij[Y];
+        m_data(i, indexStress[3]) += 0.5*bond_ij*dr_ij[X]*dr_ij[Y];
+
+        if(m_dim == 3)
+        {
+            m_data(i, indexStress[2]) += 0.5*bond_ij*dr_ij[Z]*dr_ij[Z];
+            m_data(i, indexStress[4]) += 0.5*bond_ij*dr_ij[X]*dr_ij[Z];
+            m_data(i, indexStress[5]) += 0.5*bond_ij*dr_ij[Y]*dr_ij[Z];
+        }
+#ifdef USE_N3L
+#ifdef USE_OPENMP
+//#pragma omp critical
+#endif
+        {
+            m_data(j, indexStress[0]) += 0.5*bond_ji*dr_ij[X]*dr_ij[X];
+            m_data(j, indexStress[1]) += 0.5*bond_ji*dr_ij[Y]*dr_ij[Y];
+            m_data(j, indexStress[3]) += 0.5*bond_ji*dr_ij[X]*dr_ij[Y];
+
+            if(m_dim == 3)
+            {
+                m_data(j, indexStress[2]) += 0.5*bond_ji*dr_ij[Z]*dr_ij[Z];
+                m_data(j, indexStress[4]) += 0.5*bond_ji*dr_ij[X]*dr_ij[Z];
+                m_data(j, indexStress[5]) += 0.5*bond_ji*dr_ij[Y]*dr_ij[Z];
+            }
+        }
+#endif
     }
 }
 //------------------------------------------------------------------------------
 double PD_bondForce::calculateStableMass(const std::pair<int, int> &idCol, double dt)
 {
     dt *= 1.1;
-#if 0
-    if(0)
-    {
-
-        int pId = idCol.first;
-        int col_i = idCol.second;
-        double c_i = m_data(col_i, m_indexMicromodulus);
-        double stiffness_xyz[3];
-        double dR0[3];
-        stiffness_xyz[X] = 0;
-        stiffness_xyz[Y] = 0;
-        stiffness_xyz[Z] = 0;
-
-        const arma::mat & matR0 = m_particles.r0();
-
-        double x_i = matR0(X, col_i);
-        double y_i = matR0(Y, col_i);
-        double z_i = matR0(Z, col_i);
-
-        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-
-        for(auto &con:PDconnections)
-        {
-            int id_j = con.first;
-            int col_j = m_pIds[id_j];
-
-            dR0[X] = x_i - matR0(X, col_j);
-            dR0[Y] = y_i - matR0(Y, col_j);
-            dR0[Z] = z_i - matR0(Z, col_j);
-
-            double c_j = m_data(col_j, m_indexMicromodulus);
-            double vol_j = m_data(col_j, m_indexVolume);
-            double dr0Len = con.second[m_indexDr0];
-            double volumeScaling = con.second[m_indexVolumeScaling];
-            double c_ij = 0.5*(c_i + c_j);
-
-            double dR0xyz = abs(dR0[X]) + abs(dR0[Y]) + abs(dR0[Z]);
-            double dr0Len3 = pow(dr0Len, 3);
-            for(int d=0; d<3; d++)
-            {
-                stiffness_xyz[d] +=
-                        c_ij
-                        * abs(dR0[d])
-                        * dR0xyz
-                        * vol_j
-                        * volumeScaling
-                        / dr0Len3;
-            }
-        }
-
-        double stiffness = 0;
-
-        for(int d=0;d<3; d++)
-        {
-            if(stiffness_xyz[d]>stiffness)
-            {
-                stiffness = stiffness_xyz[d];
-            }
-        }
-
-        return 0.25*pow(dt, 2)*stiffness;
-    }
-    else
-    {
-        int pId = idCol.first;
-        int col_a = idCol.second;
-        double c_a = m_data(col_a, m_indexMicromodulus);
-
-        double m[3];
-        double dR0[3];
-        m[X] = 0;
-        m[Y] = 0;
-        m[Z] = 0;
-
-        const arma::mat & matR0 = m_particles.r0();
-
-        double x_a = matR0(X, col_a);
-        double y_a = matR0(Y, col_a);
-        double z_a = matR0(Z, col_a);
-
-        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-        double k_i[3];
-
-        for(int i=0; i<3; i++)
-        {
-            k_i[X] = 0;
-            k_i[Y] = 0;
-            k_i[Z] = 0;
-
-            for(auto &con:PDconnections)
-            {
-                int id_b = con.first;
-                int col_b = m_pIds[id_b];
-
-                dR0[X] = x_a - matR0(X, col_b);
-                dR0[Y] = y_a - matR0(Y, col_b);
-                dR0[Z] = z_a - matR0(Z, col_b);
-
-                double c_b = m_data(col_b, m_indexMicromodulus);
-                double vol_b = m_data(col_b, m_indexVolume);
-                double dr0Len = con.second[m_indexDr0];
-                double volumeScaling = con.second[m_indexVolumeScaling];
-                double c_ab = 0.5*(c_a + c_b);
-
-                double dr0Len3 = pow(dr0Len, 3);
-
-                for(int j=0; j<3; j++)
-                {
-                    k_i[j] +=
-                            c_ab
-                            * dR0[i]*dR0[j]
-                            * vol_b
-                            * volumeScaling
-                            / dr0Len3;
-                }
-            }
-
-            for(int j=0; j<3; j++)
-            {
-                m[i] += fabs(k_i[j]);
-            }
-        }
-
-        double stiffness = 0;
-
-        for(int d=0;d<3; d++)
-        {
-            if(m[d]>stiffness)
-            {
-                stiffness = m[d];
-            }
-        }
-
-        return 0.5*pow(dt, 2)*stiffness;
-//        return 0.25*pow(dt, 2)*stiffness;
-    }
-#else if
-    int pId = idCol.first;
-    int col_a = idCol.second;
-    double c_a = m_data(col_a, m_indexMicromodulus);
+    const int pId = idCol.first;
+    const int col_a = idCol.second;
+    const double c_a = m_data(col_a, m_indexMicromodulus);
 
     double m[3];
-    double dR0[3];
+    double dr0[3];
     m[X] = 0;
     m[Y] = 0;
     m[Z] = 0;
 
     const arma::mat & matR0 = m_particles.r0();
 
-    double x_a = matR0(X, col_a);
-    double y_a = matR0(Y, col_a);
-    double z_a = matR0(Z, col_a);
+    const double x_a = matR0(X, col_a);
+    const double y_a = matR0(Y, col_a);
+    const double z_a = matR0(Z, col_a);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
-    double k_one[3];
-    double k_two[3];
-
+    double k[3];
 
     for(int i=0; i<3; i++)
     {
-        k_one[X] = 0;
-        k_one[Y] = 0;
-        k_one[Z] = 0;
-
-        k_two[X] = 0;
-        k_two[Y] = 0;
-        k_two[Z] = 0;
+        k[X] = 0;
+        k[Y] = 0;
+        k[Z] = 0;
 
         for(auto &con:PDconnections)
         {
-            int id_b = con.first;
-            int col_b = m_pIds[id_b];
+            if(con.second[m_indexConnected] <= 0.5)
+                continue;
 
-            dR0[X] = x_a - matR0(X, col_b);
-            dR0[Y] = y_a - matR0(Y, col_b);
-            dR0[Z] = z_a - matR0(Z, col_b);
+            const int id_b = con.first;
+            const int col_b = m_pIds[id_b];
 
-            double c_b = m_data(col_b, m_indexMicromodulus);
-            double vol_b = m_data(col_b, m_indexVolume);
-            double dr0Len = con.second[m_indexDr0];
-            double volumeScaling = con.second[m_indexVolumeScaling];
-            double c_ab = 0.5*(c_a + c_b);
+            dr0[X] = x_a - matR0(X, col_b);
+            dr0[Y] = y_a - matR0(Y, col_b);
+            dr0[Z] = z_a - matR0(Z, col_b);
 
-            double dr0Len3 = pow(dr0Len, 3);
-            double coeff = c_ab*volumeScaling*vol_b/dr0Len3;
-            double term1 = 0;
-            double term2 = 0;
+            const double c_b = m_data(col_b, m_indexMicromodulus);
+            const double vol_b = m_data(col_b, m_indexVolume);
+            const double dr0Len = con.second[m_indexDr0];
+            const double volumeScaling = con.second[m_indexVolumeScaling];
+            const double g_ab = con.second[m_indexForceScaling];
+            const double c_ab = 0.5*(c_a + c_b)*g_ab;
+
+            const double dr0Len3 = pow(dr0Len, 3);
+            const double coeff = c_ab*volumeScaling*vol_b/dr0Len3;
+
+            double sum = 0;
 
             for(int j=0; j<3; j++)
             {
-                term1 += dR0[i]*dR0[j];
-                term2 += fabs(dR0[j]);
+                sum += fabs(dr0[j]);
             }
-            term1 *= coeff;
-            term2 *= fabs(dR0[i])*coeff;
+            sum *= fabs(dr0[i])*coeff;
 
-            k_one[i] += term1;
-            k_two[i] += term2;
+            k[i] += sum;
         }
 
-//        m[i] = fabs(k_one[i]) - k_two[i];
-        m[i] = k_two[i];
+        m[i] = k[i];
     }
 
     double stiffness = 0;
@@ -549,12 +439,13 @@ double PD_bondForce::calculateStableMass(const std::pair<int, int> &idCol, doubl
         }
     }
 
-    return 0.25*pow(dt, 2)*stiffness;
-#endif
+    double stableMass = 2*0.25*pow(dt, 2)*stiffness;
+    return stableMass;
 }
 //------------------------------------------------------------------------------
 void PD_bondForce::initialize(double E, double nu, double delta, int dim, double h)
 {
+    Force::initialize(E, nu, delta, dim, h);
     double k;
     double c;
 
@@ -570,12 +461,33 @@ void PD_bondForce::initialize(double E, double nu, double delta, int dim, double
         k = E/(2.*(1. - nu));
         c = 12*k/(h*M_PI*pow(delta, 3));
     }
+    else if(dim == 1)
+    {
+        nu = 1./4.;
+        k = E;
+        c = 2*E/(h*h*pow(delta, 2));
+    }
     else
     {
         cerr << "ERROR: dimension " << dim << " not supported" << endl;
-        cerr << "use 2 or 3." << endl;
+        cerr << "use 1, 2 or 3." << endl;
         exit(EXIT_FAILURE);
     }
+    // Testing a new coefficient
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
+//    for(int i=0; i<m_particles.nParticles(); i++)
+//    {
+//        int pId = i;
+
+//        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+//        for(auto &con:PDconnections)
+//        {
+//            double dr0Len = con.second[m_indexDr0];
+//            con.second[m_indexForceScaling] = (1 - dr0Len/delta);
+//        }
+//    }
 
     if(m_numericalInitialization){
         m_particles.setParameter("micromodulus", k);
@@ -586,7 +498,8 @@ void PD_bondForce::initialize(double E, double nu, double delta, int dim, double
         return;
     }
 
-    double dimScaling = 2.*pow(dim, 2.);
+    // Scaling the bond force
+    double dimScaling = 2.*k*pow(dim, 2.);    
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
@@ -596,6 +509,7 @@ void PD_bondForce::initialize(double E, double nu, double delta, int dim, double
         int pId = i;
         int col_i = i;
         double dRvolume = 0;
+        double v = 0;
 
         vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
         for(auto &con:PDconnections)
@@ -604,13 +518,16 @@ void PD_bondForce::initialize(double E, double nu, double delta, int dim, double
             int col_j = m_pIds[id_j];
             double volumeScaling = con.second[m_indexVolumeScaling];
             double dr0Len = con.second[m_indexDr0];
-
-            dRvolume += dr0Len*m_data(col_j, m_indexVolume);
-            //            dRvolume += dr0Len*data(col_j, indexVolume)*volumeScaling;
+            double g_ij = con.second[m_indexForceScaling];
+            dRvolume +=   dr0Len*m_data(col_j, m_indexVolume)*volumeScaling*g_ij;
+            v += m_data(col_j, m_indexVolume)*volumeScaling;
         }
-        m_data(col_i, m_indexMicromodulus) *= dimScaling/dRvolume;
+        double c_i = dimScaling/dRvolume;
+        double l_delta = pow((3.*v/(4.*M_PI)), 1./3.);
+        double c_j = 18*k/(M_PI*pow(l_delta, 4));
+        m_data(col_i, m_indexMicromodulus) = c_i;
+//        m_data(col_i, m_indexMicromodulus) = c_j;
     }
 }
 //------------------------------------------------------------------------------
 }
-

@@ -1,16 +1,17 @@
-#ifndef PD_BONDFORCE_H
-#define PD_BONDFORCE_H
+#ifndef PD_PMB_H
+#define PD_PMB_H
 
 #include <unordered_map>
 #include "PDtools/Force/force.h"
 
+//------------------------------------------------------------------------------
 namespace PDtools
 {
 
-//------------------------------------------------------------------------------
-class PD_bondForce : public Force
+class PD_PMB : public Force
 {
-private:
+public:
+    int m_dim = 3;
     int m_indexMicromodulus;
     int m_indexVolume;
     int m_indexDr0;
@@ -18,11 +19,22 @@ private:
     int m_indexStretch;
     int m_indexForceScaling;
     int m_indexConnected;
-    int m_indexCompute;
+    double m_lc;
+    double m_delta;
+    int m_indexS0;
+    int m_indexS_new;
+    int m_indexS00;
 
     arma::mat & m_r;
+    arma::mat & m_r0;
     arma::mat & m_F;
     arma::mat & m_data;
+    double **f;
+    double **x;
+    double **r0;
+
+    double m_alpha;
+
     std::unordered_map<int, int> & m_pIds;
 
     enum PD_bondForceErrorMessages
@@ -31,8 +43,8 @@ private:
     };
 
 public:
-    PD_bondForce(PD_Particles &particles);
-    ~PD_bondForce();
+    PD_PMB(PD_Particles &particles, double lc, double delta, double alpha);
+    ~PD_PMB();
     virtual void calculateForces(const std::pair<int, int> & idCol);
     virtual double calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
     virtual void calculatePotentialEnergy(const std::pair<int, int> & idCol,
@@ -46,4 +58,5 @@ public:
 };
 //------------------------------------------------------------------------------
 }
-#endif // PD_BONDFORCE_H
+
+#endif // PD_PMB_H

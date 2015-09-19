@@ -117,7 +117,7 @@ void SaveParticles::writeBody(Particles &particles,
 
     for(auto id_pos:particles.pIds())
     {
-        int id  = id_pos.first;
+        int id  = id_pos.first + 1;
         int pos = id_pos.second;
 
         if(m_saveId)
@@ -148,7 +148,7 @@ void SaveParticles::writeBinaryBody(Particles &particles,
 
     for(auto id_pos:particles.pIds())
     {
-        const double id  = id_pos.first;
+        const double id  = id_pos.first + 1;
         int pos = id_pos.second;
 
         if(m_saveId)
@@ -243,7 +243,7 @@ void SaveParticles::write_lmpHeader(const Particles &particles,
         outStream.open(savePath.c_str());
     }
     outStream << "ITEM: TIMESTEP" << endl;
-    outStream << "0" << endl;
+    outStream << m_timestep << endl;
     outStream << "ITEM: NUMBER OF ATOMS" << endl;
     outStream << particles.nParticles() << endl;
 
@@ -320,7 +320,7 @@ void SaveParticles::write_lmpBinaryHeader(Particles &particles,
     }
 
     // Writing the header
-    long long int currentTimeStep = 0;
+    long long int currentTimeStep = m_timestep;
     long long int nParticles = particles.nParticles();
     int triclinic = 0.0;
     int nChunks = 1;

@@ -141,7 +141,7 @@ TEST_F(PD_PARTICLES_FIXTURE, CREATE_PD_CONNECTIONS)
     grid.initialize();
     grid.placeParticlesInGrid(particles);
 
-    setPdConnections(particles, grid, radius);
+    setPdConnections(particles, grid, radius, gridspacing);
 
     // Saving the results
     particles.registerParameter("connections");

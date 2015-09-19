@@ -15,8 +15,10 @@ private:
     int m_indexVolume;
     int m_indexDr0;
     int m_indexVolumeScaling;
+    int m_indexForceScaling;
     int m_indexStretch;
     int m_indexExponent;
+    int m_indexConnected;
 
     arma::mat & m_r;
     arma::mat & m_F;
@@ -36,6 +38,8 @@ public:
     virtual double calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
     virtual void calculatePotentialEnergy(const std::pair<int, int> & idCol,
                                           int indexPotential);
+    virtual double calculateBondEnergy(const std::pair<int, int> &idCol,
+                                    std::pair<int, std::vector<double> > &con);
     virtual void calculateStress(const std::pair<int, int> & idCol,
                                  const int (&indexStress)[6]);
 

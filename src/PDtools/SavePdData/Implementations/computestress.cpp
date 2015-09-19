@@ -53,10 +53,10 @@ ComputeStress::~ComputeStress()
 //------------------------------------------------------------------------------
 void ComputeStress::update(const pair<int, int> &pIdcol)
 {
-    for(int s=0; s<6; s++)
-    {
-        m_data(pIdcol.second, m_indexStress[s]) = 0;
-    }
+//    for(int s=0; s<6; s++)
+//    {
+//        m_data(pIdcol.second, m_indexStress[s]) = 0;
+//    }
 
     for(Force *force: m_forces)
     {

@@ -28,6 +28,7 @@ protected:
     vector<Force *> m_oneBodyForces;
     vector<Modifier *> m_spModifiers;
     vector<Modifier *> m_modifiers;
+    vector<Modifier*> m_qsModifiers;
     const int m_dim = 3;
     int m_steps = 0;
     double m_dt = 0;
@@ -37,6 +38,7 @@ protected:
     string m_savePath = "testGeometries";
     SavePdData *saveParticles;
     double m_errorThreshold = 1.e-11;
+    int m_indexStress[6];
 
     enum SolverErrorMessages
     {
@@ -50,30 +52,22 @@ public:
     virtual ~Solver();
 
     virtual void solve() = 0;
-
     virtual void stepForward(int i) = 0;
 
     void setParticles(PD_Particles &_particles);
-
     void setDomain(Domain &_domain);
-
     void setMainGrid(Grid &_grid);
-
     void setSteps(int steps);
-
     void setDt(double _dt);
-
     void setT(double _t);
 
-    void addForce(Force* force);
-
     void setSavePath(const string & savePath);
-
     void setSaveInterval(double saveInterval);
 
+    void addForce(Force* force);
     void addSpModifier(Modifier * modifier);
-
     void addModifier(Modifier * modifier);
+    void addQsModifiers(Modifier * modifier);
 
     std::vector<std::string> saveParameters() const;
 
@@ -87,6 +81,8 @@ public:
 
     virtual void modifiersStepOne();
     virtual void modifiersStepTwo();
+
+    virtual void zeroForcesAndStress();
 
     void setADR_fracture(Modifier *ADR_fracture);
     void setErrorThreshold(double errorThreshold);

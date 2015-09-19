@@ -14,6 +14,11 @@ class Force
 protected:
     PD_Particles &m_particles;
     bool m_numericalInitialization = false;
+    int m_dim = 3;
+    double m_E;
+    double m_nu;
+    double m_h;
+    double m_delta;
 
 public:
     Force(PD_Particles &particles);
@@ -28,10 +33,14 @@ public:
     virtual double calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
     virtual void calculatePotentialEnergy(const std::pair<int, int> & idCol,
                                           int indexPotential);
+    virtual double calculateBondEnergy(const std::pair<int, int> & idCol,
+                                          std::pair<int, std::vector<double>> & con);
 
     virtual void calculateStress(const std::pair<int, int> & idCol,
                                  const int (&indexStress)[6]);
     virtual void updateState();
+
+    virtual void updateState(const std::pair<int, int> & idCol);
 
     virtual double calculateStableMass(const std::pair<int, int> & idCol,
                                      double dt);
@@ -41,6 +50,9 @@ public:
     enum enum_coordinates{X, Y, Z};
 
     void numericalInitialization(bool ni);
+    void setDim(int dim);
+
+    virtual void applySurfaceCorrection(double strain = 0.001);
 
 };
 //------------------------------------------------------------------------------

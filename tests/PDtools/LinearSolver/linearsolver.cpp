@@ -1,3 +1,4 @@
+
 #include <gtest/gtest.h>
 #include <PdFunctions/pdfunctions.h>
 #include <PDtools.h>
@@ -10,16 +11,16 @@ extern std::vector<string> geometries;
 
 using namespace PDtools;
 
-class PD_SOLVER_FIXTURE : public ::testing::Test {
+class PD_LINEAR_SOLVER_FIXTURE : public ::testing::Test {
     protected:
 
-    PD_SOLVER_FIXTURE()
+    PD_LINEAR_SOLVER_FIXTURE()
     {
 
     }
 };
 
-TEST_F(PD_SOLVER_FIXTURE, TEST_INTEGRATOR)
+TEST_F(PD_LINEAR_SOLVER_FIXTURE, TEST_INTEGRATOR)
 {
     using namespace std;
     using namespace arma;
@@ -150,7 +151,7 @@ TEST_F(PD_SOLVER_FIXTURE, TEST_INTEGRATOR)
 }
 
 
-TEST_F(PD_SOLVER_FIXTURE, TEST_ADR)
+TEST_F(PD_LINEAR_SOLVER_FIXTURE, TEST_ADR)
 {
     using namespace std;
     using namespace arma;
@@ -272,7 +273,7 @@ TEST_F(PD_SOLVER_FIXTURE, TEST_ADR)
 }
 
 
-TEST_F(PD_SOLVER_FIXTURE, TEST_ADR_BUNNY)
+TEST_F(PD_LINEAR_SOLVER_FIXTURE, TEST_ADR_BUNNY)
 {
     using namespace std;
     using namespace arma;

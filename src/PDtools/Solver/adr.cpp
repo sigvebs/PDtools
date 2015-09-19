@@ -35,8 +35,8 @@ void ADR::solve()
 //------------------------------------------------------------------------------
 void ADR::stepForward(int i)
 {
-    modifiersStepOne();
     save(i);
+    modifiersStepOne();
 
     m_globalError = 2*m_errorThreshold;
     iterate();
@@ -50,33 +50,37 @@ void ADR::stepForward(int i)
 void ADR::iterate()
 {
     int counter = 0;
+    int minSteps = 100;
+    int maxSteps = 1000;
+    maxSteps = 400;
     int nParticles = m_particles->nParticles();
 
     do
     {
         integrateStepOne();
+        zeroForcesAndStress();
 
+        updateGridAndCommunication();
         calculateForces();
         staticModifiers();
 
         integrateStepTwo();
 
         counter++;
-        if(counter >200)
+        if(counter >maxSteps)
             break;
     }
-    while(m_globalError > m_errorThreshold);
+    while( (m_globalError > m_errorThreshold) || (counter < minSteps));
 
     cout << "counter = " << counter << " error =" << m_globalError << endl;
-    calculateForces();
-
+//    calculateForces();
 
     //--------------------------------------------------
     if(!m_qsModifiers.empty())
     {
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
         for(int i=0; i<nParticles; i++)
         {
             pair<int, int> id(i, i);
@@ -103,25 +107,20 @@ void ADR::iterate()
             modifier->evaluateStepTwo();
         }
 
-        bool state = false;
+        bool continueState = false;
 
         for(Modifier *modifier:m_qsModifiers)
         {
             if(modifier->state())
-                state = true;
+                continueState = true;
         }
 
-        if(state)
+        if(continueState)
         {
             m_globalError = 2*m_errorThreshold;
             iterate();
         }
     }
-}
-//------------------------------------------------------------------------------
-void ADR::addQsModifiers(Modifier *mod)
-{
-    m_qsModifiers.push_back(mod);
 }
 //------------------------------------------------------------------------------
 void ADR::checkInitialization()
@@ -213,7 +212,6 @@ void ADR::integrateStepOne()
             Fn += pow(F(d, col_i), 2);
 
             Fold(d, col_i) = F(d, col_i);
-            F(d, col_i) = 0;
 
             drSquared += (r(d, col_i) - rPrev)*(r(d, col_i) - rPrev);
         }
@@ -268,12 +266,10 @@ void ADR::integrateStepTwo()
         }
     }
 
-//    if(m_c >= 2.0)
-//    {
-////        cout << "c = " << m_c << endl;
-//        m_c = 1.999999999999999999999999999;
-//    }
-//    m_c = 1.999999999999999999999999999;
+    if(m_c >= 2.0)
+    {
+        m_c = 1.99;
+    }
 }
 //------------------------------------------------------------------------------
 void ADR::staticModifiers()

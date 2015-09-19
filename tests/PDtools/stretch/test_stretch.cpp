@@ -58,7 +58,6 @@ void test_stretch(string project_folder, int n, string save_folder)
     double E;
     double nu;
     double k;
-    double micromodulus;
 
     m_cfg.lookupValue("dim", dim);
     m_cfg.lookupValue("E", E);
@@ -97,7 +96,7 @@ void test_stretch(string project_folder, int n, string save_folder)
     grid.initialize();
     grid.placeParticlesInGrid(particles);
 
-    setPdConnections(particles, grid, delta);
+    setPdConnections(particles, grid, delta, gridspacing);
 
     //--------------------------------------------------------------------------
     // Setting the initial position

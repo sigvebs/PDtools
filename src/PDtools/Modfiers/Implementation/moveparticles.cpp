@@ -9,13 +9,15 @@ MoveParticles::MoveParticles(double velAmplitude,
                              double velOrientation,
                              pair<double, double> boundary,
                              int boundaryOrientation,
-                             double dt)
+                             double dt,
+                             bool isStatic)
 {
     m_velAmplitude = velAmplitude;
     m_velOritentation = velOrientation;
     m_boundary = boundary;
     m_boundaryOrientation = boundaryOrientation;
     m_dt = dt;
+    m_isStatic = isStatic;
 }
 //------------------------------------------------------------------------------
 MoveParticles::~MoveParticles()
@@ -26,10 +28,20 @@ MoveParticles::~MoveParticles()
 void MoveParticles::evaluateStepOne()
 {
     arma::mat & r = m_particles->r();
+    arma::mat & v = m_particles->v();
+    arma::mat & F = m_particles->F();
+    arma::mat & Fold = m_particles->Fold();
+
     for(pair<int, int> &idCol:m_boundaryParticles)
     {
         int col_i = idCol.second;
         r(m_boundaryOrientation, col_i) += m_velAmplitude*m_dt;
+//        for(int d=0;d<3; d++)
+//        {
+//            v(d, col_i) = 0.0;
+//            F(d, col_i) = 0.0;
+//            Fold(d, col_i) = 0.0;
+//        }
     }
 }
 //------------------------------------------------------------------------------
@@ -63,7 +75,8 @@ void MoveParticles::initialize()
         if(m_boundary.first <= pos && pos < m_boundary.second)
         {
             pair<int, int> pId(i, i);
-            isStatic(pId.second) = 1.0;
+            if(m_isStatic)
+                isStatic(pId.second) = 1;
 #ifdef USE_OPENMP
 #pragma omp critical
 #endif
@@ -87,16 +100,16 @@ void MoveParticles::staticEvaluation()
     for(pair<int, int> &idCol:m_boundaryParticles)
     {
         int col_i = idCol.second;
-//        v(m_boundaryOrientation, col_i) = 0.0;
-//        F(m_boundaryOrientation, col_i) = 0.0;
-//        Fold(m_boundaryOrientation, col_i) = 0.0;
+        v(m_boundaryOrientation, col_i) = 0.0;
+        F(m_boundaryOrientation, col_i) = 0.0;
+        Fold(m_boundaryOrientation, col_i) = 0.0;
 
-        for(int d=0;d<3; d++)
-        {
-            v(d, col_i) = 0.0;
-            F(d, col_i) = 0.0;
-            Fold(d, col_i) = 0.0;
-        }
+//        for(int d=0;d<3; d++)
+//        {
+//            v(d, col_i) = 0.0;
+//            F(d, col_i) = 0.0;
+//            Fold(d, col_i) = 0.0;
+//        }
     }
 }
 //------------------------------------------------------------------------------

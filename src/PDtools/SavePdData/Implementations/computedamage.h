@@ -19,6 +19,7 @@ public:
 private:
     int m_indexDamage;
     int m_indexMaxPdConnections;
+    int m_indexConnected;
     arma::mat *m_data;
 };
 //------------------------------------------------------------------------------

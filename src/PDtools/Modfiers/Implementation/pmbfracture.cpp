@@ -22,6 +22,7 @@ void PmbFracture::initialize()
     m_indexUnbreakable =  m_particles->getParamId("unbreakable");
     m_indexStretch = m_particles->getPdParamId("stretch");
     m_indexS00 = m_particles->registerPdParameter("s00");
+    m_indexConnected = m_particles->getPdParamId("connected");
     m_indexS_tmp = m_particles->registerParameter("s_tmp");
     m_pIds = &m_particles->pIds();
     m_data = &m_particles->data();
@@ -40,52 +41,54 @@ void PmbFracture::initialize()
             int col_j = (*m_pIds)[id_j];
             double s0_j = (*m_data)(col_j, m_indexS0);
             con.second[m_indexS00] = 0.5*(s0_i + s0_j);
+            m_s00 = s0_i; // TMP FIX
         }
     }
 }
 //------------------------------------------------------------------------------
 void PmbFracture::evaluateStepOne(const pair<int, int> &id_col)
 {
-    int pId = id_col.first;
-    int col_i = id_col.second;
+    const int pId = id_col.first;
+    const int col_i = id_col.second;
 
     if((*m_data)(col_i, m_indexUnbreakable) >= 1)
         return;
 
-    double s0_i = (*m_data)(col_i, m_indexS0);
+    const double s0_i = (*m_data)(col_i, m_indexS0);
     vector<pair<int, vector<double>>> & PDconnections = m_particles->pdConnections(pId);
-    vector<pair<int, vector<double>> *> removeParticles;
 
     double s0_new = numeric_limits<double>::min();
 
     for(auto &con:PDconnections)
     {
-        int id_j = con.first;
-        int col_j = (*m_pIds)[id_j];
-        if((*m_data)(col_j, m_indexUnbreakable) >= 1)
+        const int id_j = con.first;
+        const int j = (*m_pIds)[id_j];
+
+        if((*m_data)(j, m_indexUnbreakable) >= 1)
             continue;
 
-        double stretch = con.second[m_indexStretch];
-        double s00 = con.second[m_indexS00];
-        double s0_j = (*m_data)(col_j, m_indexS0);
-        double s0 = std::min(s0_i, s0_j);
+        if(con.second[m_indexConnected] <= 0.5)
+            continue;
+
+        const double stretch = con.second[m_indexStretch];
+        const double s00 = con.second[m_indexS00];
+        const double s0_j = (*m_data)(j, m_indexS0);
+        const double s0 = std::min(s0_i, s0_j);
+//        s0 *= g_ij;
 
         if(stretch > s0)
         {
-            removeParticles.push_back(&con);
+            con.second[m_indexConnected] = 0;
         }
 
         double s0_tmp = s00 - m_alpha*stretch;
         s0_new = std::max(s0_new, s0_tmp);
     }
 
-    (*m_data)(col_i, m_indexS_tmp) = s0_new;
-
-    for(auto &removeParticle:removeParticles)
-    {
-        PDconnections.erase( remove(begin(PDconnections), end(PDconnections), *removeParticle),
-                             end(PDconnections) );
-    }
+    if(s0_new < m_s00)
+        (*m_data)(col_i, m_indexS_tmp) = m_s00;
+    else
+        (*m_data)(col_i, m_indexS_tmp) = s0_new;
 }
 //------------------------------------------------------------------------------
 void PmbFracture::evaluateStepTwo(const pair<int, int> &id_col)

@@ -18,7 +18,8 @@ SOURCES += \
     PDtools/grid/test_grid.cpp \
     PDtools/configuration/test_configuration/test_configuration.cpp \
     PDtools/test_solver/test_solver.cpp \
-    PDtools/stretch/test_stretch.cpp
+    PDtools/stretch/test_stretch.cpp \
+    PDtools/LinearSolver/linearsolver.cpp
 
 HEADERS += \
     test_resources.h

@@ -6,7 +6,7 @@
 
 namespace PDtools
 {
-class Force;
+//class Force;
 
 //------------------------------------------------------------------------------
 class ADRfracture : public Modifier
@@ -29,6 +29,7 @@ private:
     int m_indexStretch;
     int m_indexUnbreakable;
     int m_indexS00;
+    int m_indexConnected;
     int m_indexS_tmp;
     arma::mat * m_data;
     std::unordered_map<int, int> * m_pIds;

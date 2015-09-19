@@ -1,5 +1,5 @@
-#ifndef PMBFRACTURE_H
-#define PMBFRACTURE_H
+#ifndef SIMPLEFRACTURE_H
+#define SIMPLEFRACTURE_H
 
 #include <unordered_map>
 #include "PDtools/Modfiers/modifier.h"
@@ -7,29 +7,29 @@
 namespace PDtools
 {
 //------------------------------------------------------------------------------
-class PmbFracture: public Modifier
+class SimpleFracture : public Modifier
 {
 public:
-    PmbFracture(double alpha);
-    ~PmbFracture();
+    SimpleFracture(double alpha);
+    ~SimpleFracture();
 
     virtual void initialize();
-    virtual void evaluateStepOne(const pair<int, int> &id_col);
-    virtual void evaluateStepTwo(const pair<int, int> &id_col);
+    virtual void evaluateStepOne(const pair<int, int> &pIdcol);
+    virtual void evaluateStepTwo();
 
 private:
     double m_alpha;
-    int m_indexS0;
     int m_indexStretch;
     int m_indexUnbreakable;
-    int m_indexS00;
     int m_indexConnected;
-    int m_indexS_tmp;
-    double m_s00;
+    int m_indexDr0;
+    int m_indexVolume;
+    int m_indexForceScaling;
+    int m_indexMicromodulus;
+    bool m_broken;
     arma::mat * m_data;
     std::unordered_map<int, int> * m_pIds;
 };
 //------------------------------------------------------------------------------
 }
-
-#endif // PMBFRACTURE_H
+#endif // SIMPLEFRACTURE_H

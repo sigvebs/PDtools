@@ -52,6 +52,10 @@ void SavePdData::initialize()
         {
             m_computeProperties.push_back(new ComputeMaxStretch(*m_particles));
         }
+        if(param == "f_x")
+        {
+            m_computeProperties.push_back(new ComputeMaxStretch(*m_particles));
+        }
         if(param == "average_stretch")
         {
             m_computeProperties.push_back(new ComputeAverageStretch(*m_particles));
@@ -73,11 +77,12 @@ void SavePdData::initialize()
         }
         else if(param == "id"
                 || param == "x" || param == "y" || param == "z"
+//                || param == "v_x" || param == "v_y" || param == "v_z"
                 || param == "s_xx" || param == "s_yy" || param == "s_zz"
                 || param == "s_xy" || param == "s_xz" || param == "s_yz"
                 )
         {
-            // Ignore id, coordinates and stress
+            // Ignore id, velocities, coordinates and stress
         }
         else
         {
@@ -120,9 +125,9 @@ void SavePdData::evaluate(double t, int i)
 {
     (void) t;
 
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
     for(int i=0; i<m_particles->nParticles(); i++)
     {
         pair<int, int> id(i, i);
@@ -133,6 +138,7 @@ void SavePdData::evaluate(double t, int i)
     }
 
     string fName = m_savePath + "/" + to_string(i) + ".lmp";
+    saveParticles->setTimestep(i);
     saveParticles->writeToFile(*m_particles, fName);
 }
 //------------------------------------------------------------------------------

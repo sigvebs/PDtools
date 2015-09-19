@@ -14,7 +14,9 @@ private:
     int m_steps;
     arma::mat & m_F;
     arma::mat & m_r;
+    arma::mat & m_r0;
     arma::mat & m_data;
+    double m_spacing;
     double m_scaling;
     double m_verletRadius;
     double m_forceScaling;
@@ -23,6 +25,7 @@ private:
     int m_verletListId;
     int m_indexMicromodulus;
     int m_indexRadius;
+    int m_dim;
 public:
     ContactForce(PD_Particles &particles, Grid &grid, double spacing);
     ~ContactForce();
@@ -32,6 +35,8 @@ public:
     virtual void updateState();
     void setForceScaling(double forceScaling);
     void setVerletRadius(double verletSpacing);
+    virtual void initialize(double E, double nu, double delta, int dim, double h);
+    virtual void applySurfaceCorrection(double strain);
 };
 //------------------------------------------------------------------------------
 }

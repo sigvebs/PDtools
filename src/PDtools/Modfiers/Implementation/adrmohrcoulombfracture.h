@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include "PDtools/Modfiers/modifier.h"
+#include <armadillo>
 
 namespace PDtools
 {
@@ -11,7 +12,7 @@ class Force;
 class ADRmohrCoulombFracture : public Modifier
 {
 public:
-    ADRmohrCoulombFracture(double mu, double C, double T);
+    ADRmohrCoulombFracture(double mu, double C, double T, int dim);
     ~ADRmohrCoulombFracture();
 
     virtual void initialize();
@@ -24,14 +25,15 @@ public:
 private:
     double m_C;
     double m_T;
+    int m_dim;
     double m_d;
     vector<Force *> m_forces;
     arma::mat *m_data;
     std::unordered_map<int, int> * m_pIds;
 
     int m_indexStress[6];
-    int m_dim;
     int m_indexUnbreakable;
+    int m_indexConnected;
     pair<int, pair<int, vector<double>> *> m_maxPId;
     double m_maxStress;
 };

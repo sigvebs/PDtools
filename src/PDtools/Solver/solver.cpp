@@ -61,6 +61,36 @@ void Solver::initialize()
     saveParticles->setParticles(m_particles);
     saveParticles->setForces(m_oneBodyForces);
     saveParticles->initialize();
+
+    if(m_particles->hasParameter("s_xx"))
+        m_indexStress[0] = m_particles->getParamId("s_xx");
+    else
+        m_indexStress[0] = m_particles->registerParameter("s_xx");
+
+    if(m_particles->hasParameter("s_yy"))
+        m_indexStress[1] = m_particles->getParamId("s_yy");
+    else
+        m_indexStress[1] = m_particles->registerParameter("s_yy");
+
+    if(m_particles->hasParameter("s_zz"))
+        m_indexStress[2] = m_particles->getParamId("s_zz");
+    else
+        m_indexStress[2] = m_particles->registerParameter("s_zz");
+
+    if(m_particles->hasParameter("s_xy"))
+        m_indexStress[3] = m_particles->getParamId("s_xy");
+    else
+        m_indexStress[3] = m_particles->registerParameter("s_xy");
+
+    if(m_particles->hasParameter("s_xz"))
+        m_indexStress[4] = m_particles->getParamId("s_xz");
+    else
+        m_indexStress[4] = m_particles->registerParameter("s_xz");
+
+    if(m_particles->hasParameter("s_yz"))
+        m_indexStress[5] = m_particles->getParamId("s_yz");
+    else
+        m_indexStress[5] = m_particles->registerParameter("s_yz");
 }
 //------------------------------------------------------------------------------
 void Solver::modifiersStepOne()
@@ -106,6 +136,28 @@ void Solver::modifiersStepTwo()
             {
                 modifier->evaluateStepTwo(id);
             }
+        }
+    }
+}
+//------------------------------------------------------------------------------
+void Solver::zeroForcesAndStress()
+{
+    mat & F = m_particles->F();
+    mat & data = m_particles->data();
+
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
+    for(int i=0; i<m_particles->nParticles(); i++)
+    {
+        pair<int, int> id(i, i);
+        for(int d=0; d<m_dim; d++)
+        {
+            F(d, i) = 0;
+        }
+        for(int s=0; s<6; s++)
+        {
+            data(i, m_indexStress[s]) = 0;
         }
     }
 }
@@ -165,6 +217,11 @@ void Solver::addModifier(Modifier *modifier)
     m_modifiers.push_back(modifier);
 }
 //------------------------------------------------------------------------------
+void Solver::addQsModifiers(Modifier *modifier)
+{
+    m_qsModifiers.push_back(modifier);
+}
+//------------------------------------------------------------------------------
 void Solver::checkInitialization()
 {
     if(m_steps == 0)
@@ -188,20 +245,37 @@ void Solver::checkInitialization()
 //------------------------------------------------------------------------------
 void Solver::calculateForces()
 {
+    arma::imat & isStatic = m_particles->isStatic();
     int nParticles = m_particles->nParticles();
 
+    // Updating overall state
     for(Force *oneBodyForce:m_oneBodyForces)
     {
         oneBodyForce->updateState();
     }
 
-    // Calculate one-body forces
+    // Updating single particle states
 #ifdef USE_OPENMP
-# pragma omp parallel for
+#pragma omp parallel for
 #endif
     for(int i=0; i<nParticles; i++)
     {
         pair<int, int> id(i, i);
+        for(Force *oneBodyForce:m_oneBodyForces)
+        {
+            oneBodyForce->updateState(id);
+        }
+    }
+
+    // Calculateing the one-body forces
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+    for(int i=0; i<nParticles; i++)
+    {
+        pair<int, int> id(i, i);
+//        if(isStatic(i))
+//            continue;
         for(Force *oneBodyForce:m_oneBodyForces)
         {
             oneBodyForce->calculateForces(id);

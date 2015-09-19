@@ -23,7 +23,6 @@ public:
 
     virtual void stepForward(int i);
     void iterate();
-    void addQsModifiers(Modifier * mod);
 
 protected:
     virtual void checkInitialization();
@@ -32,9 +31,6 @@ protected:
     virtual void integrateStepOne();
     virtual void integrateStepTwo();
     void staticModifiers();
-
-    vector<Modifier*> m_qsModifiers;
-
 };
 //------------------------------------------------------------------------------
 }

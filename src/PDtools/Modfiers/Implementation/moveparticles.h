@@ -11,7 +11,7 @@ class MoveParticles: public Modifier
 public:
     MoveParticles(double velAmplitude, double velOrientation,
                    pair<double, double> boundary, int boundaryOrientation,
-                  double dt = 1.0);
+                  double dt, bool isStatic);
     ~MoveParticles();
 
     virtual void evaluateStepOne();
@@ -25,6 +25,7 @@ private:
     pair<double, double> m_boundary;
     int m_boundaryOrientation;
     double m_dt;
+    bool m_isStatic;
 };
 //------------------------------------------------------------------------------
 }

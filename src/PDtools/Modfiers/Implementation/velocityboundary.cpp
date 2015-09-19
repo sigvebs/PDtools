@@ -9,7 +9,8 @@ VelocityBoundary::VelocityBoundary(double velAmplitude,
                                    double velOrientation,
                                    pair<double, double> boundary,
                                    int boundaryOrientation,
-                                   int steps)
+                                   double dt,
+                                   int steps, bool isStatic)
 {
     m_velAmplitude = velAmplitude;
     m_velOritentation = velOrientation;
@@ -17,6 +18,21 @@ VelocityBoundary::VelocityBoundary(double velAmplitude,
     m_boundaryOrientation = boundaryOrientation;
     m_dv = velAmplitude / steps;
     m_v = 0;
+    m_dt = dt;
+    m_isStatic = isStatic;
+
+    if(m_velOritentation == 0)
+    {
+        m_otherAxis = {1, 2};
+    }
+    else if(m_velOritentation == 1)
+    {
+        m_otherAxis = {0, 2};
+    }
+    else if(m_velOritentation == 2)
+    {
+        m_otherAxis = {1, 2};
+    }
 }
 //------------------------------------------------------------------------------
 VelocityBoundary::~VelocityBoundary()
@@ -24,29 +40,66 @@ VelocityBoundary::~VelocityBoundary()
 
 }
 //------------------------------------------------------------------------------
-void VelocityBoundary::evaluateStepTwo()
+void VelocityBoundary::evaluateStepOne()
 {
-    arma::mat & v = m_particles->v();
-    arma::mat & F = m_particles->F();
-
-    for(pair<int, int> &idCol:m_boundaryParticles)
-    {
-        int col_i = idCol.second;
-        v(0, col_i) = 0.0;
-        F(0, col_i) = 0.0;
-        v(1, col_i) = 0.0;
-        F(1, col_i) = 0.0;
-        v(2, col_i) = 0.0;
-        F(2, col_i) = 0.0;
-
-        v(m_boundaryOrientation, col_i) = m_v;
-        F(m_boundaryOrientation, col_i) = 0.0;
-    }
-
     if(fabs(m_v) < fabs(m_velAmplitude))
     {
         m_v += m_dv;
     }
+
+    arma::mat & v = m_particles->v();
+    arma::mat & r = m_particles->r();
+    arma::mat & F = m_particles->F();
+    arma::mat &data = m_particles->data();
+    arma::imat & isStatic = m_particles->isStatic();
+
+    const int colRho = m_particles->getParamId("rho");
+    const double v_dt = m_v * m_dt;
+    const double dtRhoHalf = 0.5*m_dt;
+
+    for(pair<int, int> &idCol:m_boundaryParticles)
+    {
+        int col_i = idCol.second;
+
+        v(m_boundaryOrientation, col_i) = m_v;
+        if(isStatic(col_i))
+            r(m_boundaryOrientation, col_i) += v_dt;
+
+//        double rho = data(col_i, colRho);
+//        double dtRho = dtRhoHalf/rho;
+//        for(int d:m_otherAxis)
+//        {
+//            v(d, col_i) += F(d, col_i)*dtRho;
+//            r(d, col_i) += v(d, col_i)*m_dt;
+//        }
+//        for(int d:m_otherAxis)
+//        {
+//            F(d, col_i) = 0;
+//        }
+        F(m_boundaryOrientation, col_i) = 0;
+    }
+}
+//------------------------------------------------------------------------------
+void VelocityBoundary::evaluateStepTwo()
+{
+//    arma::mat & v = m_particles->v();
+//    arma::mat & F = m_particles->F();
+//    arma::mat &data = m_particles->data();
+//    const int colRho = m_particles->getParamId("rho");
+//    const double dtRhoHalf = 0.5*m_dt;
+
+
+//    for(pair<int, int> &idCol:m_boundaryParticles)
+//    {
+//        int col_i = idCol.second;
+
+//        double rho = data(col_i, colRho);
+//        double dtRho = dtRhoHalf/rho;
+//        for(int d:m_otherAxis)
+//        {
+//            v(d, col_i) += F(d, col_i)*dtRho;
+//        }
+//    }
 }
 //------------------------------------------------------------------------------
 void VelocityBoundary::initialize()
@@ -54,6 +107,7 @@ void VelocityBoundary::initialize()
     // Selecting particles
     const arma::mat & r = m_particles->r();
     arma::mat & data = m_particles->data();
+    arma::imat & isStatic = m_particles->isStatic();
     int unbreakablePos;
 
     if(m_particles->hasParameter("unbreakable"))
@@ -77,14 +131,19 @@ void VelocityBoundary::initialize()
         if(m_boundary.first <= pos && pos < m_boundary.second)
         {
             pair<int, int> pId(i, i);
+            if(m_isStatic)
+                isStatic(pId.second) = 1;
+#ifdef USE_OPENMP
 #pragma omp critical
+#endif
             m_boundaryParticles.push_back(pId);
+            data(i, unbreakablePos) = 1;
         }
 
         if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second)
         {
 //#pragma omp critical
-            data(i, unbreakablePos) = 1;
+//            data(i, unbreakablePos) = 1;
             n++;
         }
     }

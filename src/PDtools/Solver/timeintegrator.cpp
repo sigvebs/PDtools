@@ -22,19 +22,19 @@ void TimeIntegrator::solve()
 //------------------------------------------------------------------------------
 void TimeIntegrator::stepForward(int i)
 {
-    integrateStepOne();
-    updateGridAndCommunication();
-
+    save(i);
     modifiersStepOne();
+    integrateStepOne();
+    zeroForcesAndStress();
+
+    updateGridAndCommunication();
 
     calculateForces();
 
     modifiersStepTwo();
     integrateStepTwo();
 
-    save(i);
     m_t += m_dt;
-
     //    modifiersStepOne();
 //    integrateStepOne();
 
