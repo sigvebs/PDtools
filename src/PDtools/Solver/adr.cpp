@@ -52,7 +52,7 @@ void ADR::iterate()
     int counter = 0;
     int minSteps = 100;
     int maxSteps = 1000;
-    maxSteps = 400;
+//    maxSteps = 400;
     int nParticles = m_particles->nParticles();
 
     do

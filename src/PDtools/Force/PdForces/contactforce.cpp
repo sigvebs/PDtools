@@ -40,7 +40,8 @@ ContactForce::ContactForce(PD_Particles &particles, Grid & grid, double spacing)
 {
     m_verletRadius = 3.1*spacing;
     m_forceScaling = 10.0;
-    m_scaling = 0.60;
+    m_forceScaling = 15.0;
+    m_scaling = 0.90;
 
     m_verletListId = particles.registerVerletList("contectForce");
     particles.setVerletUpdateFreq(25);

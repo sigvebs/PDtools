@@ -6,7 +6,6 @@
 
 namespace PDtools
 {
-
 //------------------------------------------------------------------------------
 class PD_bondforceGaussian: public Force
 {
@@ -17,8 +16,10 @@ private:
     int m_indexVolumeScaling;
     int m_indexForceScaling;
     int m_indexStretch;
-    int m_indexExponent;
+    int m_indexWeightFunction;
     int m_indexConnected;
+
+    std::string m_weightType;
 
     arma::mat & m_r;
     arma::mat & m_F;
@@ -32,7 +33,7 @@ private:
     };
 
 public:
-    PD_bondforceGaussian(PD_Particles &particles);
+    PD_bondforceGaussian(PD_Particles &particles, std::string weightType="constant");
     ~PD_bondforceGaussian();
     virtual void calculateForces(const std::pair<int, int> & idCol);
     virtual double calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
@@ -47,6 +48,10 @@ public:
                                      double dt);
 
     virtual void initialize(double E, double nu, double delta, int dim, double h);
+    void initializeConstant();
+    void initializeLinear();
+    void initializeGaussian();
+    void initializeSigmoid();
 };
 //------------------------------------------------------------------------------
 }

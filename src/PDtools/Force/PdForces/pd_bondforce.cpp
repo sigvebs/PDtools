@@ -29,6 +29,7 @@ PD_bondForce::PD_bondForce(PD_Particles &particles):
     m_indexDr0 = m_particles.getPdParamId("dr0");
     m_indexVolumeScaling = m_particles.getPdParamId("volumeScaling");
     m_indexForceScaling = m_particles.registerPdParameter("forceScalingBond", 1);
+    //m_indexWeightfunction = m_particles.registerPdParameter("weightFunction", 1);
     m_indexStretch = m_particles.registerPdParameter("stretch");
     m_indexConnected = m_particles.getPdParamId("connected");
     m_indexCompute = m_particles.getPdParamId("compute");
@@ -141,17 +142,22 @@ void PD_bondForce::calculateForces(const pair<int, int> &idCol)
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(d, j) - m_r(d, i);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
-        const double dr = sqrt(dr2);
+        double dr = sqrt(dr2);
         double ds = dr - dr0;
 
         // To avoid roundoff errors
         if (fabs(ds) < THRESHOLD)
             ds = 0.0;
 
+        if(dr < 0)
+        {
+            ds = 0;
+            dr = 1.0;
+        }
         const double s = ds/dr0;
         const double fbond_ij = c_ij*s*vol_j*volumeScaling/dr;
 #ifdef USE_N3L
@@ -233,6 +239,11 @@ void PD_bondForce::calculateForces(const pair<int, int> &idCol)
 
         con.second[m_indexStretch] = stretch;
     }*/
+}
+
+void PD_bondForce::calculateLinearForces(const std::pair<int, int> &idCol)
+{
+
 }
 //------------------------------------------------------------------------------
 double PD_bondForce::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)

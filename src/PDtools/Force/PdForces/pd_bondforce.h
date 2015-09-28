@@ -17,6 +17,7 @@ private:
     int m_indexVolumeScaling;
     int m_indexStretch;
     int m_indexForceScaling;
+    int m_indexWeightfunction;
     int m_indexConnected;
     int m_indexCompute;
 
@@ -34,6 +35,7 @@ public:
     PD_bondForce(PD_Particles &particles);
     ~PD_bondForce();
     virtual void calculateForces(const std::pair<int, int> & idCol);
+    virtual void calculateLinearForces(const std::pair<int, int> & idCol);
     virtual double calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
     virtual void calculatePotentialEnergy(const std::pair<int, int> & idCol,
                                           int indexPotential);

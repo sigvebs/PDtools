@@ -85,9 +85,9 @@ void PmbFracture::evaluateStepOne(const pair<int, int> &id_col)
         s0_new = std::max(s0_new, s0_tmp);
     }
 
-    if(s0_new < m_s00)
-        (*m_data)(col_i, m_indexS_tmp) = m_s00;
-    else
+//    if(s0_new < m_s00)
+//        (*m_data)(col_i, m_indexS_tmp) = m_s00;
+//    else
         (*m_data)(col_i, m_indexS_tmp) = s0_new;
 }
 //------------------------------------------------------------------------------

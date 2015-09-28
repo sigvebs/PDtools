@@ -11,6 +11,6 @@ int main(int argc, char **argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
 //    ::testing::GTEST_FLAG(filter) = "PD_SOLVER_FIXTURE*";
-    ::testing::GTEST_FLAG(filter) = "PD_STRETCH_FIXTURE*";
+    ::testing::GTEST_FLAG(filter) = "PD_LINEAR_SOLVER_FIXTURE*";
     return RUN_ALL_TESTS();
 }
