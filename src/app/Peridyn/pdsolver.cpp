@@ -116,7 +116,7 @@ void PdSolver::initialize()
         exit(EXIT_FAILURE);
     }
 
-    double gridspacing = 1.1*delta;
+    double gridspacing = 1.2*delta;
     m_grid = Grid(domain, gridspacing);
     m_grid.initialize();
     m_grid.placeParticlesInGrid(m_particles);
@@ -151,6 +151,7 @@ void PdSolver::initialize()
     {
         useS0fromCfg = true;
     }
+
 
     m_particles.registerParameter("rho", rho);
     m_particles.registerParameter("s0", s0);
@@ -207,6 +208,12 @@ void PdSolver::initialize()
         {
             forces.push_back(new PD_bondforceGaussian(m_particles));
         }
+        else if(type == "weighted bond")
+        {
+            string weightType;
+            cfg_forces[i].lookupValue("weightType", weightType);
+            forces.push_back(new PD_bondforceGaussian(m_particles, weightType));
+        }
         else if(type == "contact force")
         {
             forces.push_back(new ContactForce(m_particles, m_grid, lc));
@@ -219,7 +226,6 @@ void PdSolver::initialize()
         force->numericalInitialization(calculateMicromodulus);
         force->initialize(E, nu, delta, dim, h);
     }
-
     //--------------------------------------------------------------------------
     // Recalcuating particle properties
     //--------------------------------------------------------------------------

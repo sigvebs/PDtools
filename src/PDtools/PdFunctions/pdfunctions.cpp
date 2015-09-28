@@ -7,7 +7,7 @@
 #include "PDtools/Force/force.h"
 
 #define USE_EXTENDED_RANGE_RADIUS 0
-#define USE_EXTENDED_RANGE_LC 1
+#define USE_EXTENDED_RANGE_LC 0
 
 namespace PDtools
 {
@@ -27,6 +27,8 @@ void setPdConnections(PD_Particles & particles,
     particles.registerPdParameter("dr0");
     particles.registerPdParameter("connected");
 
+    int nFour = 0;
+    int nElse = 0;
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
@@ -124,12 +126,24 @@ void setPdConnections(PD_Particles & particles,
 #pragma omp critical
             {
                 particles.setPdConnections(id_i, connectionsVector);
+
+                if(connectionsVector.size() == 4)
+                    nFour++;
+                else
+                    nElse++;
+
+
             }
 #else
             particles.setPdConnections(id_i, connectionsVector);
 #endif
         }
     }
+
+    double scale = nFour / double(nFour + nElse);
+
+    cout << scale << endl;
+
 }
 //------------------------------------------------------------------------------
 void applyVolumeCorrection(PD_Particles &particles, double delta, double lc)
@@ -170,6 +184,7 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc)
                 volumeCorrection = 0.5*(delta + radius_j - dr)/radius_j;
             }
             con.second[indexVolumeScaling] = volumeCorrection;
+            //con.second[indexVolumeScaling] = 1;
             const double vol_i = data(i, indexVolume);
             vol_delta += vol_i*volumeCorrection;
         }

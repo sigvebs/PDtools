@@ -1,5 +1,8 @@
-CONFIG += OPENMP
+CONFIG *= OPENMP
 #DEFINES *= USE_N3L
+
+contains(CONFIG, OPENMP):message(Building with OPENMP)
+contains(DEFINES, USE_N3L):message(Building with N3L)
 
 #-------------------------------------------------------------------------------
 # Optimizations
@@ -34,15 +37,12 @@ INCLUDEPATH += $$SRC_DIR/PDtools
 #INCLUDEPATH += -I /usr/include/python2.7/
 #LIBS *= -lboost_program_options -lboost_python
 
-LIBS *=  -lconfig++ -larmadillo -llapack -lblas
+LIBS *=  -lconfig++
+#LIBS *=  -larmadillo -llapack -lopenblas
+LIBS *=  -larmadillo -llapack -lblas
 LIBS *=  -lboost_system -lboost_filesystem
 
-COMMON_CXXFLAGS += -std=c++11
-COMMON_CXXFLAGS += -Wno-sign-compare
-
-QMAKE_CXXFLAGS += $$COMMON_CXXFLAGS
-QMAKE_CXXFLAGS_RELEASE += $$COMMON_CXXFLAGS
-QMAKE_CXXFLAGS_DEBUG += $$COMMON_CXXFLAGS
+CONFIG += c++11
 
 #LIBS += -L$$TOP_OUT_PWD/src/PDtools -lPDtools
 
