@@ -1,0 +1,10 @@
+PDtools
+============
+
+A library for Peridynamics simulations written in C++11.
+
+Dependencies:
+ - boost-dev: system, algorithm, filesystem, mpi
+ - blas
+ - armadillo
+ - libconfig++

@@ -5,10 +5,8 @@
 #include <vector>
 #include <string>
 
-
 namespace PDtools
 {
-
 using namespace std;
 
 class PD_Particles;

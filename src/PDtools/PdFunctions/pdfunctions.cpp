@@ -7,7 +7,7 @@
 #include "PDtools/Force/force.h"
 
 #define USE_EXTENDED_RANGE_RADIUS 0
-#define USE_EXTENDED_RANGE_LC 1
+#define USE_EXTENDED_RANGE_LC 0
 
 namespace PDtools
 {
@@ -184,6 +184,7 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc)
                 volumeCorrection = 0.5*(delta + radius_j - dr)/radius_j;
             }
             con.second[indexVolumeScaling] = volumeCorrection;
+            //con.second[indexVolumeScaling] = 1;
             const double vol_i = data(i, indexVolume);
             vol_delta += vol_i*volumeCorrection;
         }

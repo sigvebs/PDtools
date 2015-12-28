@@ -1,0 +1,5 @@
+nParticles = 4000
+spacing = 2.50000e-02
+latticePoints = "[39, 39, 1]"
+boundaries = "[0.00000e+00, 1.00000e+00, 0.00000e+00, 1.00000e+00, -1.25000e-02, 1.25000e-02]"
+periodic = "[false, false, false]"
