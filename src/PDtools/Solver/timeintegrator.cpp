@@ -12,6 +12,9 @@ void TimeIntegrator::solve()
 {
     initialize();
     checkInitialization();
+    calculateForces();
+
+    cout << "Starting time integration " << endl;
 
     // Looping over all time, particles and components.
     for (int i = 0; i < m_steps; i++)
@@ -35,18 +38,6 @@ void TimeIntegrator::stepForward(int i)
     integrateStepTwo();
 
     m_t += m_dt;
-    //    modifiersStepOne();
-//    integrateStepOne();
-
-//    updateGridAndCommunication();
-
-//    calculateForces();
-
-//    integrateStepTwo();
-//    modifiersStepTwo();
-
-//    save(i);
-//    m_t += m_dt;
 }
 //------------------------------------------------------------------------------
 void TimeIntegrator::initialize()

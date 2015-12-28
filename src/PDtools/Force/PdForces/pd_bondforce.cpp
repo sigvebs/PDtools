@@ -6,11 +6,7 @@ namespace PDtools
 {
 //------------------------------------------------------------------------------
 PD_bondForce::PD_bondForce(PD_Particles &particles):
-    Force(particles),
-    m_r(m_particles.r()),
-    m_F(m_particles.F()),
-    m_data(m_particles.data()),
-    m_pIds(m_particles.pIds())
+    Force(particles)
 {
     m_indexMicromodulus = m_particles.registerParameter("micromodulus", 1);
 
@@ -25,6 +21,7 @@ PD_bondForce::PD_bondForce(PD_Particles &particles):
              << "Errorcode: " << MicrmodulusNotSet << endl;
         throw MicrmodulusNotSet;
     }
+
     m_indexVolume = m_particles.getParamId("volume");
     m_indexDr0 = m_particles.getPdParamId("dr0");
     m_indexVolumeScaling = m_particles.getPdParamId("volumeScaling");
@@ -48,7 +45,7 @@ void PD_bondForce::calculateForces(const pair<int, int> &idCol)
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
-    const arma::vec3 r_i = m_r.col(col_i);
+    const arma::vec3 r_i = m_r.row(col_i);
 
     double f_ix = 0;
     double f_iy = 0;
@@ -80,9 +77,9 @@ void PD_bondForce::calculateForces(const pair<int, int> &idCol)
         const int col_j = col_js[j];
         const double dr0Len = dr0Lens[j];
 
-        const double dx = m_r(X, col_j) - r_i(X);
-        const double dy = m_r(Y, col_j) - r_i(Y);
-        const double dz = m_r(Z, col_j) - r_i(Z);
+        const double dx = m_r(col_j, X) - r_i(X);
+        const double dy = m_r(col_j, Y) - r_i(Y);
+        const double dz = m_r(col_j, Z) - r_i(Z);
 
         const double drLen = sqrt(dx*dx + dy*dy + dz*dz);
         const double ds = drLen - dr0Len;
@@ -100,24 +97,18 @@ void PD_bondForce::calculateForces(const pair<int, int> &idCol)
     {
         PDconnections[j].second[m_indexStretch] = stretchs[j];
     }
-    m_F(X, col_i) += f_ix;
-    m_F(Y, col_i) += f_iy;
-    m_F(Z, col_i) += f_iz;
+    m_F(col_i, X) += f_ix;
+    m_F(col_i, Y) += f_iy;
+    m_F(col_i, Z) += f_iz;
 #else
     const int pId = idCol.first;
     const int i = idCol.second;
     const double c_i = m_data(i, m_indexMicromodulus);
+#ifdef USE_N3L
     const double vol_i = m_data(i, m_indexVolume);
+#endif
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-    double r_i[m_dim];
-    double f_i[m_dim];
-    for(int d=0; d<m_dim; d++)
-    {
-        f_i[d] = 0;
-        r_i[d] = m_r(d, i);
-    }
 
     const int nConnections = PDconnections.size();
     double dr_ij[m_dim];
@@ -142,7 +133,7 @@ void PD_bondForce::calculateForces(const pair<int, int> &idCol)
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - m_r(d, i);
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
@@ -166,84 +157,20 @@ void PD_bondForce::calculateForces(const pair<int, int> &idCol)
 
         for(int d=0; d<m_dim; d++)
         {
-            m_F(d, i) += dr_ij[d]*fbond_ij;
+            m_F(i, d) += dr_ij[d]*fbond_ij;
 #ifdef USE_N3L
-            m_F(d, j) += dr_ij[d]*fbond_ji;
+            m_F(j, d) += dr_ij[d]*fbond_ji;
 #endif
         }
 
         con.second[m_indexStretch] = s;
     }
-
-//    for(int d=0; d<m_dim; d++)
-//    {
-//        m_F(d, i) += f_i[d];
-//    }
-#endif
-    /*
-     *     int pId = idCol.first;
-    int col_i = idCol.second;
-    double c_i = m_data(col_i, m_indexMicromodulus);
-
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-//    double x_i = m_r(X, col_i);
-//    double y_i = m_r(Y, col_i);
-//    double z_i = m_r(Z, col_i);
-    double r_i[3];
-    for(int d=0; d<3; d++)
-    {
-        r_i[d] = m_r(d, col_i);
-    }
-    double dr_ij[3];
-
-    const int nConnections = PDconnections.size();
-#pragma simd
-    for(int j=0; j<nConnections; j++)
-//        for(auto &con:PDconnections)
-    {
-        auto &con = PDconnections[j];
-        int id_j = con.first;
-        int col_j = m_pIds[id_j];
-
-        double c_j = m_data(col_j, m_indexMicromodulus);
-        double vol_j = m_data(col_j, m_indexVolume);
-        double dr0Len         = con.second[m_indexDr0];
-        double volumeScaling   = con.second[m_indexVolumeScaling];
-        double c_ij = 0.5*(c_i + c_j);
-
-        double drSquared = 0;
-        for(int d=0; d<3; d++)
-        {
-            dr_ij[d] = m_r(d, col_j) - r_i[d];
-            drSquared = dr_ij[d]*dr_ij[d];
-        }
-//        dr_ij[X] = m_r(X, col_j) - x_i;
-//        dr_ij[Y] = m_r(Y, col_j) - y_i;
-//        dr_ij[Z] = m_r(Z, col_j) - z_i;
-
-//        double drSquared = dr_ij[X]*dr_ij[X] + dr_ij[Y]*dr_ij[Y] + dr_ij[Z]*dr_ij[Z];
-        double drLen = sqrt(drSquared);
-        double ds = drLen - dr0Len;
-
-        // To avoid roundoff errors
-        if (fabs(ds) < THRESHOLD)
-            ds = 0.0;
-
-        double stretch = ds/dr0Len;
-        double fbond = c_ij*stretch*vol_j*volumeScaling/drLen;
-
-        m_F(X, col_i) += dr_ij[X]*fbond;
-        m_F(Y, col_i) += dr_ij[Y]*fbond;
-        m_F(Z, col_i) += dr_ij[Z]*fbond;
-
-        con.second[m_indexStretch] = stretch;
-    }*/
+#endif 
 }
-
+//------------------------------------------------------------------------------
 void PD_bondForce::calculateLinearForces(const std::pair<int, int> &idCol)
 {
-
+    (void) idCol;
 }
 //------------------------------------------------------------------------------
 double PD_bondForce::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
@@ -275,7 +202,7 @@ double PD_bondForce::calculatePotentialEnergyDensity(const std::pair<int, int> &
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - m_r(d, i);
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
@@ -299,19 +226,13 @@ void PD_bondForce::calculateStress(const std::pair<int, int> &idCol, const int (
     const int pId = idCol.first;
     const int i = idCol.second;
     const double c_i = m_data(i, m_indexMicromodulus);
+#ifdef USE_N3L
     const double vol_i = m_data(i, m_indexVolume);
+#endif
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
-    double r_i[m_dim];
-    for(int d=0; d<m_dim; d++)
-    {
-        r_i[d] = m_r(d, i);
-    }
-
     double dr_ij[m_dim];
-//    double f[m_dim];
-
     const int nConnections = PDconnections.size();
 
     for(int l_j=0; l_j<nConnections; l_j++)
@@ -325,7 +246,7 @@ void PD_bondForce::calculateStress(const std::pair<int, int> &idCol, const int (
 
         const double c_j = m_data(j, m_indexMicromodulus);
         const double vol_j = m_data(j, m_indexVolume);
-        const double dr0 = con.second[m_indexDr0];
+        //const double dr0 = con.second[m_indexDr0];
         const double volumeScaling = con.second[m_indexVolumeScaling];
         const double g_ij = con.second[m_indexForceScaling];
         const double c_ij = 0.5*(c_i + c_j)*g_ij;
@@ -334,7 +255,7 @@ void PD_bondForce::calculateStress(const std::pair<int, int> &idCol, const int (
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
@@ -390,9 +311,9 @@ double PD_bondForce::calculateStableMass(const std::pair<int, int> &idCol, doubl
 
     const arma::mat & matR0 = m_particles.r0();
 
-    const double x_a = matR0(X, col_a);
-    const double y_a = matR0(Y, col_a);
-    const double z_a = matR0(Z, col_a);
+    const double x_a = matR0(col_a, X);
+    const double y_a = matR0(col_a, Y);
+    const double z_a = matR0(col_a, Z);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
@@ -412,9 +333,9 @@ double PD_bondForce::calculateStableMass(const std::pair<int, int> &idCol, doubl
             const int id_b = con.first;
             const int col_b = m_pIds[id_b];
 
-            dr0[X] = x_a - matR0(X, col_b);
-            dr0[Y] = y_a - matR0(Y, col_b);
-            dr0[Z] = z_a - matR0(Z, col_b);
+            dr0[X] = x_a - matR0(col_b, X);
+            dr0[Y] = y_a - matR0(col_b, Y);
+            dr0[Z] = z_a - matR0(col_b, Z);
 
             const double c_b = m_data(col_b, m_indexMicromodulus);
             const double vol_b = m_data(col_b, m_indexVolume);
@@ -450,13 +371,13 @@ double PD_bondForce::calculateStableMass(const std::pair<int, int> &idCol, doubl
         }
     }
 
-    double stableMass = 2*0.25*pow(dt, 2)*stiffness;
+    double stableMass = 4*0.25*pow(dt, 2)*stiffness;
     return stableMass;
 }
 //------------------------------------------------------------------------------
-void PD_bondForce::initialize(double E, double nu, double delta, int dim, double h)
+void PD_bondForce::initialize(double E, double nu, double delta, int dim, double h, double lc)
 {
-    Force::initialize(E, nu, delta, dim, h);
+    Force::initialize(E, nu, delta, dim, h, lc);
     double k;
     double c;
 
@@ -484,21 +405,6 @@ void PD_bondForce::initialize(double E, double nu, double delta, int dim, double
         cerr << "use 1, 2 or 3." << endl;
         exit(EXIT_FAILURE);
     }
-    // Testing a new coefficient
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
-//    for(int i=0; i<m_particles.nParticles(); i++)
-//    {
-//        int pId = i;
-
-//        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-//        for(auto &con:PDconnections)
-//        {
-//            double dr0Len = con.second[m_indexDr0];
-//            con.second[m_indexForceScaling] = (1 - dr0Len/delta);
-//        }
-//    }
 
     if(m_numericalInitialization){
         m_particles.setParameter("micromodulus", k);
@@ -510,33 +416,33 @@ void PD_bondForce::initialize(double E, double nu, double delta, int dim, double
     }
 
     // Scaling the bond force
-    double dimScaling = 2.*k*pow(dim, 2.);    
+    const double dimScaling = 2.*k*pow(dim, 2.);
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles.nParticles(); i++)
+    for(unsigned int i=0; i<m_particles.nParticles(); i++)
     {
-        int pId = i;
-        int col_i = i;
+        const int pId = i;
+        const int col_i = i;
         double dRvolume = 0;
         double v = 0;
 
         vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
         for(auto &con:PDconnections)
         {
-            int id_j = con.first;
-            int col_j = m_pIds[id_j];
-            double volumeScaling = con.second[m_indexVolumeScaling];
-            double dr0Len = con.second[m_indexDr0];
-            double g_ij = con.second[m_indexForceScaling];
+            const int id_j = con.first;
+            const int col_j = m_pIds[id_j];
+            const double volumeScaling = con.second[m_indexVolumeScaling];
+            const double dr0Len = con.second[m_indexDr0];
+            const double g_ij = con.second[m_indexForceScaling];
             dRvolume +=   dr0Len*m_data(col_j, m_indexVolume)*volumeScaling*g_ij;
             v += m_data(col_j, m_indexVolume)*volumeScaling;
         }
-        double c_i = dimScaling/dRvolume;
-        double l_delta = pow((3.*v/(4.*M_PI)), 1./3.);
-        double c_j = 18*k/(M_PI*pow(l_delta, 4));
+        const double c_i = dimScaling/dRvolume;
         m_data(col_i, m_indexMicromodulus) = c_i;
+//        double l_delta = pow((3.*v/(4.*M_PI)), 1./3.);
+//        double c_j = 18*k/(M_PI*pow(l_delta, 4));
 //        m_data(col_i, m_indexMicromodulus) = c_j;
     }
 }

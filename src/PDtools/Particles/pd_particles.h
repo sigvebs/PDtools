@@ -12,63 +12,89 @@ namespace PDtools
 class PD_Particles: public Particles
 {
 protected:
-    arma::mat m_r0;
-    arma::mat m_v;
-    arma::mat m_F;
+    mat m_r0;
+    mat m_v;
+    mat m_F;
+    mat m_b;
+    mat m_u;
 
     // For ADR
-    arma::vec m_stableMass;
-    arma::mat m_Fold;
+    vec m_stableMass;
+    mat m_Fold;
 
-    std::unordered_map<int, std::vector<std::pair<int, vector<double>>>> m_PdConnections;
-    std::unordered_map<std::string, int> m_PdParameters;
+    unordered_map<int, vector<pair<int, vector<double>>>> m_PdConnections;
+    unordered_map<string, int> m_PdParameters;
 
 public:
     PD_Particles();
 
     ~PD_Particles();
 
+    virtual void
+    initializeMatrices();
 
-    virtual void initializeMatrices();
+    void
+    initializeADR();
 
-    void initializeADR();
+    void
+    initializeBodyForces();
 
-    void setPdConnections(int id, vector<std::pair<int, std::vector<double>>> connections)
+    void
+    setPdConnections(int id, vector<pair<int, vector<double>>> connections)
     {
         m_PdConnections[id] = connections;
     }
 
-    std::vector<std::pair<int, std::vector<double>>> & pdConnections(int id)
+    vector<pair<int, vector<double>>> &
+    pdConnections(int id)
     {
         return m_PdConnections.at(id);
     }
 
-    arma::mat & r0()
+    mat &
+    r0()
     {
         return m_r0;
     }
 
-    arma::mat & v()
+    mat &
+    v()
     {
         return m_v;
     }
 
-    arma::mat & F()
+    mat &
+    F()
     {
         return m_F;
     }
 
-    arma::vec & stableMass()
+    vec &
+    stableMass()
     {
         return m_stableMass;
     }
 
-    arma::mat & Fold()
+    mat &
+    Fold()
     {
         return m_Fold;
     }
 
-    int getPdParamId(string paramId)
+    mat &
+    b()
+    {
+        return m_b;
+    }
+
+    mat &
+    u()
+    {
+        return m_u;
+    }
+
+    int
+    getPdParamId(string paramId)
     {
         if(m_PdParameters.count(paramId) != 1)
         {
@@ -92,7 +118,7 @@ public:
         m_PdParameters[paramId] = pos;
 
         // Adding the new parameter to all connections
-        for(int col=0;col<m_nParticles; col++)
+        for(unsigned int col=0;col<m_nParticles; col++)
         {
             for(auto &con:m_PdConnections[col])
             {
@@ -102,6 +128,10 @@ public:
 
         return pos;
     }
+
+    void
+    dimensionalScaling(const double E0, const double L0, const double v0,
+                       const double t0, const double rho0);
 };
 //------------------------------------------------------------------------------
 }

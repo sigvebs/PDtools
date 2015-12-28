@@ -57,8 +57,8 @@ void BondEnergyFracture::evaluateStepOne(const pair<int, int> &pIdcol)
 
     for(auto &con:PDconnections)
     {
-        int id_j = con.first;
-        int col_j = (*m_pIds)[id_j];
+        const int id_j = con.first;
+        const int col_j = (*m_pIds)[id_j];
 
         if((*m_data)(col_j, m_indexUnbreakable) >= 1)
             continue;
@@ -70,13 +70,7 @@ void BondEnergyFracture::evaluateStepOne(const pair<int, int> &pIdcol)
         const double c = 0.5*(c_i + c_j)*g_ij;
         const double s = con.second[m_indexStretch];
         const double dr0 = con.second[m_indexDr0];
-//        const double w = 0.5*c*s*s*dr0;
-        double w = 0;
-//        for(Force *force:m_forces)
-//        {
-//            force->updateState();
-////            w += force->calculateBondEnergy(pIdcol, con);
-//        }
+        const double w = 0.5*c*s*s*dr0;
         if(w > m_wc)
         {
             con.second[m_indexConnected] = 0;

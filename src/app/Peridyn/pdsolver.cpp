@@ -1,14 +1,19 @@
 #include "pdsolver.h"
 
-#include <unordered_map>
-#include <vector>
 #include <PDtools/PdFunctions/pdfunctions.h>
 #include <PDtools/Force/forces.h>
 #include <PDtools/Modfiers/modifiers.h>
 #include <PDtools/Solver/solvers.h>
 
-using namespace PDtools;
+#include <armadillo>
+#include <boost/regex.hpp>
+#include <unordered_map>
+#include <vector>
 
+
+using namespace PDtools;
+using namespace arma;
+using namespace libconfig;
 //------------------------------------------------------------------------------
 PdSolver::PdSolver(string cfgPath):
     m_configPath(cfgPath)
@@ -20,16 +25,25 @@ PdSolver::PdSolver(string cfgPath):
     }
     catch (const FileIOException &fioex)
     {
-        std::cerr << "I/O error while reading the configuration file." << std::endl;
+        std::cerr << "I/O error while reading the configuration file."
+                  << std::endl;
         exit(EXIT_FAILURE);
     }
     catch (const ParseException &pex)
     {
-        std::cerr << "Parse error at " << pex.getFile() << ":" << pex.getLine()
+        std::cerr << "Parse error at "
+                  << pex.getFile()
+                  << ":"
+                  << pex.getLine()
                   << " - " << pex.getError() << std::endl;
         exit(EXIT_FAILURE);
     }
     m_cfg.setAutoConvert(true);
+
+    // TODO: TMP FIXES, WEIRD COMPILER STUFF
+//    vec be(2);
+//    be.randu();
+//    boost::regex rr("([A-Za-z_]+)");
 }
 //------------------------------------------------------------------------------
 PdSolver::~PdSolver()
@@ -44,11 +58,31 @@ void PdSolver::initialize()
     double G0 = -1;
     double rho = -1;
 
+    double E0 = 1;
+    double L0 = 1;
+    double v0 = 1;
+    double t0 = 1;
+    double rho0 = 1;
+
     m_cfg.lookupValue("dim", dim);
     m_cfg.lookupValue("E", E);
     m_cfg.lookupValue("nu", nu);
     m_cfg.lookupValue("G0", G0);
     m_cfg.lookupValue("rho", rho);
+
+    // Checking for dimensional scaling
+    int scaleparameters = 0;
+    m_cfg.lookupValue("scaleparameters", scaleparameters);
+
+    if(scaleparameters)
+    {
+        m_cfg.lookupValue("E0", E0);
+        m_cfg.lookupValue("L0", L0);
+        m_cfg.lookupValue("v0", v0);
+        m_cfg.lookupValue("t0", t0);
+        m_cfg.lookupValue("rho0", rho0);
+    }
+
     //--------------------------------------------------------------------------
     // Setting the domain
     //--------------------------------------------------------------------------
@@ -71,33 +105,35 @@ void PdSolver::initialize()
     for(int d=0; d<3; d++)
     {
         pair<double, double> bound(cfg_domain[2*d], cfg_domain[2*d+1]);
+        bound.first /= L0;
+        bound.second /= L0;
         dxdydz[d] = bound.second - bound.first;
         domain.push_back(bound);
     }
-
     // TODO: periodic boundaries
     //--------------------------------------------------------------------------
     // Loading the particles
     //--------------------------------------------------------------------------
-    string particlesPath;
-    if(!m_cfg.lookupValue("particlesPath", particlesPath))
+    if(!m_cfg.exists("particlesPath"))
     {
         cerr << "'particlesPath' must be set in the configuration file" << endl;
         exit(EXIT_FAILURE);
     }
+    string particlesPath = (const char *) m_cfg.lookup("particlesPath");
     m_particles = load_pd(particlesPath);
-    m_particles.initializeADR();
+    m_particles.dimensionalScaling(E0, L0, v0, t0, rho0);
+    cout << "Loading particles complete" << endl;
     //--------------------------------------------------------------------------
     // TODO: Setting the initial position, should not be done here
     //--------------------------------------------------------------------------
     mat &r0 = m_particles.r0();
-    mat &r = m_particles.r();
+    const mat &r = m_particles.r();
 
-    for(int i=0; i<m_particles.nParticles(); i++)
+    for(unsigned int i=0; i<m_particles.nParticles(); i++)
     {
         for(int d=0; d<3; d++)
         {
-            r0(d, i) = r(d,i);
+            r0(i, d) = r(i, d);
         }
     }
     //--------------------------------------------------------------------------
@@ -115,59 +151,57 @@ void PdSolver::initialize()
         cerr << "'lc' must be set in the configuration file" << endl;
         exit(EXIT_FAILURE);
     }
+    lc /= L0;
+    delta /= L0;
 
-    double gridspacing = 1.2*delta;
+    cout << "gridspacing" << endl;
+    const double gridspacing = 1.2*delta;
+    cout << "Grid" << endl;
     m_grid = Grid(domain, gridspacing);
+    m_grid.dim = dim;
+    cout << "initialize" << endl;
     m_grid.initialize();
+    cout << "placeParticlesInGrid" << endl;
     m_grid.placeParticlesInGrid(m_particles);
+    cout << "Particles placed in grid" << endl;
     //--------------------------------------------------------------------------
     // Setting particles parameters
     //--------------------------------------------------------------------------
-    double k;
-
     double h = dxdydz[2];
     double s0 = 1;
 
-    if(dim == 3)
-    {
-        k = E/(3.*(1. - 2.*nu));
-    }
-    else if(dim == 2)
-    {
-        k = E/(2.*(1. - nu));
-    }
-    else if(dim == 1)
-    {
-        k = E;
-    }
-    else
-    {
-        cerr << "ERROR: dimension " << dim << " not supported" << endl;
-        cerr << "use 1, 2 or 3." << endl;
-        exit(EXIT_FAILURE);
-    }
     bool useS0fromCfg = false;
     if(m_cfg.lookupValue("s0", s0))
     {
         useS0fromCfg = true;
     }
 
-
-    m_particles.registerParameter("rho", rho);
+    m_particles.registerParameter("rho", rho/rho0);
     m_particles.registerParameter("s0", s0);
     m_particles.registerParameter("radius");
     calculateRadius(m_particles, dim, dxdydz[2]);
 
     int calculateMicromodulus = 0;
     m_cfg.lookupValue("calculateMicromodulus", calculateMicromodulus);
+    cout << "Additional parameters set" << endl;
     //--------------------------------------------------------------------------
     // Setting the PD-connections
     //--------------------------------------------------------------------------
-    lc *= 1.05;
+    //lc *= 1.05;
+
+    bool applyVolumeCorrectio = true;
     setPdConnections(m_particles, m_grid, delta, lc);
+    addFractures(m_particles, domain);
+    removeVoidConnections(m_particles, m_grid, delta, lc);
+    cleanUpPdConnections(m_particles);
     m_particles.registerPdParameter("volumeScaling", 1);
-    applyVolumeCorrection(m_particles, delta, lc);
+
+    if(applyVolumeCorrectio)
+    {
+        applyVolumeCorrection(m_particles, delta, lc);
+    }
     setPD_N3L(m_particles);
+    cout << "PD connections set" << endl;
     //--------------------------------------------------------------------------
     // Setting the Forces
     //--------------------------------------------------------------------------
@@ -176,8 +210,10 @@ void PdSolver::initialize()
     Setting &cfg_forces = m_cfg.lookup("forces");
     for(int i=0; i<cfg_forces.getLength(); i++)
     {
-        string type;
-        cfg_forces[i].lookupValue("type", type);
+        const char * tmpType;
+        cfg_forces[i].lookupValue("type", tmpType);
+        string type = tmpType;
+        delete tmpType;
 
         if(type == "bond force")
         {
@@ -220,12 +256,14 @@ void PdSolver::initialize()
         }
     }
 
+
     // Initializing forces
-    for(Force* force: forces)
+    for(Force* force:forces)
     {
         force->numericalInitialization(calculateMicromodulus);
-        force->initialize(E, nu, delta, dim, h);
+        force->initialize(E/E0, nu, delta, dim, h, lc);
     }
+    cout << "Forces set" << endl;
     //--------------------------------------------------------------------------
     // Recalcuating particle properties
     //--------------------------------------------------------------------------
@@ -233,9 +271,14 @@ void PdSolver::initialize()
     m_cfg.lookupValue("applySurfaceCorrection", applySurfaceCorrection);
     if(applySurfaceCorrection)
     {
-        for(Force* force: forces)
+        for(Force* force:forces)
         {
-            force->applySurfaceCorrection();
+            int nSurfaceCorrections = 20;
+            for(int i=0; i<nSurfaceCorrections; i++)
+            {
+                //force->applySurfaceCorrection(0.0005);
+                force->applySurfaceCorrection(0.001);
+            }
         }
     }
 
@@ -256,10 +299,12 @@ void PdSolver::initialize()
             exit(EXIT_FAILURE);
         }
     }
+    cout << "Corrections set" << endl;
     //--------------------------------------------------------------------------
     // Setting the solver
     //--------------------------------------------------------------------------
-    string solverType = m_cfg.lookup("solverType");
+    string solverType = (const char *) m_cfg.lookup("solverType");
+
     int nSteps;
     double dt;
 
@@ -271,9 +316,14 @@ void PdSolver::initialize()
 
     if(solverType == "ADR")
     {
+        m_particles.initializeADR();
         ADR *adrSolver = new ADR();
         dt = 1.0;
         double errorThreshold;
+        int maxSteps = 2000;
+        int maxStepsFracture = 1000;
+        m_cfg.lookupValue("maxSteps", maxSteps);
+        m_cfg.lookupValue("maxStepsFracture", maxStepsFracture);
 
         if(!m_cfg.lookupValue("errorThreshold", errorThreshold))
         {
@@ -281,12 +331,32 @@ void PdSolver::initialize()
             exit(EXIT_FAILURE);
         }
 
+        adrSolver->maxSteps(maxSteps);
+        adrSolver->maxStepsFracture(maxStepsFracture);
         adrSolver->setErrorThreshold(errorThreshold);
         solver = adrSolver;
+    }
+    else if(solverType == "dynamic ADR")
+    {
+        m_particles.initializeADR();
+        solver = new dynamicADR();
+        m_cfg.lookupValue("dt", dt);
+    }
+    else if(solverType == "conjugate gradient")
+    {
+        const int maxIterations = 20000;
+        const int threshold = 3.e-8;
+        solver = new StaticSolver(maxIterations, threshold);
+        m_cfg.lookupValue("dt", dt);
     }
     else if(solverType == "velocity verlet")
     {
         solver = new VelocityVerletIntegrator();
+        m_cfg.lookupValue("dt", dt);
+    }
+    else if(solverType == "euler-chromer")
+    {
+        solver = new EulerCromerIntegrator();
         m_cfg.lookupValue("dt", dt);
     }
     else
@@ -294,6 +364,9 @@ void PdSolver::initialize()
         cerr << "Error: solver not set" << endl;
         exit(EXIT_FAILURE);
     }
+    dt /= t0;
+
+    cout << "Solver set" << endl;
     //--------------------------------------------------------------------------
     // Setting the modifiers
     //--------------------------------------------------------------------------
@@ -304,8 +377,10 @@ void PdSolver::initialize()
     Setting &cfg_modifiers = m_cfg.lookup("modifiers");
     for(int i=0; i<cfg_modifiers.getLength(); i++)
     {
-        string type;
-        cfg_modifiers[i].lookupValue("type", type);
+        const char * tmpType;
+        cfg_modifiers[i].lookupValue("type", tmpType);
+        string type = tmpType;
+        delete tmpType;
 
         if(type == "velocity particles")
         {
@@ -317,6 +392,8 @@ void PdSolver::initialize()
             double a0 = cfg_modifiers[i]["area"][0];
             double a1 = cfg_modifiers[i]["area"][1];
             cfg_modifiers[i].lookupValue("static", isStatic);
+            a0 /= L0;
+            a1 /= L0;
 
             pair<double, double> area(a0, a1);
 
@@ -328,6 +405,7 @@ void PdSolver::initialize()
                      << type << "'" << endl;
                 exit(EXIT_FAILURE);
             }
+            v /= v0;
             modifiers.push_back(new VelocityBoundary(v, vAxis, area, axis,
                                                      dt, nSteps, isStatic));
         }
@@ -340,6 +418,8 @@ void PdSolver::initialize()
             double a0 = cfg_modifiers[i]["area"][0];
             double a1 = cfg_modifiers[i]["area"][1];
             cfg_modifiers[i].lookupValue("static", isStatic);
+            a0 /= L0;
+            a1 /= L0;
 
             pair<double, double> area(a0, a1);
 
@@ -351,16 +431,20 @@ void PdSolver::initialize()
                      << type << "'" << endl;
                 exit(EXIT_FAILURE);
             }
+            v /= v0;
 
             modifiers.push_back(new MoveParticles(v, vAxis, area, axis, dt, isStatic));
         }
-        else if(type == "force density")
+        else if(type == "boundary force")
         {
             double appliedForce;
             int axis, forceAxis;
 
             double a0 = cfg_modifiers[i]["area"][0];
             double a1 = cfg_modifiers[i]["area"][1];
+            a0 /= L0;
+            a1 /= L0;
+
 
             pair<double, double> area(a0, a1);
 
@@ -372,6 +456,7 @@ void PdSolver::initialize()
                      << type << "'" << endl;
                 exit(EXIT_FAILURE);
             }
+            appliedForce /= (E0/pow(L0, 4));
 
             if(solverType == "ADR")
             {
@@ -435,6 +520,8 @@ void PdSolver::initialize()
                      << type << "'" << endl;
                 exit(EXIT_FAILURE);
             }
+            C /= E0;
+            T /= E0;
 
             if(solverType == "ADR")
             {
@@ -514,6 +601,7 @@ void PdSolver::initialize()
         mod->initialize();
     }
 
+    cout << "Modifiers set" << endl;
     //--------------------------------------------------------------------------
     // Setting additional initial conditions
     //--------------------------------------------------------------------------
@@ -522,8 +610,10 @@ void PdSolver::initialize()
         Setting &cfg_initialConditions = m_cfg.lookup("initialConditions");
         for(int i=0; i<cfg_initialConditions.getLength(); i++)
         {
-            string type;
-            cfg_initialConditions[i].lookupValue("type", type);
+            const char * tmpType;
+            cfg_initialConditions[i].lookupValue("type", tmpType);
+            string type = tmpType;
+            delete tmpType;
 
             if(type == "strain")
             {
@@ -532,6 +622,8 @@ void PdSolver::initialize()
 
                 double a0 = cfg_initialConditions[i]["area"][0];
                 double a1 = cfg_initialConditions[i]["area"][1];
+                a0 /= L0;
+                a1 /= L0;
 
                 pair<double, double> area(a0, a1);
 
@@ -548,7 +640,7 @@ void PdSolver::initialize()
         }
     }
 
-
+    cout << "Initial conditions set" << endl;
     //--------------------------------------------------------------------------
     // Adding the modifiers and forces to the solver
     //--------------------------------------------------------------------------
@@ -583,13 +675,12 @@ void PdSolver::initialize()
         cerr << "Error reading the 'saveFrequency' in config file" << endl;
         exit(EXIT_FAILURE);
     }
-
-    string savePath;
-    if (!m_cfg.lookupValue("savePath", savePath))
+    if(!m_cfg.exists("savePath"))
     {
         cerr << "Error reading the 'savePath' in config file" << endl;
         exit(EXIT_FAILURE);
     }
+    string savePath = (const char *) m_cfg.lookup("savePath");
 
     vector<string> saveParameters;
     if(m_cfg.exists("saveParameters"))
@@ -605,8 +696,9 @@ void PdSolver::initialize()
         cerr << "No saveParamters set" << endl;
         exit(EXIT_FAILURE);
     }
-
+    solver->setDim(dim);
     solver->setSavePath(savePath);
+    solver->setSaveScaling(E0, L0, v0, t0, rho0);
     solver->setSaveInterval(saveFrequency);
     solver->setSaveParameters(saveParameters);
 }

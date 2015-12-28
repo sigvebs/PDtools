@@ -50,33 +50,33 @@ void VelocityBoundary::evaluateStepOne()
     arma::mat & v = m_particles->v();
     arma::mat & r = m_particles->r();
     arma::mat & F = m_particles->F();
-    arma::mat &data = m_particles->data();
+//    arma::mat &data = m_particles->data();
     arma::imat & isStatic = m_particles->isStatic();
 
-    const int colRho = m_particles->getParamId("rho");
+//    const int colRho = m_particles->getParamId("rho");
     const double v_dt = m_v * m_dt;
-    const double dtRhoHalf = 0.5*m_dt;
+//    const double dtRhoHalf = 0.5*m_dt;
 
     for(pair<int, int> &idCol:m_boundaryParticles)
     {
         int col_i = idCol.second;
 
-        v(m_boundaryOrientation, col_i) = m_v;
+        v(col_i, m_boundaryOrientation) = m_v;
         if(isStatic(col_i))
-            r(m_boundaryOrientation, col_i) += v_dt;
+            r(col_i, m_boundaryOrientation) += v_dt;
 
 //        double rho = data(col_i, colRho);
 //        double dtRho = dtRhoHalf/rho;
 //        for(int d:m_otherAxis)
 //        {
-//            v(d, col_i) += F(d, col_i)*dtRho;
-//            r(d, col_i) += v(d, col_i)*m_dt;
+//            v(col_i, d) += F(col_i, d)*dtRho;
+//            r(col_i, d) += v(col_i, d)*m_dt;
 //        }
 //        for(int d:m_otherAxis)
 //        {
-//            F(d, col_i) = 0;
+//            F(col_i, d) = 0;
 //        }
-        F(m_boundaryOrientation, col_i) = 0;
+        F(col_i, m_boundaryOrientation) = 0;
     }
 }
 //------------------------------------------------------------------------------
@@ -97,7 +97,7 @@ void VelocityBoundary::evaluateStepTwo()
 //        double dtRho = dtRhoHalf/rho;
 //        for(int d:m_otherAxis)
 //        {
-//            v(d, col_i) += F(d, col_i)*dtRho;
+//            v(col_i, d) += F(col_i, d)*dtRho;
 //        }
 //    }
 }
@@ -124,10 +124,10 @@ void VelocityBoundary::initialize()
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles->nParticles(); i++)
+    for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
         int col_i = i;
-        double pos = r(m_boundaryOrientation, col_i);
+        double pos = r(col_i, m_boundaryOrientation);
         if(m_boundary.first <= pos && pos < m_boundary.second)
         {
             pair<int, int> pId(i, i);

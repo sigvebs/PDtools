@@ -93,7 +93,7 @@ void LoadPdParticles::loadBody(PD_Particles &particles,
 
 
     // Reading all the data from file
-    for(int i=0; i<particles.nParticles(); i++)
+    for(unsigned int i=0; i<particles.nParticles(); i++)
     {
         vector<string> lineSplit;
         getline(rawData, line);
@@ -114,11 +114,11 @@ void LoadPdParticles::loadBody(PD_Particles &particles,
 
         for(pair<int, int> pc:position_config)
         {
-            r(pc.first, i) = stod(lineSplit[pc.second]);
+            r(i, pc.first) = stod(lineSplit[pc.second]);
         }
         for(pair<int, int> vc:velocity_config)
         {
-            v(vc.first, i) = stod(lineSplit[vc.second]);
+            v(i, vc.first) = stod(lineSplit[vc.second]);
         }
         for(pair<int, int> dfc:data_config_mapping)
         {
@@ -209,7 +209,7 @@ void LoadPdParticles::loadBinaryBody(PD_Particles &particles,
     int nColumns = m_nColumns;
 
     // Reading all the data from file
-    for(int i=0; i<particles.nParticles(); i++)
+    for(unsigned int i=0; i<particles.nParticles(); i++)
     {
         double line[nColumns];
         fread(&line[0], nColumns*sizeof(double), 1, rawData);
@@ -228,11 +228,11 @@ void LoadPdParticles::loadBinaryBody(PD_Particles &particles,
 
         for(pair<int, int> pc:position_config)
         {
-            r(pc.first, i) = line[pc.second];
+            r(i, pc.first) = line[pc.second];
         }
         for(pair<int, int> vc:velocity_config)
         {
-            v(vc.first, i) = line[vc.second];
+            v(i, vc.first) = line[vc.second];
         }
         for(pair<int, int> dfc:data_config_mapping)
         {
@@ -247,7 +247,7 @@ PD_Particles load_pd(string loadPath)
     vector<string> lineSplit;
 
     boost::split(lineSplit, loadPath, boost::is_any_of("."), boost::token_compress_on);
-    string type = lineSplit.back();
+    const string type = lineSplit.back();
 
     PD_Particles particles = loadParticles.load(loadPath, type);
 

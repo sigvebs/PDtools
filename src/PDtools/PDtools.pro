@@ -6,9 +6,6 @@ CONFIG   -= qt
 
 include(../../defaults.pri)
 
-DEFINES *= ARMA_NO_DEBUG
-#LIBS *=  -lboost_system -lboost_filesystem
-
 HEADERS += \
     PDtools.h \
     Particles/particles.h \
@@ -51,7 +48,10 @@ HEADERS += \
     Modfiers/Implementation/boundaryforce.h \
     Modfiers/Implementation/bondenergyfracture.h \
     Modfiers/Implementation/simplefracture.h \
-    Force/PdForces/pd_lps.h
+    Force/PdForces/pd_lps.h \
+    Solver/ADRsolvers/dynamicadr.h \
+    Solver/staticsolver.h \
+    Solver/TimeIntegrators/eulercromerintegrator.h
 
 SOURCES += \
     Grid/grid.cpp \
@@ -91,7 +91,10 @@ SOURCES += \
     Modfiers/Implementation/boundaryforce.cpp \
     Modfiers/Implementation/bondenergyfracture.cpp \
     Modfiers/Implementation/simplefracture.cpp \
-    Force/PdForces/pd_lps.cpp
+    Force/PdForces/pd_lps.cpp \
+    Solver/ADRsolvers/dynamicadr.cpp \
+    Solver/staticsolver.cpp \
+    Solver/TimeIntegrators/eulercromerintegrator.cpp
 
 #headers.path    = $$OUT_PWD
 #headers.files   += $$HEADERS

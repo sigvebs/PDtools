@@ -15,11 +15,11 @@ class SaveParticles
 {
 private:
     string m_format;
-    vector<string> m_saveParameters;
+    std::vector<std::pair<std::string, double>> m_saveParameters;
     bool m_binary = false;
     bool m_saveId;
-    vector<int> m_saveCoordinates;
-    vector<int> m_dataParameters;
+    vector<pair<int, double>> m_saveCoordinates;
+    vector<pair<int, double>> m_dataParameters;
     vector<string> m_header;
     bool m_append = false;
     int m_timestep = 0;
@@ -35,7 +35,7 @@ public:
         ;
     }
     SaveParticles(string format,
-                 vector<string> saveParameters,
+                 std::vector<std::pair<std::string, double>> saveParameters,
                  bool binary = false):
         m_format(format),
         m_saveParameters(saveParameters),
@@ -43,39 +43,52 @@ public:
     {
         ;
     }
-    void writeToFile(Particles &particles, const string &savePath);
+    void
+    writeToFile(Particles &particles, const string &savePath);
 
-    void append(bool append)
+    void
+    append(bool append)
     {
         m_append = append;
     }
-    void binary(bool binary)
+
+    void
+    binary(bool binary)
     {
         m_binary = binary;
     }
 
-    void setTimestep(int timestep)
+    void
+    setTimestep(int timestep)
     {
         m_timestep = timestep;
     }
 
 private:
-    void initialize(Particles &particles);
+    void
+    initialize(Particles &particles);
 
-    void writeBody(Particles &particles,
+    void
+    writeBody(Particles &particles,
                    const string &savePath);
-    void writeBinaryBody(Particles &particles,
+    void
+    writeBinaryBody(Particles &particles,
                          const string &savePath);
 
-    void write_xyzHeader(const Particles &particles,
+    void
+    write_xyzHeader(const Particles &particles,
                          const string &savePath);
-    void write_plyHeader(const Particles &particles,
+    void
+    write_plyHeader(const Particles &particles,
                          const string &savePath);
-    void write_lmpHeader(const Particles &particles,
+    void
+    write_lmpHeader(const Particles &particles,
                          const string &savePath);
-    void write_plyBinaryHeader(const Particles &particles,
+    void
+    write_plyBinaryHeader(const Particles &particles,
                          const string &savePath);
-    void write_lmpBinaryHeader(Particles &particles,
+    void
+    write_lmpBinaryHeader(Particles &particles,
                          const string &savePath);
 };
 }

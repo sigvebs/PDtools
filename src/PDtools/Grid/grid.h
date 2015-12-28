@@ -3,8 +3,8 @@
 
 #include <iostream>
 #include <math.h>
-#include <armadillo>
 #include <unordered_map>
+#include <armadillo>
 
 namespace PDtools
 {

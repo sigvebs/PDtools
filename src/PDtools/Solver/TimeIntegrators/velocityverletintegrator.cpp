@@ -26,29 +26,29 @@ void VelocityVerletIntegrator::integrateStepOne()
     // x(t + dt)    = x(t) + v(t + 0.5dt) dt
     mat & r = m_particles->r();
     mat & v = m_particles->v();
-    mat & F = m_particles->F();
+    const mat & F = m_particles->F();
     const mat & data = m_particles->data();
-    double dtRhoHalf = 0.5*m_dt;
-    arma::imat & isStatic = m_particles->isStatic();
+    const double dtRhoHalf = 0.5*m_dt;
+    const arma::imat & isStatic = m_particles->isStatic();
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles->nParticles(); i++)
+    for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
-        int col_i = i;
+        const int col_i = i;
         if(isStatic(col_i))
         {
             continue;
         }
-        double rho = data(col_i, m_colRho);
-        double dtRho = dtRhoHalf/rho;
+        const double rho = data(col_i, m_colRho);
+        const double dtRho = dtRhoHalf/rho;
 
         for(int d=0; d<m_dim; d++)
         {
-            const double Fd = F(d, col_i)*dtRho;
-            v(d, col_i) += Fd;
-            r(d, col_i) += v(d, col_i)*m_dt;
+            const double Fd = F(col_i, d)*dtRho;
+            v(col_i, d) += Fd;
+            r(col_i, d) += v(col_i, d)*m_dt;
         }
     }
 }
@@ -59,25 +59,25 @@ void VelocityVerletIntegrator::integrateStepTwo()
     mat & v = m_particles->v();
     const mat & F = m_particles->F();
     const mat & data = m_particles->data();
-    double dtRhoHalf = 0.5*m_dt;
-    arma::imat & isStatic = m_particles->isStatic();
+    const double dtRhoHalf = 0.5*m_dt;
+    const arma::imat & isStatic = m_particles->isStatic();
 
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles->nParticles(); i++)
+    for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
-        int col_i = i;
+        const int col_i = i;
         if(isStatic(col_i))
             continue;
 
-        double rho = data(col_i, m_colRho);
-        double dtRho = dtRhoHalf/rho;
+        const double rho = data(col_i, m_colRho);
+        const double dtRho = dtRhoHalf/rho;
 
         for(int d=0; d<m_dim; d++)
         {
-            v(d, col_i) += F(d, col_i)*dtRho;
+            v(col_i, d) += F(col_i, d)*dtRho;
         }
     }
 }

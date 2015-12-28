@@ -6,12 +6,7 @@ namespace PDtools
 {
 //------------------------------------------------------------------------------
 PD_LPS::PD_LPS(PD_Particles &particles):
-    Force(particles),
-    m_r(m_particles.r()),
-    m_r0(m_particles.r0()),
-    m_F(m_particles.F()),
-    m_data(m_particles.data()),
-    m_pIds(m_particles.pIds())
+    Force(particles)
 {
     m_iTheta = m_particles.registerParameter("theta", 0);
     m_iThetaNew = m_particles.registerParameter("thetaNew", 0);
@@ -50,17 +45,6 @@ void PD_LPS::calculateForces(const std::pair<int, int> &idCol)
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
-    double r_i[m_dim];
-    double r0_i[m_dim];
-    double f_i[m_dim];
-
-    for(int d=0; d<m_dim; d++)
-    {
-        f_i[d] = 0;
-        r_i[d] = m_r(d, i);
-        r0_i[d] = m_r0(d, i);
-    }
-
     const int nConnections = PDconnections.size();
     double dr_ij[m_dim];
 
@@ -87,7 +71,7 @@ void PD_LPS::calculateForces(const std::pair<int, int> &idCol)
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
@@ -100,7 +84,7 @@ void PD_LPS::calculateForces(const std::pair<int, int> &idCol)
 
         for(int d=0; d<m_dim; d++)
         {
-            m_F(d, i) += dr_ij[d]*bond;
+            m_F(i, d) += dr_ij[d]*bond;
         }
 
         con.second[m_iStretch] = ds/dr0;
@@ -116,14 +100,6 @@ double PD_LPS::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
     const double m_i = m_data(i, m_iMass);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-    double r_i[m_dim];
-    double r0_i[m_dim];
-    for(int d=0; d<m_dim; d++)
-    {
-        r_i[d] = m_r(d, i);
-        r0_i[d] = m_r0(d, i);
-    }
 
     const int nConnections = PDconnections.size();
     double dr_ij[m_dim];
@@ -152,7 +128,7 @@ double PD_LPS::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
@@ -195,7 +171,7 @@ double PD_LPS::computeDilation(const std::pair<int, int> &idCol)
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - m_r(d, i);
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
@@ -231,14 +207,6 @@ void PD_LPS::calculateStress(const std::pair<int, int> &idCol, const int (&index
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
-    double r_i[3];
-    double r0_i[3];
-    for(int d=0; d<m_dim; d++)
-    {
-        r_i[d] = m_r(d, i);
-        r0_i[d] = m_r0(d, i);
-    }
-
     const int nConnections = PDconnections.size();
     double dr_ij[m_dim];
 
@@ -264,7 +232,7 @@ void PD_LPS::calculateStress(const std::pair<int, int> &idCol, const int (&index
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
@@ -338,7 +306,7 @@ double PD_LPS::calculateStableMass(const std::pair<int, int> &idCol, double dt)
 
             for(int d=0; d<m_dim; d++)
             {
-                dr0[d] = matR0(d, a) - matR0(d, b);
+                dr0[d] = matR0(a, d) - matR0(b, d);
             }
 
             const double m_b = m_data(b, m_iMass);
@@ -380,9 +348,9 @@ double PD_LPS::calculateStableMass(const std::pair<int, int> &idCol, double dt)
     return stableMass;
 }
 //------------------------------------------------------------------------------
-void PD_LPS::initialize(double E, double nu, double delta, int dim, double h)
+void PD_LPS::initialize(double E, double nu, double delta, int dim, double h, double lc)
 {
-    Force::initialize(E, nu, delta, dim, h);
+    Force::initialize(E, nu, delta, dim, h, lc);
     m_delta = delta;
     m_dim = dim;
     m_mu = 0.5*E/(1 + nu);
@@ -417,7 +385,7 @@ void PD_LPS::calculateMass()
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles.nParticles(); i++)
+    for(unsigned int i=0; i<m_particles.nParticles(); i++)
     {
         pair<int, int> id_col(i, i);
 
@@ -481,14 +449,14 @@ void PD_LPS::applySurfaceCorrection(double strain)
 # pragma omp parallel for
 #endif
         // Applying uniaxial stretch
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             const int col_i = idCol.second;
 
             for(int d=0; d<m_dim; d++)
             {
-                m_r(d, col_i) = (1 + strainFactor(d))*m_r(d, col_i);
+                m_r(col_i, d) = (1 + strainFactor(d))*m_r(col_i, d);
             }
         }
 
@@ -497,7 +465,7 @@ void PD_LPS::applySurfaceCorrection(double strain)
 # pragma omp parallel for
 #endif
         // Calculating the elastic energy density
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             const int col_i = idCol.second;
@@ -510,15 +478,15 @@ void PD_LPS::applySurfaceCorrection(double strain)
 # pragma omp parallel for
 #endif
         // Resetting the positions
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             int col_i = idCol.second;
 
             for(int d=0; d<m_dim; d++)
             {
-//                m_r(d, col_i) = m_r(d, col_i)/(1 + strainFactor(d));
-                m_r(d, col_i) = m_r0(d, col_i);
+//                m_r(col_i, d) = m_r(col_i, d)/(1 + strainFactor(d));
+                m_r(col_i, d) = m_r0(col_i, d);
             }
         }
     }
@@ -557,7 +525,7 @@ void PD_LPS::applySurfaceCorrection(double strain)
 //# pragma omp parallel for
 //#endif
         // Applying uniaxial stretch
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             int col_i = idCol.second;
@@ -565,7 +533,7 @@ void PD_LPS::applySurfaceCorrection(double strain)
             for(int d=0; d<m_dim; d++)
             {
                 double shear = strainFactor(d)*m_r(axis(d), col_i);
-                m_r(d, col_i) = m_r(d, col_i) + shear;
+                m_r(col_i, d) = m_r(col_i, d) + shear;
             }
         }
 
@@ -574,7 +542,7 @@ void PD_LPS::applySurfaceCorrection(double strain)
         //# pragma omp parallel for
         //#endif
         // Calculating the elastic energy density
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             const int col_i = idCol.second;
@@ -587,15 +555,15 @@ void PD_LPS::applySurfaceCorrection(double strain)
 //# pragma omp parallel for
 //#endif
         // Resetting the positions
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             int col_i = idCol.second;
 
             for(int d=0; d<m_dim; d++)
             {
-//                m_r(d, col_i) = m_r(d, col_i) - strainFactor(d)*m_r(axis(d), col_i);
-                m_r(d, col_i) = m_r0(d, col_i);
+//                m_r(col_i, d) = m_r(col_i, d) - strainFactor(d)*m_r(axis(d), col_i);
+                m_r(col_i, d) = m_r0(col_i, d);
             }
         }
     }
@@ -606,7 +574,7 @@ void PD_LPS::applySurfaceCorrection(double strain)
 //#ifdef USE_OPENMP
 //# pragma omp parallel for
 //#endif
-    for(int i=0; i<m_particles.nParticles(); i++)
+    for(unsigned int i=0; i<m_particles.nParticles(); i++)
     {
         pair<int, int> idCol(i, i);
         int pId = idCol.first;
@@ -620,7 +588,7 @@ void PD_LPS::applySurfaceCorrection(double strain)
             int col_j = m_pIds[id_j];
 
             double dr0Len = con.second[m_iDr0];
-            arma::vec3 n = (m_r.col(col_i) - m_r.col(col_j))/dr0Len;
+            arma::vec3 n = (m_r.row(col_i).t() - m_r.row(col_j).t())/dr0Len;
 
             arma::vec3 gd_mean;
             arma::vec3 gb_mean;

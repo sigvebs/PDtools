@@ -108,7 +108,7 @@ void test_stretch(string project_folder, int n, string save_folder)
     {
         for(int d=0; d<3; d++)
         {
-            r0(d, i) = r(d,i);
+            r0(i, d) = r(i, d);
         }
     }
 
@@ -185,8 +185,8 @@ void test_stretch(string project_folder, int n, string save_folder)
     //--------------------------------------------------------------------------
     for(int i=0; i<particles.nParticles(); i++)
     {
-        r(0,i) *= (1 + epsilon);
-        r(1,i) *= (1 - nu*epsilon);
+        r(i, 0) *= (1 + epsilon);
+        r(i, 1) *= (1 - nu*epsilon);
     }
     //--------------------------------------------------------------------------
     // Calculating the forces

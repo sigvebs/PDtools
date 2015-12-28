@@ -31,7 +31,7 @@ protected:
         v_y << 0.265347 << 0.101397 << 0.112907 << 0.329744 << 0.695344 << 0.0504753 << 0.536449 << 0.346610 << 0.168145 << 0.166564 << 0.111014;
         volume << 8.76566e-06 << 8.22899e-06 << 8.0501e-06  << 8.31843e-06 << 7.78176e-06 << 6.44008e-06 << 7.33453e-06 << 8.0501e-06 << 8.31843e-06 << 7.0662e-06 << 8.13954e-06 << arma::endr;
 
-        r = _r;
+        r = _r.t();
         data.col(parameters["v_x"]) = v_x;
         data.col(parameters["v_y"]) = v_y;
         data.col(parameters["volume"]) = volume;
@@ -69,10 +69,10 @@ TEST_F(PARTICLES_FIXTURE, LOAD_XYZ)
         int id_test = testParticles.pIds()[i];
         int id_load = particles.pIds()[i];
 
-        ASSERT_EQ(r_test(0, id_test), r(0, id_load));
-        ASSERT_EQ(r_test(1, id_test), r(1, id_load));
-        ASSERT_EQ(r_test(0, id_test), r(0, id_load));
-        ASSERT_EQ(r_test(1, id_test), r(1, id_load));
+        ASSERT_EQ(r_test(id_test, 0), r(id_load, 0));
+        ASSERT_EQ(r_test(id_test, 1), r(id_load, 1));
+        ASSERT_EQ(r_test(id_test, 0), r(id_load, 0));
+        ASSERT_EQ(r_test(id_test, 1), r(id_load, 1));
 
         for(auto param:parameters)
         {
@@ -216,7 +216,7 @@ TEST_F(PARTICLES_FIXTURE, VERLET_LIST)
 
     for(const pair<int, int> &idCol:pIds)
     {
-        int gridId = grid.gridId(R.col(idCol.second));
+        int gridId = grid.gridId(R.row(idCol.second));
         data(idCol.second, gridID) = gridId;
         data(idCol.second, connectionsID) = particles.verletList(idCol.first).size();
     }

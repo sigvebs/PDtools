@@ -3,10 +3,7 @@
 
 #include <armadillo>
 #include <unordered_map>
-#include <stdexcept>
-#include <regex>
 #include <boost/algorithm/string.hpp>
-#include <fstream>
 
 using namespace std;
 
@@ -30,27 +27,29 @@ protected:
     int m_nColumns;
     int m_chunkLength;
 
-    virtual unordered_map <string, int> read_xyzHeader(fstream &data);
+    virtual unordered_map <string, int>
+    read_xyzHeader(fstream &data);
 
-    virtual unordered_map <string, int> read_lmpBinaryHeader(FILE *data,
-                                                     unordered_map<string, int> parameters);
+    virtual unordered_map <string, int>
+    read_lmpBinaryHeader(FILE *data, unordered_map<string, int> parameters);
 
-    virtual unordered_map <string, int> read_plyBinaryHeader(FILE *data,
-                                                     unordered_map<string, int> parameters);
+    virtual unordered_map <string, int>
+    read_plyBinaryHeader(FILE *data, unordered_map<string, int> parameters);
 
-    virtual void loadBody(T_particles &particles, fstream &data,
-                  unordered_map <string, int> parameters);
+    virtual void
+    loadBody(T_particles &particles, fstream &data, unordered_map <string, int> parameters);
 
-    virtual void loadBinaryBody(T_particles &particles, FILE *data,
-                        unordered_map <string, int> parameters);
+    virtual void
+    loadBinaryBody(T_particles &particles, FILE *data, unordered_map <string, int> parameters);
 
 public:
     T_LoadParticles();
 
-    virtual T_particles load(string loadPath,
-                    string format,
-                    bool bin=false,
-                    unordered_map<string, int> loadParameters={{}});
+    virtual T_particles
+    load(string loadPath,
+         string format,
+         bool bin=false,
+         unordered_map<string, int> loadParameters={{}});
 
     void useLegacyFormat(bool ulf)
     {

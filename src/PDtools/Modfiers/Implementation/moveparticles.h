@@ -25,6 +25,7 @@ private:
     pair<double, double> m_boundary;
     int m_boundaryOrientation;
     double m_dt;
+    double m_time;
     bool m_isStatic;
 };
 //------------------------------------------------------------------------------

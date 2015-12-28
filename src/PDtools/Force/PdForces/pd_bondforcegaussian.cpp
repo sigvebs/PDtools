@@ -8,10 +8,6 @@ namespace PDtools
 PD_bondforceGaussian::PD_bondforceGaussian(PD_Particles &particles,
                                            std::string weightType):
     Force(particles),
-    m_r(m_particles.r()),
-    m_F(m_particles.F()),
-    m_data(m_particles.data()),
-    m_pIds(m_particles.pIds()),
     m_weightType(weightType)
 {
     m_indexMicromodulus = m_particles.registerParameter("micromodulus", 1);
@@ -57,10 +53,10 @@ void PD_bondforceGaussian::calculateForces(const std::pair<int, int> &idCol)
             continue;
 
         const int id_j = con.first;
-        const int col_j = m_pIds[id_j];
+        const int j = m_pIds[id_j];
 
-        const double c_j = m_data(col_j, m_indexMicromodulus);
-        const double vol_j = m_data(col_j, m_indexVolume);
+        const double c_j = m_data(j, m_indexMicromodulus);
+        const double vol_j = m_data(j, m_indexVolume);
         const double dr0         = con.second[m_indexDr0];
         const double volumeScaling   = con.second[m_indexVolumeScaling];
         const double g_ij = con.second[m_indexForceScaling];
@@ -70,7 +66,7 @@ void PD_bondforceGaussian::calculateForces(const std::pair<int, int> &idCol)
         double dr2 = 0;
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, col_j) - m_r(d, i);
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
@@ -89,9 +85,9 @@ void PD_bondforceGaussian::calculateForces(const std::pair<int, int> &idCol)
 
         for(int d=0; d<m_dim; d++)
         {
-            m_F(d, i) += dr_ij[d]*fbond_ij;
+            m_F(i, d) += dr_ij[d]*fbond_ij;
 #ifdef USE_N3L
-            m_F(d, j) += dr_ij[d]*fbond_ji;
+            m_F(j, d) += dr_ij[d]*fbond_ji;
 #endif
         }
 
@@ -117,20 +113,20 @@ double PD_bondforceGaussian::calculatePotentialEnergyDensity(const std::pair<int
             continue;
 
         const int id_j = con.first;
-        const int col_j = m_pIds[id_j];
+        const int j = m_pIds[id_j];
 
-        const double vol_j = m_data(col_j, m_indexVolume);
+        const double vol_j = m_data(j, m_indexVolume);
         const double dr0         = con.second[m_indexDr0];
         const double volumeScaling   = con.second[m_indexVolumeScaling];
         const double g_ij = con.second[m_indexForceScaling];
         const double w_ij = con.second[m_indexWeightFunction];
-        const double c_j = m_data(col_j, m_indexMicromodulus);
+        const double c_j = m_data(j, m_indexMicromodulus);
         const double c_ij = 0.5*(c_i + c_j)*w_ij*g_ij;
 
         double dr2 = 0;
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, col_j) - m_r(d, i);
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
@@ -158,19 +154,19 @@ void PD_bondforceGaussian::calculatePotentialEnergy(const std::pair<int, int> &i
 double PD_bondforceGaussian::calculateBondEnergy(const std::pair<int, int> &idCol, pair<int, vector<double> > &con)
 {
     // PD_bond
-    const int pId = idCol.first;
-    const int col_i = idCol.second;
-    const double c_i = m_data(col_i, m_indexMicromodulus);
+//    const int pId = idCol.first;
+    const int i = idCol.second;
+    const double c_i = m_data(i, m_indexMicromodulus);
 
     const int id_j = con.first;
-    const int col_j = m_pIds[id_j];
+    const int j = m_pIds[id_j];
 
-    const double vol_j = m_data(col_j, m_indexVolume);
+    const double vol_j = m_data(j, m_indexVolume);
     const double dr0Len         = con.second[m_indexDr0];
     const double volumeScaling   = con.second[m_indexVolumeScaling];
     const double g_ij = con.second[m_indexForceScaling];
     const double w_ij = con.second[m_indexWeightFunction];
-    const double c_j = m_data(col_j, m_indexMicromodulus);
+    const double c_j = m_data(j, m_indexMicromodulus);
     const double c = 0.5*(c_i + c_j)*w_ij*g_ij;
 
     double dr_ij[m_dim];
@@ -178,7 +174,7 @@ double PD_bondforceGaussian::calculateBondEnergy(const std::pair<int, int> &idCo
 
     for(int d=0; d<m_dim; d++)
     {
-        dr_ij[d] = m_r(d, col_j) - m_r(d, col_i);
+        dr_ij[d] = m_r(j, d) - m_r(i, d);
         dr2 += dr_ij[d]*dr_ij[d];
     }
 
@@ -202,11 +198,6 @@ void PD_bondforceGaussian::calculateStress(const std::pair<int, int> &idCol, con
     const double c_i = m_data(i, m_indexMicromodulus);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-    double r_i[m_dim];
-    for(int d=0; d<m_dim; d++)
-    {
-        r_i[d] = m_r(d, i);
-    }
     double dr_ij[m_dim];
     double f[m_dim];
 
@@ -229,7 +220,7 @@ void PD_bondforceGaussian::calculateStress(const std::pair<int, int> &idCol, con
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 
@@ -319,7 +310,7 @@ double PD_bondforceGaussian::calculateStableMass(const std::pair<int, int> &idCo
             double sum = 0;
             for(int d=0; d<m_dim; d++)
             {
-                dR0[d] = matR0(d, col_a) - matR0(d, col_b);
+                dR0[d] = matR0(col_a, d) - matR0(col_b, d);
                 sum += fabs(dR0[d]);
             }
 
@@ -353,9 +344,9 @@ double PD_bondforceGaussian::calculateStableMass(const std::pair<int, int> &idCo
 }
 //------------------------------------------------------------------------------
 void PD_bondforceGaussian::initialize(double E, double nu, double delta,
-                                      int dim, double h)
+                                      int dim, double h, double lc)
 {
-    Force::initialize(E, nu, delta, dim, h);
+    Force::initialize(E, nu, delta, dim, h, lc);
 
     if(m_weightType == "constant")
     {
@@ -416,7 +407,8 @@ void PD_bondforceGaussian::initializeConstant()
 //------------------------------------------------------------------------------
 void PD_bondforceGaussian::initializeLinear()
 {
-    double c, k;
+    double c = -1;
+    double k = -1;
 
     if(m_dim == 3)
     {
@@ -429,6 +421,7 @@ void PD_bondforceGaussian::initializeLinear()
         m_nu = 1./3.;
         k = m_E/(2.*(1. - m_nu));
         c = 48.*k/(m_h*M_PI*pow(m_delta, 3));
+        c = 48.*k/(m_h*M_PI*pow(m_delta, 3)*(4 - 3*m_delta/(m_delta + 0.5*m_lc)));
     }
     else if(m_dim == 1)
     {
@@ -441,24 +434,26 @@ void PD_bondforceGaussian::initializeLinear()
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles.nParticles(); i++)
+    for(unsigned int i=0; i<m_particles.nParticles(); i++)
     {
         const int pId = i;
-        const int col_i = i;
+//        const int col_i = i;
 
         vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
         for(auto &con:PDconnections)
         {
             const double dr0 = con.second[m_indexDr0];
-            con.second[m_indexWeightFunction] = 1 - dr0/m_delta;
+//            con.second[m_indexWeightFunction] = 1 - dr0/m_delta;
+            con.second[m_indexWeightFunction] = 1 - dr0/(m_delta + 0.5*m_lc);
         }
     }
 }
 //------------------------------------------------------------------------------
 void PD_bondforceGaussian::initializeGaussian()
 {
-    double c, k;
+    double c = -1;
+    double k = -1;
     m_l = 0.5*m_delta;
 
     if(m_dim == 3)
@@ -486,10 +481,10 @@ void PD_bondforceGaussian::initializeGaussian()
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles.nParticles(); i++)
+    for(unsigned int i=0; i<m_particles.nParticles(); i++)
     {
         const int pId = i;
-        const int col_i = i;
+//        const int col_i = i;
 
         vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
         for(auto &con:PDconnections)
@@ -539,10 +534,10 @@ void PD_bondforceGaussian::initializeSigmoid()
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles.nParticles(); i++)
+    for(unsigned int i=0; i<m_particles.nParticles(); i++)
     {
         const int pId = i;
-        const int col_i = i;
+//        const int col_i = i;
 
         vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
         for(auto &con:PDconnections)
@@ -551,6 +546,141 @@ void PD_bondforceGaussian::initializeSigmoid()
             const double e_drl = 1./(1. + exp((dr0 - alpha)/beta));
 
             con.second[m_indexWeightFunction] = e_drl;
+        }
+    }
+}
+//------------------------------------------------------------------------------
+void PD_bondforceGaussian::applySurfaceCorrection(double strain)
+{
+    arma::vec3 scaleFactor;
+    arma::mat & r = m_particles.r();
+    std::unordered_map<int, int> & pIds = m_particles.pIds();
+    arma::mat g = arma::zeros(m_particles.nParticles(), m_dim);
+
+    const int iDr0 = m_particles.getPdParamId("dr0");
+    const int iForceScaling = m_particles.getPdParamId("forceScalingBond");
+
+
+    // Stretching all particle in the x-direction
+    scaleFactor(0) = strain;
+    scaleFactor(1) = 0;
+    scaleFactor(2) = 0;
+
+    scaleFactor(1) = -strain*m_nu;
+    scaleFactor(2) = -strain*m_nu;
+
+    double W_infty = 0;
+
+    switch(m_dim)
+    {
+    case 3:
+        W_infty = 0.6*m_E*pow(strain, 2);
+        break;
+    case 2:
+        W_infty = 9./16.*m_E*pow(strain, 2);
+        break;
+    case 1:
+        W_infty = 0.5*m_E*pow(strain, 2);
+        break;
+    }
+
+    for(int a=0; a<m_dim; a++)
+    {
+        if(a == 1)
+            scaleFactor.swap_rows(0,1);
+        else if(a == 2)
+            scaleFactor.swap_rows(1,2);
+
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
+        // Loading the geometry
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
+        {
+            pair<int, int> idCol(i, i);
+            const int col_i = idCol.second;
+
+            for(int d=0; d<m_dim; d++)
+            {
+                r(col_i, d) = (1 + scaleFactor(d))*r(col_i, d);
+            }
+        }
+
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
+        // Calculating the elastic energy density
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
+        {
+            pair<int, int> idCol(i, i);
+            const int col_i = idCol.second;
+            double W = this->calculatePotentialEnergyDensity(idCol);
+            g(col_i, a) = W;
+        }
+
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
+        // Resetting the positions
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
+        {
+            pair<int, int> idCol(i, i);
+            int col_i = idCol.second;
+
+            for(int d=0; d<m_dim; d++)
+            {
+                r(col_i, d) = r(col_i, d)/(1 + scaleFactor(d));
+            }
+        }
+    }
+
+    // Scaling the energy with the median energy, which we assume
+    // to be the bulk energy
+    for(int a=0; a<m_dim; a++)
+    {
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
+        {
+            pair<int, int> idCol(i, i);
+            const int col_i = idCol.second;
+            const double g_i = g(col_i, a);
+            const double W =  W_infty/g_i;
+            g(col_i, a) = W;
+        }
+    }
+
+    // Calculating the scaling
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
+    for(unsigned int i=0; i<m_particles.nParticles(); i++)
+    {
+        pair<int, int> idCol(i, i);
+        const int pId = idCol.first;
+        const int col_i = idCol.second;
+
+        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+
+        for(auto &con:PDconnections)
+        {
+            const int id_j = con.first;
+            const int col_j = pIds[id_j];
+
+            const double dr0Len = con.second[iDr0];
+            const arma::vec3 &n = (r.row(col_i).t() - r.row(col_j).t())/dr0Len;
+
+            arma::vec3 g_mean;
+            double G = 0;
+            for(int d=0; d<m_dim; d++)
+            {
+                g_mean(d) = 0.5*(g(col_i, d) + g(col_j, d));
+                G += pow(n(d)/g_mean(d), 2);
+            }
+
+            G = pow(G, -0.5);
+            con.second[iForceScaling] *= G;
         }
     }
 }

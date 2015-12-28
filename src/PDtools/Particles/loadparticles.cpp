@@ -3,6 +3,11 @@
 #include "pd_particles.h"
 #include "particles.h"
 
+#include <boost/regex.hpp>
+#include <regex>
+#include <stdexcept>
+#include <fstream>
+
 namespace PDtools
 {
 template class T_LoadParticles<Particles>;
@@ -97,18 +102,22 @@ unordered_map <std::string, int> T_LoadParticles<T_particles>::read_xyzHeader(fs
     m_nParticles = stoi(line);
 
     // Reading the comments
-    // This program follows a convenction that the comments
+    // This program follows a convention that the comments
     // in a xyz-file must name the variables.
     getline(data, line);
-    regex rr("([A-Za-z_]+)");
-    sregex_iterator next(line.begin(), line.end(), rr);
-    sregex_iterator end;
+    boost::regex rr("([A-Za-z_]+)");
+    boost::sregex_iterator next(line.begin(), line.end(), rr);
+    boost::sregex_iterator end;
+//    std::regex rr("([A-Za-z_]+)");
+//    std::sregex_iterator next(line.begin(), line.end(), rr);
+//    std::sregex_iterator end;
 
     unordered_map <std::string, int> parameters;
     int position = 0;
     while(next != end)
     {
-        smatch match = *next;
+//        std::smatch match = *next;
+        boost::smatch match = *next;
         parameters[match.str()] = position;
         position++;
         next++;
@@ -313,7 +322,7 @@ void T_LoadParticles<T_particles>::loadBody(T_particles &particles, fstream &raw
     arma::mat & data = particles.data();
 
     // Reading all the data from file
-    for(int i=0; i<particles.nParticles(); i++)
+    for(unsigned int i=0; i<particles.nParticles(); i++)
     {
         vector<string> lineSplit;
         getline(rawData, line);
@@ -334,7 +343,7 @@ void T_LoadParticles<T_particles>::loadBody(T_particles &particles, fstream &raw
 
         for(pair<int, int> pc:position_config)
         {
-            r(pc.first, i) = stod(lineSplit[pc.second]);
+            r(i, pc.first) = stod(lineSplit[pc.second]);
         }
         for(pair<int, int> dfc:data_config_mapping)
         {
@@ -409,7 +418,7 @@ void T_LoadParticles<T_particles>::loadBinaryBody(T_particles &particles,
     arma::mat & data = particles.data();
 
     // Reading all the data from file
-    for(int i=0; i<particles.nParticles(); i++)
+    for(unsigned int i=0; i<particles.nParticles(); i++)
     {
         double line[nColumns];
         fread(&line[0], nColumns*sizeof(double), 1, rawData);
@@ -428,7 +437,7 @@ void T_LoadParticles<T_particles>::loadBinaryBody(T_particles &particles,
 
         for(pair<int, int> pc:position_config)
         {
-            r(pc.first, i) = line[pc.second];
+            r(i, pc.first) = line[pc.second];
         }
         for(pair<int, int> dfc:data_config_mapping)
         {

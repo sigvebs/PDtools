@@ -5,7 +5,6 @@
 #include <libconfig.h++>
 
 using namespace std;
-using namespace libconfig;
 
 //------------------------------------------------------------------------------
 class PdSolver
@@ -19,7 +18,7 @@ public:
 
 protected:
     string m_configPath;
-    Config m_cfg;
+    libconfig::Config m_cfg;
     PDtools::PD_Particles m_particles;
     PDtools::Grid m_grid;
     PDtools::Solver *solver;

@@ -56,7 +56,21 @@ void Grid::createGrid()
     int ny = floor(y_len/m_gridspacing) > 0 ? floor(y_len/m_gridspacing) : 1;
     int nz = floor(z_len/m_gridspacing) > 0 ? floor(z_len/m_gridspacing) : 1;
 
+
     m_gridSpacing = {x_len/nx, y_len/ny, z_len/nz };
+    if(dim <= 1)
+    {
+        ny = 1;
+        y_len = m_gridspacing;
+        m_gridSpacing(1) = 1.;
+    }
+    if(dim <= 2)
+    {
+        nz = 1;
+        z_len = m_gridspacing;
+        m_gridSpacing(2) = 1.;
+    }
+
     m_nGrid = {nx, ny, nz};
     vector<ivec> inner_points;
     vector<ivec> boundary_points;
@@ -87,17 +101,18 @@ void Grid::createGrid()
             {
                 // id = x + nx*y + nx*ny*z;
                 // Center of gridpoint
-                vec3 center = {
+                const vec3 center = {
                     m_boundary[X].first + m_gridSpacing(X)*(x + 0.5)
                     ,m_boundary[Y].first + m_gridSpacing(Y)*(y + 0.5)
                     ,m_boundary[Z].first + m_gridSpacing(Z)*(z + 0.5)};
 
-                int id = gridId(center);
+                const int id = gridId(center);
                 m_gridpoints[id] = new GridPoint(id, center, false);
                 m_myGridPoints.push_back(id);
             }
         }
     }
+    cout << m_myGridPoints.size() << endl;
 
     // Boundary conditions
     for(int d=0; d<3; d++)
@@ -121,12 +136,12 @@ void Grid::createGrid()
                     xyz(inn_p[1]) = point_2;
 
                     // Center of gridpoint
-                    vec3 center = {
+                    const vec3 center = {
                         m_boundary[X].first + m_gridSpacing(X)*(xyz(X) + 0.5)
                         ,m_boundary[Y].first + m_gridSpacing(Y)*(xyz(Y) + 0.5)
                         ,m_boundary[Z].first + m_gridSpacing(Z)*(xyz(Z) + 0.5)};
 
-                    int id = gridId(center);
+                    const int id = gridId(center);
                     m_gridpoints[id] = new GridPoint(id, center, true);
                 }
             }
@@ -219,7 +234,8 @@ int Grid::gridId(const vec3 &r) const
 {
     ivec3 i;
 
-    for(int d=0; d<dim; d++)
+    for(int d=0; d<3; d++)
+//        for(int d=0; d<dim; d++)
     {
         i(d) = int((r(d) - m_boundary[d].first)/m_gridSpacing(d));
 
@@ -246,15 +262,15 @@ void Grid::update()
 void Grid::placeParticlesInGrid(Particles &particles)
 {
     clearParticles();
-    const mat & rParticles = particles.r();
+    const mat & R = particles.r();
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<particles.nParticles(); i++)
+    for(unsigned int i=0; i<particles.nParticles(); i++)
     {
         pair<int, int> id_pos(i, i);
-        const vec3 &r = rParticles.col(id_pos.second);
+        const vec3 &r = R.row(id_pos.second).t();
         int gId = gridId(r);
 #ifdef USE_OPENMP
 #pragma omp critical
@@ -310,7 +326,7 @@ void updateVerletList(const string &verletStringId,
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-    for(int i=0; i<mygridPoints.size(); i++)
+    for(unsigned int i=0; i<mygridPoints.size(); i++)
     {
         double dx, dy, dz;
         int gridId = mygridPoints.at(i);
@@ -320,7 +336,7 @@ void updateVerletList(const string &verletStringId,
         {
             int id_i = idCol_i.first;
             vector<int> verletList;
-            const vec & r_i = R.col(idCol_i.second);
+            const vec & r_i = R.row(idCol_i.second);
 
             for(const pair<int, int> & idCol_j:gridPoint.particles())
             {
@@ -328,7 +344,7 @@ void updateVerletList(const string &verletStringId,
                 if(id_i == id_j)
                     continue;
 
-                const vec & r_j = R.col(idCol_j.second);
+                const vec & r_j = R.row(idCol_j.second);
                 dx = r_i(0) - r_j(0);
                 dy = r_i(1) - r_j(1);
                 dz = r_i(2) - r_j(2);
@@ -348,7 +364,7 @@ void updateVerletList(const string &verletStringId,
             {
                 for(const pair<int, int> & idCol_j:neighbour->particles())
                 {
-                    const vec & r_j = R.col(idCol_j.second);
+                    const vec & r_j = R.row(idCol_j.second);
                     dx = r_i(0) - r_j(0);
                     dy = r_i(1) - r_j(1);
                     dz = r_i(2) - r_j(2);

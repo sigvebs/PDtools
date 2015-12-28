@@ -54,6 +54,7 @@ void SaveParticles::writeToFile(Particles &particles, const string &savePath)
 void SaveParticles::initialize(Particles &particles)
 {
     // The default is that all data-parameters are saved
+    /*
     if(m_saveParameters.empty())
     {
         m_saveParameters.push_back("id");
@@ -65,43 +66,50 @@ void SaveParticles::initialize(Particles &particles)
         {
             m_saveParameters.push_back(id_pos.first);
         }
-    }
+    }*/
 
     m_saveId = false;
     m_saveCoordinates.clear();
     m_header.clear();
 
     // Checking for particle ids and positions
-    for(string parameter:m_saveParameters)
+    for(const auto parameter_scale:m_saveParameters)
     {
+        const string parameter = parameter_scale.first;
+        const double scale = parameter_scale.second;
+
         if(parameter == "id")
         {
             m_saveId = true;
         }
         else if(parameter == "x")
         {
-            m_saveCoordinates.push_back(0);
+            m_saveCoordinates.push_back(pair<int, double>(0, scale));
             m_header.push_back(parameter);
         }
         else if(parameter == "y")
         {
-            m_saveCoordinates.push_back(1);
+            m_saveCoordinates.push_back(pair<int, double>(1, scale));
             m_header.push_back(parameter);
         }
         else if(parameter == "z")
         {
-            m_saveCoordinates.push_back(2);
+            m_saveCoordinates.push_back(pair<int, double>(2, scale));
             m_header.push_back(parameter);
         }
     }
 
     // Checking for other data
     m_dataParameters.clear();
-    for(string parameter:m_saveParameters)
+    for(auto parameter_scale:m_saveParameters)
     {
+        const string parameter = parameter_scale.first;
+        const double scale = parameter_scale.second;
+
         if(particles.parameters().count(parameter))
         {
-            m_dataParameters.push_back(particles.parameters().at(parameter));
+            std::pair<int, double> p(particles.parameters().at(parameter), scale);
+            m_dataParameters.push_back(p);
             m_header.push_back(parameter);
         }
     }
@@ -118,21 +126,21 @@ void SaveParticles::writeBody(Particles &particles,
     for(auto id_pos:particles.pIds())
     {
         int id  = id_pos.first + 1;
-        int pos = id_pos.second;
+        int j = id_pos.second;
 
         if(m_saveId)
         {
             outStream << id;
         }
 
-        for(int coord:m_saveCoordinates)
+        for(const auto & coord:m_saveCoordinates)
         {
-            outStream << " " << particles.r()(coord, pos);
+            outStream << " " << particles.r()(j, coord.first)*coord.second;
         }
 
-        for(int parameter:m_dataParameters)
+        for(const auto & parameter:m_dataParameters)
         {
-            outStream << " " << particles.data()(pos, parameter);
+            outStream << " " << particles.data()(j, parameter.first)*parameter.second;
         }
 
         outStream << endl;
@@ -145,25 +153,29 @@ void SaveParticles::writeBinaryBody(Particles &particles,
                                    const string &savePath)
 {
     FILE* binaryData = fopen(savePath.c_str(), "a+");
+    const arma::mat & r = particles.r();
+    const arma::mat & data = particles.data();
 
     for(auto id_pos:particles.pIds())
     {
         const double id  = id_pos.first + 1;
-        int pos = id_pos.second;
+        int j = id_pos.second;
 
         if(m_saveId)
         {
             fwrite((char*)(&id), sizeof(double), 1, binaryData);
         }
 
-        for(int coord:m_saveCoordinates)
+        for(const auto & coord:m_saveCoordinates)
         {
-            fwrite((char*)(&particles.r()(coord, pos)), sizeof(double), 1, binaryData);
+            const double r_i = r(j, coord.first)*coord.second;
+            fwrite((char*)(&r_i), sizeof(double), 1, binaryData);
         }
 
-        for(int parameter:m_dataParameters)
+        for(const auto & parameter:m_dataParameters)
         {
-            fwrite((char*)(&particles.data()(pos, parameter)), sizeof(double), 1, binaryData);
+            const double dp = data(j, parameter.first)*parameter.second;
+            fwrite((char*)(&dp), sizeof(double), 1, binaryData);
         }
     }
     //--------------------------------------------------------------------------
@@ -310,13 +322,13 @@ void SaveParticles::write_lmpBinaryHeader(Particles &particles,
 
     for(auto id_pos:particles.pIds())
     {
-        int pos = id_pos.second;
-        xMin = xMin < particles.r()(0, pos) ? xMin : particles.r()(0, pos);
-        xMax = xMax > particles.r()(0, pos) ? xMax : particles.r()(0, pos);
-        yMin = yMin < particles.r()(1, pos) ? yMin : particles.r()(1, pos);
-        yMax = yMax > particles.r()(1, pos) ? yMax : particles.r()(1, pos);
-        zMin = zMin < particles.r()(2, pos) ? zMin : particles.r()(2, pos);
-        zMax = zMax > particles.r()(2, pos) ? zMax : particles.r()(2, pos);
+        const int j = id_pos.second;
+        xMin = xMin < particles.r()(j, 0) ? xMin : particles.r()(j, 0);
+        xMax = xMax > particles.r()(j, 0) ? xMax : particles.r()(j, 0);
+        yMin = yMin < particles.r()(j, 1) ? yMin : particles.r()(j, 1);
+        yMax = yMax > particles.r()(j, 1) ? yMax : particles.r()(j, 1);
+        zMin = zMin < particles.r()(j, 2) ? zMin : particles.r()(j, 2);
+        zMax = zMax > particles.r()(j, 2) ? zMax : particles.r()(j, 2);
     }
 
     // Writing the header

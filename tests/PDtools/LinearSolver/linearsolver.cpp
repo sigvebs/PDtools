@@ -92,7 +92,7 @@ TEST_F(PD_LINEAR_SOLVER_FIXTURE, TEST_CG)
     {
         for(int d=0; d<3; d++)
         {
-            m_dr0(d, i) = m_r(d,i);
+            m_dr0(i, d) = m_r(i, d);
         }
     }
     //--------------------------------------------------------------------------
@@ -135,7 +135,7 @@ TEST_F(PD_LINEAR_SOLVER_FIXTURE, TEST_CG)
             const double c_ab = 0.5*(c_i + c_j);
 
             const double coeff = c_ab/(pow(dr0, 3))*vol_j*volumeScaling;
-            arma::vec dr0_v = m_dr0.col(l_a) - m_dr0.col(b);
+            arma::vec dr0_v = m_dr0.row(l_a) - m_dr0.row(b);
 
             for(int d1=0; d1<m_dim; d1++)
             {
@@ -210,7 +210,7 @@ TEST_F(PD_LINEAR_SOLVER_FIXTURE, TEST_CG)
             const double c_ab = 0.5*(c_i + c_j);
 
             const double coeff = c_ab/(pow(dr0, 3))*vol_j*volumeScaling;
-            arma::vec dr0_v = m_dr0.col(l_a) - m_dr0.col(b);
+            arma::vec dr0_v = m_dr0.row(l_a) - m_dr0.row(b);
 
             for(int d1=0; d1<m_dim; d1++)
             {
@@ -271,11 +271,12 @@ TEST_F(PD_LINEAR_SOLVER_FIXTURE, TEST_CG)
     int m_boundaryOrientation = 0;
     double appliedVolume = h*(m_boundary_left.second - m_boundary_left.first);
     double bodyForce = appliedForce/appliedVolume;
+    const int nParticles = m_particles.nParticles();
 
     for(int i=0; i<m_particles.nParticles(); i++)
     {
         int col_i = i;
-        double pos = m_r(m_boundaryOrientation, col_i);
+        double pos = m_r(col_i, m_boundaryOrientation);
         if(m_boundary_left.first <= pos && pos < m_boundary_left.second)
         {
             pair<int, int> pId(i, i);
@@ -300,7 +301,7 @@ TEST_F(PD_LINEAR_SOLVER_FIXTURE, TEST_CG)
         for(int d=0; d<m_dim; d++)
         {
             int j = i*m_dim + d;
-            u_k(j) = stretch*m_dr0(d, i);
+            u_k(j) = stretch*m_dr0(i, d);
         }
     }
 //    u_k.randu();
@@ -339,7 +340,7 @@ TEST_F(PD_LINEAR_SOLVER_FIXTURE, TEST_CG)
         for(int d=0; d<m_dim; d++)
         {
             int j = i*m_dim + d;
-            m_r(d,i) = m_dr0(d, i) + u_k(j);
+            m_r(i, d) = m_dr0(i, d) + u_k(j);
         }
     }
 

@@ -31,10 +31,10 @@ void Particles::initializeMatrices()
         cerr << "nParticles can not be zero when initializeing particle matrices" << endl;
         throw ZeroParticles;
     }
-    m_r = arma::mat(DIM, PARTICLE_BUFFER*m_nParticles);
-    m_data = arma::mat(PARTICLE_BUFFER*m_nParticles, PARAMETER_BUFFER);
-    m_posToId = arma::ivec(PARTICLE_BUFFER*m_nParticles);
-    m_isStatic = arma::zeros<arma::ivec>(PARTICLE_BUFFER*m_nParticles);
+    m_r = mat(PARTICLE_BUFFER*m_nParticles, DIM);
+    m_data = mat(PARTICLE_BUFFER*m_nParticles, PARAMETER_BUFFER);
+    m_posToId = ivec(PARTICLE_BUFFER*m_nParticles);
+    m_isStatic = zeros<ivec>(PARTICLE_BUFFER*m_nParticles);
 }
 //------------------------------------------------------------------------------
 const string &Particles::type() const
@@ -47,7 +47,7 @@ void Particles::type(string t)
     m_type = t;
 }
 //------------------------------------------------------------------------------
-size_t Particles::nParticles() const
+unsigned int Particles::nParticles() const
 {
     return m_nParticles;
 }
@@ -62,7 +62,7 @@ void Particles::dim(int d)
     m_dim = d;
 }
 //------------------------------------------------------------------------------
-std::unordered_map<string, int> &Particles::parameters()
+unordered_map<string, int> &Particles::parameters()
 {
     return m_parameters;
 }
@@ -76,7 +76,7 @@ int Particles::registerVerletList(string verletId)
 {
     int id = m_verletListIds.size();
     m_verletListIds[verletId] = id;
-    std::unordered_map<int, std::vector<int>> list;
+    unordered_map<int, vector<int>> list;
     m_verletLists.push_back(list);
     return id;
 }
@@ -91,7 +91,7 @@ vector<int> &Particles::verletList(int pId, int verletId)
     return m_verletLists.at(verletId).at(pId);
 }
 //------------------------------------------------------------------------------
-std::unordered_map<int, std::vector<int> > &Particles::wholeVerletList(int verletId)
+unordered_map<int, vector<int> > &Particles::wholeVerletList(int verletId)
 {
     return m_verletLists.at(verletId);
 }
@@ -134,7 +134,7 @@ void Particles::setParameter(string paramId, double value)
 {
     int param_pos = m_parameters.at(paramId);
 
-    for(int p=0;p<m_data.n_rows; p++)
+    for(unsigned int p=0;p<m_data.n_rows; p++)
     {
         m_data(p, param_pos) = value;
     }
@@ -160,7 +160,7 @@ int Particles::registerParameter(string paramId, double value)
         throw OutOfBounds;
     }
 
-    for(int p=0;p<m_data.n_rows; p++)
+    for(unsigned int p=0;p<m_data.n_rows; p++)
     {
         m_data(p, param_pos) = value;
     }
@@ -180,7 +180,7 @@ void Particles::scaleParameter(const string &paramId, double value)
         throw OutOfBounds;
     }
 
-    for(int p=0;p<m_data.n_rows; p++)
+    for(unsigned int p=0;p<m_data.n_rows; p++)
     {
         m_data(p, param_pos) *= value;
     }

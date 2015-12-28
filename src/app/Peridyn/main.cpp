@@ -10,9 +10,8 @@ int main(int argc, char** argv)
     using namespace std;
 
     wall_clock timer;
-    int myRank, nNodes;
-    myRank = 0;
-    nNodes = 1;
+    int myRank = 0;
+//    int nNodes = 1;
 
     if(argc != 2)
     {

@@ -29,7 +29,7 @@ void ComputeKineticEnergy::update(const pair<int, int> &pIdcol)
     double v_squared = 0;
     for(int d=0; d<m_dim; d++)
     {
-        v_squared += (*m_v)(d, col)*(*m_v)(d, col);
+        v_squared += (*m_v)(col, d)*(*m_v)(col, d);
     }
 
     (*m_data)(col, m_indexKE) = 0.5*mass*v_squared;

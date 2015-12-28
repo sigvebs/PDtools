@@ -28,7 +28,7 @@ void PmbFracture::initialize()
     m_data = &m_particles->data();
 
     // Setting the initial max stretch between two particles
-    for(int i=0;i<m_particles->nParticles();i++)
+    for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
         int pId = i;
         int col_i = i;

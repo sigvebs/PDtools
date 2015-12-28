@@ -7,6 +7,9 @@
 #include "PDtools/Modfiers/modifier.h"
 #include <iostream>
 
+#include <armadillo>
+using namespace arma;
+
 namespace PDtools
 {
 //------------------------------------------------------------------------------
@@ -51,12 +54,17 @@ void Solver::save(int i)
     if(i%m_saveInterval == 0)
     {
         saveParticles->evaluate(m_t, i);
+        saveParticles->saveData(m_t, i);
+
+        const double progress = (double)i/(double)m_steps;
+        printProgress(progress);
     }
 }
 //------------------------------------------------------------------------------
 void Solver::initialize()
 {
     saveParticles = new SavePdData(m_saveParameters);
+    saveParticles->setScaling(m_E0, m_L0, m_v0, m_t0, m_rho0);
     saveParticles->setSavePath(m_savePath);
     saveParticles->setParticles(m_particles);
     saveParticles->setForces(m_oneBodyForces);
@@ -105,14 +113,13 @@ void Solver::modifiersStepOne()
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-        for(int i=0; i<m_particles->nParticles(); i++)
+        for(unsigned int i=0; i<m_particles->nParticles(); i++)
         {
             pair<int, int> id(i, i);
             for(Modifier *modifier:m_spModifiers)
             {
                 modifier->evaluateStepOne(id);
             }
-
         }
     }
 }
@@ -129,7 +136,7 @@ void Solver::modifiersStepTwo()
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-        for(int i=0; i<m_particles->nParticles(); i++)
+        for(unsigned int i=0; i<m_particles->nParticles(); i++)
         {
             pair<int, int> id(i, i);
             for(Modifier *modifier:m_spModifiers)
@@ -148,12 +155,12 @@ void Solver::zeroForcesAndStress()
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles->nParticles(); i++)
+    for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
         pair<int, int> id(i, i);
         for(int d=0; d<m_dim; d++)
         {
-            F(d, i) = 0;
+            F(i, d) = 0;
         }
         for(int s=0; s<6; s++)
         {
@@ -192,6 +199,11 @@ void Solver::setT(double _t)
     m_t = _t;
 }
 //------------------------------------------------------------------------------
+void Solver::setDim(double _dim)
+{
+    m_dim = _dim;
+}
+//------------------------------------------------------------------------------
 void Solver::addForce(Force *force)
 {
     m_oneBodyForces.push_back(force);
@@ -205,6 +217,15 @@ void Solver::setSavePath(const string &savePath)
 void Solver::setSaveInterval(double saveInterval)
 {
     m_saveInterval = saveInterval;
+}
+//------------------------------------------------------------------------------
+void Solver::setSaveScaling(const double E0, const double L0, const double v0, const double t0, const double rho0)
+{
+    m_E0 = E0;
+    m_L0 = L0;
+    m_v0 = v0;
+    m_t0 = t0;
+    m_rho0 = rho0;
 }
 //------------------------------------------------------------------------------
 void Solver::addSpModifier(Modifier * modifier)
@@ -245,7 +266,7 @@ void Solver::checkInitialization()
 //------------------------------------------------------------------------------
 void Solver::calculateForces()
 {
-    arma::imat & isStatic = m_particles->isStatic();
+    const imat & isStatic = m_particles->isStatic();
     int nParticles = m_particles->nParticles();
 
     // Updating overall state
@@ -274,13 +295,31 @@ void Solver::calculateForces()
     for(int i=0; i<nParticles; i++)
     {
         pair<int, int> id(i, i);
-//        if(isStatic(i))
-//            continue;
+        if(isStatic(i))
+            continue;
         for(Force *oneBodyForce:m_oneBodyForces)
         {
             oneBodyForce->calculateForces(id);
         }
     }
+}
+//------------------------------------------------------------------------------
+void Solver::printProgress(const double progress)
+{
+    int barWidth = 70;
+
+    std::cout << "[";
+    int pos = barWidth * progress;
+    for (int j = 0; j < barWidth; ++j) {
+        if (j < pos)
+            std::cout << "=";
+        else if (j == pos)
+            std::cout << ">";
+        else
+            std::cout << " ";
+    }
+    std::cout << "] " << int(progress * 100.0) << " %\r";
+    std::cout.flush();
 }
 //------------------------------------------------------------------------------
 }

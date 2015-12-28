@@ -12,10 +12,6 @@ class ContactForce : public Force
 private:
     Grid & m_grid;
     int m_steps;
-    arma::mat & m_F;
-    arma::mat & m_r;
-    arma::mat & m_r0;
-    arma::mat & m_data;
     double m_spacing;
     double m_scaling;
     double m_verletRadius;
@@ -29,14 +25,27 @@ private:
 public:
     ContactForce(PD_Particles &particles, Grid &grid, double spacing);
     ~ContactForce();
-    virtual void calculateForces(const std::pair<int, int> & idCol);
-    virtual void calculateStress(const std::pair<int, int> & idCol,
+
+    virtual void
+    calculateForces(const std::pair<int, int> & idCol);
+
+    virtual void
+    calculateStress(const std::pair<int, int> & idCol,
                                  const int (&indexStress)[6]);
-    virtual void updateState();
-    void setForceScaling(double forceScaling);
-    void setVerletRadius(double verletSpacing);
-    virtual void initialize(double E, double nu, double delta, int dim, double h);
-    virtual void applySurfaceCorrection(double strain);
+    virtual void
+    updateState();
+
+    void
+    setForceScaling(double forceScaling);
+
+    void
+    setVerletRadius(double verletSpacing);
+
+    virtual void
+    initialize(double E, double nu, double delta, int dim, double h, double lc);
+
+    virtual void
+    applySurfaceCorrection(double strain);
 };
 //------------------------------------------------------------------------------
 }

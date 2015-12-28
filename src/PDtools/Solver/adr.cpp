@@ -39,7 +39,7 @@ void ADR::stepForward(int i)
     modifiersStepOne();
 
     m_globalError = 2*m_errorThreshold;
-    iterate();
+    iterate(m_maxSteps);
 
     cout << "i = " << i << " " << m_globalError << endl;
 
@@ -47,12 +47,11 @@ void ADR::stepForward(int i)
     m_t += m_dt;
 }
 //------------------------------------------------------------------------------
-void ADR::iterate()
+void ADR::iterate(int maxNumberOfSteps)
 {
     int counter = 0;
-    int minSteps = 100;
-    int maxSteps = 1000;
-//    maxSteps = 400;
+    int minSteps = 5;
+    int nFractureRelaxationSteps = m_maxStepsFracture;
     int nParticles = m_particles->nParticles();
 
     do
@@ -67,12 +66,12 @@ void ADR::iterate()
         integrateStepTwo();
 
         counter++;
-        if(counter >maxSteps)
+        if(counter > maxNumberOfSteps)
             break;
     }
     while( (m_globalError > m_errorThreshold) || (counter < minSteps));
 
-    cout << "counter = " << counter << " error =" << m_globalError << endl;
+    cout << "counter = " << counter << " error = " << m_globalError << endl;
 //    calculateForces();
 
     //--------------------------------------------------
@@ -90,9 +89,9 @@ void ADR::iterate()
             }
 
         }
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
         for(int i=0; i<nParticles; i++)
         {
             pair<int, int> id(i, i);
@@ -118,7 +117,7 @@ void ADR::iterate()
         if(continueState)
         {
             m_globalError = 2*m_errorThreshold;
-            iterate();
+            iterate(nFractureRelaxationSteps);
         }
     }
 }
@@ -140,9 +139,9 @@ void ADR::initialize()
     for(int i=0; i<nParticles; i++)
     {
         for(int d=0; d<m_dim; d++){
-            F(d, i) = 0;
-            Fold(d, i) = 0;
-            v(d, i) = 0;
+            F(i, d) = 0;
+            Fold(i, d) = 0;
+            v(i, d) = 0;
         }
     }
 
@@ -203,17 +202,17 @@ void ADR::integrateStepOne()
         double drSquared = 0;
 
         for(int d=0; d<m_dim; d++){
-            double rPrev = r(d, col_i);
+            double rPrev = r(col_i, d);
 
-            v(d, col_i) = beta*v(d, col_i) + alpha*F(d, col_i)/stableMass(col_i);
-            r(d, col_i) += v(d, col_i)*m_dt;
+            v(col_i, d) = beta*v(col_i, d) + alpha*F(col_i, d)/stableMass(col_i);
+            r(col_i, d) += v(col_i, d)*m_dt;
 
-            deltaFn += pow(Fold(d, col_i) - F(d, col_i), 2);
-            Fn += pow(F(d, col_i), 2);
+            deltaFn += pow(Fold(col_i, d) - F(col_i, d), 2);
+            Fn += pow(F(col_i, d), 2);
 
-            Fold(d, col_i) = F(d, col_i);
+            Fold(col_i, d) = F(col_i, d);
 
-            drSquared += (r(d, col_i) - rPrev)*(r(d, col_i) - rPrev);
+            drSquared += (r(col_i, d) - rPrev)*(r(col_i, d) - rPrev);
         }
 
         double error_i = errorScaling*sqrt(drSquared);
@@ -234,7 +233,7 @@ void ADR::integrateStepTwo()
     const mat & F = m_particles->F();
     const mat & Fold = m_particles->Fold();
     const vec & stableMass = m_particles->stableMass();
-    arma::imat & isStatic = m_particles->isStatic();
+    const arma::imat & isStatic = m_particles->isStatic();
 
     // Calculating the damping coefficient
     double numerator = 0;
@@ -251,9 +250,9 @@ void ADR::integrateStepTwo()
             continue;
         for(int d=0; d<m_dim; d++)
         {
-            numerator += -v(d, col_i)*(F(d, col_i) - Fold(d, col_i))
+            numerator += -v(col_i, d)*(F(col_i, d) - Fold(col_i, d))
                     /(stableMass(col_i)*m_dt);
-            denominator += v(d, col_i)*v(d, col_i);
+            denominator += v(col_i, d)*v(col_i, d);
         }
     }
 
@@ -266,10 +265,10 @@ void ADR::integrateStepTwo()
         }
     }
 
-    if(m_c >= 2.0)
-    {
-        m_c = 1.99;
-    }
+//    if(m_c >= 2.0)
+//    {
+//        m_c = 1.99;
+//    }
 }
 //------------------------------------------------------------------------------
 void ADR::staticModifiers()

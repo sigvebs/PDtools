@@ -21,11 +21,6 @@ private:
     int m_indexConnected;
     int m_indexCompute;
 
-    arma::mat & m_r;
-    arma::mat & m_F;
-    arma::mat & m_data;
-    std::unordered_map<int, int> & m_pIds;
-
     enum PD_bondForceErrorMessages
     {
         MicrmodulusNotSet
@@ -33,18 +28,32 @@ private:
 
 public:
     PD_bondForce(PD_Particles &particles);
+
     ~PD_bondForce();
-    virtual void calculateForces(const std::pair<int, int> & idCol);
-    virtual void calculateLinearForces(const std::pair<int, int> & idCol);
-    virtual double calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
-    virtual void calculatePotentialEnergy(const std::pair<int, int> & idCol,
+
+    virtual void
+    calculateForces(const std::pair<int, int> & idCol);
+
+    virtual void
+    calculateLinearForces(const std::pair<int, int> & idCol);
+
+    virtual double
+    calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
+
+    virtual void
+    calculatePotentialEnergy(const std::pair<int, int> & idCol,
                                           int indexPotential);
-    virtual void calculateStress(const std::pair<int, int> & idCol,
+
+    virtual void
+    calculateStress(const std::pair<int, int> & idCol,
                                  const int (&indexStress)[6]);
 
-    virtual double calculateStableMass(const std::pair<int, int> & idCol,
+    virtual double
+    calculateStableMass(const std::pair<int, int> & idCol,
                                      double dt);
-    virtual void initialize(double E, double nu, double delta, int dim, double h);
+
+    virtual void
+    initialize(double E, double nu, double delta, int dim, double h, double lc);
 };
 //------------------------------------------------------------------------------
 }

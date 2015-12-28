@@ -6,23 +6,24 @@ CONFIG   -= qt
 CONFIG   += thread
 
 include(../defaults.pri)
-DEFINES *= ARMA_NO_DEBUG
+#DEFINES *= ARMA_NO_DEBUG
 
 LIBS *= $$TOP_OUT_PWD/src/PDtools/libPDtools.a
 LIBS *= -lgtest
 
 SOURCES += \
     main.cpp \
-    PDtools/particles/test_particles.cpp \
-    PDtools/PD_particles/test_pd_particles.cpp \
-    PDtools/grid/test_grid.cpp \
-    PDtools/configuration/test_configuration/test_configuration.cpp \
-    PDtools/test_solver/test_solver.cpp \
-    PDtools/stretch/test_stretch.cpp \
-    PDtools/LinearSolver/linearsolver.cpp
+#    PDtools/particles/test_particles.cpp \
+#    PDtools/PD_particles/test_pd_particles.cpp \
+#    PDtools/grid/test_grid.cpp \
+#    PDtools/configuration/test_configuration/test_configuration.cpp \
+#    PDtools/test_solver/test_solver.cpp \
+#    PDtools/stretch/test_stretch.cpp \
+#    PDtools/LinearSolver/linearsolver.cpp \
+#    PDtools/MPI/test_mpi.cpp
 
-HEADERS += \
-    test_resources.h
+#HEADERS += \
+#    test_resources.h
 
 #-------------------------------------------------------------------------------
 # Creates extra test directories

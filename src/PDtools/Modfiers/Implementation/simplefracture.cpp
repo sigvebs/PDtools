@@ -64,7 +64,6 @@ void SimpleFracture::evaluateStepOne(const pair<int, int> &pIdcol)
         const double dr0 = con.second[m_indexDr0];
         const double sc = sqrt(m_alpha / (c_ij*dr0*vol));
 
-        double a = 3;
         if(s > sc)
         {
             con.second[m_indexConnected] = 0;

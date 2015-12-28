@@ -13,7 +13,7 @@ public:
                      pair<double, double> boundary, int boundaryOrientation);
     ~boundaryForce();
 
-//    virtual void evaluateStepOne();
+    virtual void evaluateStepOne();
     virtual void evaluateStepTwo();
     virtual void initialize();
     virtual void staticEvaluation();
@@ -25,6 +25,7 @@ private:
     pair<double, double> m_boundary;
     int m_boundaryOrientation;
     vector<int> m_otherAxis;
+    int m_indexVolume ;
 };
 //------------------------------------------------------------------------------
 }

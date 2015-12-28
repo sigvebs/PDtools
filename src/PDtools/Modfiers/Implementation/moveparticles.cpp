@@ -18,6 +18,7 @@ MoveParticles::MoveParticles(double velAmplitude,
     m_boundaryOrientation = boundaryOrientation;
     m_dt = dt;
     m_isStatic = isStatic;
+    m_time = 0;
 }
 //------------------------------------------------------------------------------
 MoveParticles::~MoveParticles()
@@ -27,22 +28,24 @@ MoveParticles::~MoveParticles()
 //------------------------------------------------------------------------------
 void MoveParticles::evaluateStepOne()
 {
-    arma::mat & r = m_particles->r();
-    arma::mat & v = m_particles->v();
-    arma::mat & F = m_particles->F();
-    arma::mat & Fold = m_particles->Fold();
+    mat & r = m_particles->r();
+    const mat & r0 = m_particles->r0();
+    const double dr = m_time*m_velAmplitude;
+//    mat & v = m_particles->v();
+//    mat & F = m_particles->F();
+//    mat & Fold = m_particles->Fold();
 
     for(pair<int, int> &idCol:m_boundaryParticles)
     {
         int col_i = idCol.second;
-        r(m_boundaryOrientation, col_i) += m_velAmplitude*m_dt;
-//        for(int d=0;d<3; d++)
-//        {
-//            v(d, col_i) = 0.0;
-//            F(d, col_i) = 0.0;
-//            Fold(d, col_i) = 0.0;
-//        }
+        for(int d=0;d<3; d++)
+        {
+            r(col_i, d) = r0(col_i, d);
+        }
+        r(col_i, m_boundaryOrientation) = r0(col_i, m_boundaryOrientation) + dr;
     }
+
+    m_time += m_dt;
 }
 //------------------------------------------------------------------------------
 void MoveParticles::initialize()
@@ -68,10 +71,10 @@ void MoveParticles::initialize()
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles->nParticles(); i++)
+    for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
         int col_i = i;
-        double pos = r(m_boundaryOrientation, col_i);
+        double pos = r(col_i, m_boundaryOrientation);
         if(m_boundary.first <= pos && pos < m_boundary.second)
         {
             pair<int, int> pId(i, i);
@@ -100,16 +103,15 @@ void MoveParticles::staticEvaluation()
     for(pair<int, int> &idCol:m_boundaryParticles)
     {
         int col_i = idCol.second;
-        v(m_boundaryOrientation, col_i) = 0.0;
-        F(m_boundaryOrientation, col_i) = 0.0;
-        Fold(m_boundaryOrientation, col_i) = 0.0;
-
-//        for(int d=0;d<3; d++)
-//        {
-//            v(d, col_i) = 0.0;
-//            F(d, col_i) = 0.0;
-//            Fold(d, col_i) = 0.0;
-//        }
+//        v(col_i, m_boundaryOrientation) = 0.0;
+//        F(col_i, m_boundaryOrientation) = 0.0;
+//        Fold(col_i, m_boundaryOrientation) = 0.0;
+        for(int d=0;d<3; d++)
+        {
+            v(col_i, d) = 0.0;
+            F(col_i, d) = 0.0;
+            Fold(col_i, d) = 0.0;
+        }
     }
 }
 //------------------------------------------------------------------------------

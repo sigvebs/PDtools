@@ -6,12 +6,7 @@ namespace PDtools
 {
 //------------------------------------------------------------------------------
 PD_OSP::PD_OSP(PD_Particles &particles):
-    Force(particles),
-    m_r(m_particles.r()),
-    m_r0(m_particles.r0()),
-    m_F(m_particles.F()),
-    m_data(m_particles.data()),
-    m_pIds(m_particles.pIds())
+    Force(particles)
 {
     m_indexA = m_particles.registerParameter("a", 1);
 //    m_indexB = m_particles.registerParameter("b", 1);
@@ -38,22 +33,18 @@ PD_OSP::~PD_OSP()
 void PD_OSP::calculateForces(const std::pair<int, int> &idCol)
 {
     const int pId = idCol.first;
-    const int col_i = idCol.second;
-    const double a_i = m_data(col_i, m_indexA);
-    const double b_i = m_data(col_i, m_indexB);
-    const double d_i = m_data(col_i, m_indexD);
-    const double theta_i = m_data(col_i, m_indexTheta);
+    const int i = idCol.second;
+    const double a_i = m_data(i, m_indexA);
+    const double b_i = m_data(i, m_indexB);
+    const double d_i = m_data(i, m_indexD);
+    const double theta_i = m_data(i, m_indexTheta);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
 
-    double r_i[3];
-    double r0_i[3];
     double f_i[3];
     for(int d=0; d<m_dim; d++)
     {
         f_i[d] = 0;
-        r_i[d] = m_r(d, col_i);
-        r0_i[d] = m_r0(d, col_i);
     }
 
     const int nConnections = PDconnections.size();
@@ -87,9 +78,9 @@ void PD_OSP::calculateForces(const std::pair<int, int> &idCol)
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
-            A_ij += dr_ij[d]*(m_r0(d, j) - r0_i[d]);
+            A_ij += dr_ij[d]*(m_r0(j, d) - m_r0(i, d));
         }
 
         const double dr = sqrt(dr2);
@@ -114,30 +105,22 @@ void PD_OSP::calculateForces(const std::pair<int, int> &idCol)
 
     for(int d=0; d<m_dim; d++)
     {
-        m_F(d, col_i) += m_delta*f_i[d];
+        m_F(i, d) += m_delta*f_i[d];
     }
 
-    m_data(col_i, m_indexThetaNew) = m_delta*thetaNew;
+    m_data(i, m_indexThetaNew) = m_delta*thetaNew;
 }
 //------------------------------------------------------------------------------
 double PD_OSP::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
 {
     const int pId = idCol.first;
-    const int col_i = idCol.second;
-    const double a_i = m_data(col_i, m_indexA);
-    const double b_i = m_data(col_i, m_indexB);
-    const double d_i = m_data(col_i, m_indexD);
-    const double theta_i = m_data(col_i, m_indexTheta);
+    const int i = idCol.second;
+    const double a_i = m_data(i, m_indexA);
+    const double b_i = m_data(i, m_indexB);
+    const double d_i = m_data(i, m_indexD);
+//    const double theta_i = m_data(i, m_indexTheta);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-    double r_i[3];
-    double r0_i[3];
-    for(int d=0; d<m_dim; d++)
-    {
-        r_i[d] = m_r(d, col_i);
-        r0_i[d] = m_r0(d, col_i);
-    }
 
     const int nConnections = PDconnections.size();
     double dr_ij[3];
@@ -163,15 +146,14 @@ double PD_OSP::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
         const double Gd_ij = con.second[m_indexForceScalingDilation];
         const double Gb_ij = con.second[m_indexForceScalingBond];
 
-
         double dr2 = 0;
         double A_ij = 0; // The lambda-factor
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
-            A_ij += dr_ij[d]*(m_r0(d, j) - r0_i[d]);
+            A_ij += dr_ij[d]*(m_r0(j, d) - m_r0(i, d));
         }
 
         const double dr = sqrt(dr2);
@@ -200,21 +182,13 @@ void PD_OSP::calculatePotentialEnergy(const std::pair<int, int> &idCol, int inde
 void PD_OSP::calculateStress(const std::pair<int, int> &idCol, const int (&indexStress)[6])
 {
     const int pId = idCol.first;
-    const int col_i = idCol.second;
-    const double a_i = m_data(col_i, m_indexA);
-    const double b_i = m_data(col_i, m_indexB);
-    const double d_i = m_data(col_i, m_indexD);
-    const double theta_i = m_data(col_i, m_indexTheta);
+    const int i = idCol.second;
+    const double a_i = m_data(i, m_indexA);
+    const double b_i = m_data(i, m_indexB);
+    const double d_i = m_data(i, m_indexD);
+    const double theta_i = m_data(i, m_indexTheta);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-    double r_i[3];
-    double r0_i[3];
-    for(int d=0; d<m_dim; d++)
-    {
-        r_i[d] = m_r(d, col_i);
-        r0_i[d] = m_r0(d, col_i);
-    }
 
     const int nConnections = PDconnections.size();
     double dr_ij[3];
@@ -247,9 +221,9 @@ void PD_OSP::calculateStress(const std::pair<int, int> &idCol, const int (&index
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
-            A_ij += dr_ij[d]*(m_r0(d, j) - r0_i[d]);
+            A_ij += dr_ij[d]*(m_r0(j, d) - m_r0(i, d));
         }
 
         const double dr = sqrt(dr2);
@@ -269,12 +243,12 @@ void PD_OSP::calculateStress(const std::pair<int, int> &idCol, const int (&index
             f[d] = dr_ij[d]*fbond;
         }
 
-        m_data(col_i, indexStress[0]) += 0.5*f[X]*dr_ij[X];
-        m_data(col_i, indexStress[1]) += 0.5*f[Y]*dr_ij[Y];
-        m_data(col_i, indexStress[2]) += 0.5*f[Z]*dr_ij[Z];
-        m_data(col_i, indexStress[3]) += 0.5*f[X]*dr_ij[Y];
-        m_data(col_i, indexStress[4]) += 0.5*f[X]*dr_ij[Z];
-        m_data(col_i, indexStress[5]) += 0.5*f[Y]*dr_ij[Z];
+        m_data(i, indexStress[0]) += 0.5*f[X]*dr_ij[X];
+        m_data(i, indexStress[1]) += 0.5*f[Y]*dr_ij[Y];
+        m_data(i, indexStress[2]) += 0.5*f[Z]*dr_ij[Z];
+        m_data(i, indexStress[3]) += 0.5*f[X]*dr_ij[Y];
+        m_data(i, indexStress[4]) += 0.5*f[X]*dr_ij[Z];
+        m_data(i, indexStress[5]) += 0.5*f[Y]*dr_ij[Z];
     }
 }
 //------------------------------------------------------------------------------
@@ -284,9 +258,9 @@ void PD_OSP::updateState(const std::pair<int, int> &idCol)
     m_data(col_i, m_indexTheta) = m_data(col_i, m_indexThetaNew);
 }
 //------------------------------------------------------------------------------
-void PD_OSP::initialize(double E, double nu, double delta, int dim, double h)
+void PD_OSP::initialize(double E, double nu, double delta, int dim, double h, double lc)
 {
-    Force::initialize(E, nu, delta, dim, h);
+    Force::initialize(E, nu, delta, dim, h, lc);
     double a, b, d;
     double k; // Bulk modulus
     double mu; // Shear modulus
@@ -336,6 +310,7 @@ void PD_OSP::initialize(double E, double nu, double delta, int dim, double h)
 //------------------------------------------------------------------------------
 void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain)
 {
+    (void) nu;
     arma::vec3 strainFactor;
     arma::mat gd = arma::zeros(m_particles.nParticles(), dim); // Dilation correction
     arma::mat gb = arma::zeros(m_particles.nParticles(), dim); // Bond correction
@@ -359,14 +334,14 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
 # pragma omp parallel for
 #endif
         // Applying uniaxial stretch
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             int col_i = idCol.second;
 
             for(int d=0; d<dim; d++)
             {
-                m_r(d, col_i) = (1 + strainFactor(d))*m_r(d, col_i);
+                m_r(col_i, d) = (1 + strainFactor(d))*m_r(col_i, d);
             }
         }
 
@@ -375,7 +350,7 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
 # pragma omp parallel for
 #endif
         // Calculating the elastic energy density
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             int col_i = idCol.second;
@@ -388,14 +363,14 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
 # pragma omp parallel for
 #endif
         // Resetting the positions
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             int col_i = idCol.second;
 
             for(int d=0; d<dim; d++)
             {
-                m_r(d, col_i) = m_r(d, col_i)/(1 + strainFactor(d));
+                m_r(col_i, d) = m_r(col_i, d)/(1 + strainFactor(d));
             }
         }
     }
@@ -434,7 +409,7 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
 //# pragma omp parallel for
 //#endif
         // Applying uniaxial stretch
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             int col_i = idCol.second;
@@ -442,9 +417,9 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
             for(int d=0; d<dim; d++)
             {
                 double shear = strainFactor(d)*m_r(axis(d), col_i);
-                m_r(d, col_i) = m_r(d, col_i) + shear;
-//                m_r(d, col_i) = m_r(d, col_i) + strainFactor(d)*m_r(axis(d), col_i);
-//                m_r(d, col_i) = (1 + strainFactor(d))*m_r(d, col_i);
+                m_r(col_i, d) = m_r(col_i, d) + shear;
+//                m_r(col_i, d) = m_r(col_i, d) + strainFactor(d)*m_r(axis(d), col_i);
+//                m_r(col_i, d) = (1 + strainFactor(d))*m_r(col_i, d);
             }
         }
 
@@ -453,7 +428,7 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
 //# pragma omp parallel for
 //#endif
         // Calculating the elastic energy density
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             int col_i = idCol.second;
@@ -466,15 +441,15 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
 //# pragma omp parallel for
 //#endif
         // Resetting the positions
-        for(int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
             pair<int, int> idCol(i, i);
             int col_i = idCol.second;
 
             for(int d=0; d<dim; d++)
             {
-                m_r(d, col_i) = m_r(d, col_i) - strainFactor(d)*m_r(axis(d), col_i);
-//                m_r(d, col_i) = m_r(d, col_i)/(1 + strainFactor(d));
+                m_r(col_i, d) = m_r(col_i, d) - strainFactor(d)*m_r(axis(d), col_i);
+//                m_r(col_i, d) = m_r(col_i, d)/(1 + strainFactor(d));
             }
         }
     }
@@ -485,7 +460,7 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
 //#ifdef USE_OPENMP
 //# pragma omp parallel for
 //#endif
-    for(int i=0; i<m_particles.nParticles(); i++)
+    for(unsigned int i=0; i<m_particles.nParticles(); i++)
     {
         pair<int, int> idCol(i, i);
         int pId = idCol.first;
@@ -524,19 +499,10 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
 double PD_OSP::calculateDilationTerm(const std::pair<int, int> &idCol)
 {
     const int pId = idCol.first;
-    const int col_i = idCol.second;
-    const double d_i = m_data(col_i, m_indexD);
+    const int i = idCol.second;
+    const double d_i = m_data(i, m_indexD);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-    double r_i[3];
-    double r0_i[3];
-    for(int d=0; d<m_dim; d++)
-    {
-        r_i[d] = m_r(d, col_i);
-        r0_i[d] = m_r0(d, col_i);
-    }
-
     const int nConnections = PDconnections.size();
     double dr_ij[3];
 
@@ -561,9 +527,9 @@ double PD_OSP::calculateDilationTerm(const std::pair<int, int> &idCol)
 
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
-            A_ij += dr_ij[d]*(m_r0(d, j) - r0_i[d]);
+            A_ij += dr_ij[d]*(m_r0(d, j) - m_r0(i, d));
         }
 
         const double dr = sqrt(dr2);
@@ -584,18 +550,9 @@ double PD_OSP::calculateDilationTerm(const std::pair<int, int> &idCol)
 double PD_OSP::calculateBondPotential(const std::pair<int, int> &idCol)
 {
     const int pId = idCol.first;
-    const int col_i = idCol.second;
-    const double b_i = m_data(col_i, m_indexB);
-
+    const int i = idCol.second;
+    const double b_i = m_data(i, m_indexB);
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-    double r_i[3];
-    double r0_i[3];
-    for(int d=0; d<m_dim; d++)
-    {
-        r_i[d] = m_r(d, col_i);
-        r0_i[d] = m_r0(d, col_i);
-    }
 
     const int nConnections = PDconnections.size();
     double dr_ij[3];
@@ -619,7 +576,7 @@ double PD_OSP::calculateBondPotential(const std::pair<int, int> &idCol)
         double dr2 = 0;
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }
 

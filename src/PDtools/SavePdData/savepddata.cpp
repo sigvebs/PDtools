@@ -47,27 +47,32 @@ void SavePdData::initialize()
         if(param == "damage")
         {
             m_computeProperties.push_back(new ComputeDamage(*m_particles));
+            m_saveparam_scale.push_back(std::pair<std::string, double>("damage", 1.));
         }
         if(param == "max_stretch")
         {
             m_computeProperties.push_back(new ComputeMaxStretch(*m_particles));
+            m_saveparam_scale.push_back(std::pair<std::string, double>("max_stretch", 1.));
         }
-        if(param == "f_x")
+        if(param == "radius")
         {
-            m_computeProperties.push_back(new ComputeMaxStretch(*m_particles));
+            m_saveparam_scale.push_back(std::pair<std::string, double>("radius", m_L0));
         }
         if(param == "average_stretch")
         {
             m_computeProperties.push_back(new ComputeAverageStretch(*m_particles));
+            m_saveparam_scale.push_back(std::pair<std::string, double>("average_stretch", 1.));
         }
         else if(param == "kinetic_energy")
         {
             m_computeProperties.push_back(new ComputeKineticEnergy(*m_particles));
+            m_saveparam_scale.push_back(std::pair<std::string, double>("kinetic_energy", pow(m_v0, 2)*pow(m_L0, 3)*m_rho0));
         }
         else if(param == "potential_energy")
         {
             m_computeProperties.push_back(new ComputePotentialEnergy(*m_particles,
                                                                      *m_oneBodyForces));
+            m_saveparam_scale.push_back(std::pair<std::string, double>("potential_energy", 1.));
         }
         else if(param == "stress")
         {
@@ -75,14 +80,18 @@ void SavePdData::initialize()
                                                             *m_oneBodyForces));
             computeStress = true;
         }
-        else if(param == "id"
-                || param == "x" || param == "y" || param == "z"
-//                || param == "v_x" || param == "v_y" || param == "v_z"
-                || param == "s_xx" || param == "s_yy" || param == "s_zz"
-                || param == "s_xy" || param == "s_xz" || param == "s_yz"
-                )
+        else if(param == "id")
         {
-            // Ignore id, velocities, coordinates and stress
+            m_saveparam_scale.push_back(std::pair<std::string, double>("id", 1.));
+        }
+        else if(param == "x" || param == "y" || param == "z")
+        {
+            m_saveparam_scale.push_back(std::pair<std::string, double>(param, m_L0));
+        }
+        else if(   param == "s_xx" || param == "s_yy" || param == "s_zz"
+                || param == "s_xy" || param == "s_xz" || param == "s_yz")
+        {
+            m_saveparam_scale.push_back(std::pair<std::string, double>(param, m_E0));
         }
         else
         {
@@ -105,11 +114,17 @@ void SavePdData::initialize()
         m_saveParameters.push_back("s_xy");
         m_saveParameters.push_back("s_xz");
         m_saveParameters.push_back("s_yz");
+        m_saveparam_scale.push_back(std::pair<std::string, double>("s_xx", m_E0));
+        m_saveparam_scale.push_back(std::pair<std::string, double>("s_yy", m_E0));
+        m_saveparam_scale.push_back(std::pair<std::string, double>("s_zz", m_E0));
+        m_saveparam_scale.push_back(std::pair<std::string, double>("s_xy", m_E0));
+        m_saveparam_scale.push_back(std::pair<std::string, double>("s_xz", m_E0));
+        m_saveparam_scale.push_back(std::pair<std::string, double>("s_yz", m_E0));
     }
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<m_particles->nParticles(); i++)
+    for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
         pair<int, int> id(i, i);
         for(ComputeProperty *computeProperty:m_computeProperties)
@@ -118,7 +133,7 @@ void SavePdData::initialize()
         }
     }
 
-    saveParticles = new SaveParticles("lmp", m_saveParameters, false);
+    saveParticles = new SaveParticles("lmp", m_saveparam_scale, false);
 }
 //------------------------------------------------------------------------------
 void SavePdData::evaluate(double t, int i)
@@ -128,7 +143,7 @@ void SavePdData::evaluate(double t, int i)
 //#ifdef USE_OPENMP
 //# pragma omp parallel for
 //#endif
-    for(int i=0; i<m_particles->nParticles(); i++)
+    for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
         pair<int, int> id(i, i);
         for(ComputeProperty *computeProperty:m_computeProperties)
@@ -136,7 +151,10 @@ void SavePdData::evaluate(double t, int i)
             computeProperty->update(id);
         }
     }
-
+}
+//------------------------------------------------------------------------------
+void SavePdData::saveData(double t, int i)
+{
     string fName = m_savePath + "/" + to_string(i) + ".lmp";
     saveParticles->setTimestep(i);
     saveParticles->writeToFile(*m_particles, fName);
@@ -160,6 +178,15 @@ void SavePdData::addParameter(string param)
 void SavePdData::setForces(std::vector<Force *> &oneBodyForces)
 {
     m_oneBodyForces = &oneBodyForces;
+}
+//------------------------------------------------------------------------------
+void SavePdData::setScaling(const double E0, const double L0, const double v0, const double t0, const double rho0)
+{
+    m_E0 = E0;
+    m_L0 = L0;
+    m_v0 = v0;
+    m_t0 = t0;
+    m_rho0 = rho0;
 }
 //------------------------------------------------------------------------------
 // Compute Property class

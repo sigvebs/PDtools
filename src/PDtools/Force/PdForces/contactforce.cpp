@@ -16,9 +16,9 @@ void ContactForce::setVerletRadius(double verletSpacing)
     m_verletRadius = verletSpacing;
 }
 //------------------------------------------------------------------------------
-void ContactForce::initialize(double E, double nu, double delta, int dim, double h)
+void ContactForce::initialize(double E, double nu, double delta, int dim, double h, double lc)
 {
-    Force::initialize(E, nu, delta, dim, h);
+    Force::initialize(E, nu, delta, dim, h, lc);
     updateVerletList("contectForce", m_particles, m_grid, m_verletRadius);
     m_dim = dim;
 }
@@ -32,10 +32,6 @@ ContactForce::ContactForce(PD_Particles &particles, Grid & grid, double spacing)
     Force(particles),
     m_grid(grid),
     m_steps(0),
-    m_F(m_particles.F()),
-    m_r(m_particles.r()),
-    m_r0(m_particles.r0()),
-    m_data(m_particles.data()),
     m_spacing(spacing)
 {
     m_verletRadius = 3.1*spacing;
@@ -72,7 +68,7 @@ void ContactForce::calculateForces(const std::pair<int, int> &idCol)
         double drSquared = 0;
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - m_r(d, i);
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             drSquared += dr_ij[d]*dr_ij[d];
         }
 
@@ -91,7 +87,7 @@ void ContactForce::calculateForces(const std::pair<int, int> &idCol)
 
             for(int d=0; d<m_dim; d++)
             {
-                m_F(d, i) += dr_ij[d]*fbond;
+                m_F(i, d) += dr_ij[d]*fbond;
             }
         }
     }
@@ -100,6 +96,8 @@ void ContactForce::calculateForces(const std::pair<int, int> &idCol)
 void ContactForce::calculateStress(const std::pair<int, int> &idCol,
                                    const int (&indexStress)[6])
 {
+    (void) idCol;
+    (void) indexStress;
     /*
     const int pId = idCol.first;
     const int i = idCol.second;
@@ -108,11 +106,6 @@ void ContactForce::calculateStress(const std::pair<int, int> &idCol,
 
     double dr_ij[m_dim];
     double f[m_dim];
-    double r_i[m_dim];
-    for(int d=0; d<m_dim; d++)
-    {
-        r_i[d] = m_r(d, i);
-    }
 
     const vector<int> & verletList = m_particles.verletList(pId);
 
@@ -123,7 +116,7 @@ void ContactForce::calculateStress(const std::pair<int, int> &idCol,
         double drSquared = 0;
         for(int d=0; d<m_dim; d++)
         {
-            dr_ij[d] = m_r(d, j) - r_i[d];
+            dr_ij[d] = m_r(j, d) - m_r(i, d);
             drSquared += dr_ij[d]*dr_ij[d];
         }
         double drLen = sqrt(drSquared);

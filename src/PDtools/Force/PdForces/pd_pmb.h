@@ -25,17 +25,11 @@ public:
     int m_indexS_new;
     int m_indexS00;
 
-    arma::mat & m_r;
-    arma::mat & m_r0;
-    arma::mat & m_F;
-    arma::mat & m_data;
     double **f;
     double **x;
     double **r0;
 
     double m_alpha;
-
-    std::unordered_map<int, int> & m_pIds;
 
     enum PD_bondForceErrorMessages
     {
@@ -45,16 +39,26 @@ public:
 public:
     PD_PMB(PD_Particles &particles, double lc, double delta, double alpha);
     ~PD_PMB();
-    virtual void calculateForces(const std::pair<int, int> & idCol);
-    virtual double calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
-    virtual void calculatePotentialEnergy(const std::pair<int, int> & idCol,
+
+    virtual void
+    calculateForces(const std::pair<int, int> & idCol);
+
+    virtual double
+    calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
+
+    virtual void
+    calculatePotentialEnergy(const std::pair<int, int> & idCol,
                                           int indexPotential);
-    virtual void calculateStress(const std::pair<int, int> & idCol,
+    virtual void
+    calculateStress(const std::pair<int, int> & idCol,
                                  const int (&indexStress)[6]);
 
-    virtual double calculateStableMass(const std::pair<int, int> & idCol,
+    virtual double
+    calculateStableMass(const std::pair<int, int> & idCol,
                                      double dt);
-    virtual void initialize(double E, double nu, double delta, int dim, double h);
+
+    virtual void
+    initialize(double E, double nu, double delta, int dim, double h, double lc);
 };
 //------------------------------------------------------------------------------
 }

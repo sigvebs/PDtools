@@ -24,39 +24,45 @@ private:
     int m_iMass;
     int m_iCompute;
 
-    arma::mat & m_r;
-    arma::mat & m_r0;
-    arma::mat & m_F;
-    arma::mat & m_data;
-    std::unordered_map<int, int> & m_pIds;
-
     double m_k;
     double m_mu;
     double m_delta;
     double m_nu;
 public:
     PD_LPS(PD_Particles &particles);
+
     ~PD_LPS();
-    virtual void calculateForces(const std::pair<int, int> & idCol);
 
-    virtual double calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
+    virtual void
+    calculateForces(const std::pair<int, int> & idCol);
 
-    double computeDilation(const std::pair<int, int> & idCol);
+    virtual double
+    calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
 
-    virtual void calculatePotentialEnergy(const std::pair<int, int> & idCol,
+    double
+    computeDilation(const std::pair<int, int> & idCol);
+
+    virtual void
+    calculatePotentialEnergy(const std::pair<int, int> & idCol,
                                           int indexPotential);
-    virtual void calculateStress(const std::pair<int, int> & idCol,
+    virtual void
+    calculateStress(const std::pair<int, int> & idCol,
                                  const int (&indexStress)[6]);
 
-    virtual void updateState(const std::pair<int, int> & idCol);
+    virtual void
+    updateState(const std::pair<int, int> & idCol);
 
-    virtual double calculateStableMass(const std::pair<int, int> & idCol,
+    virtual double
+    calculateStableMass(const std::pair<int, int> & idCol,
                                      double dt);
-    virtual void initialize(double E, double nu, double delta, int dim, double h);
+    virtual void
+    initialize(double E, double nu, double delta, int dim, double h, double lc);
 
-    void calculateMass();
+    void
+    calculateMass();
 
-    virtual void applySurfaceCorrection(double strain=0.01);
+    virtual void
+    applySurfaceCorrection(double strain=0.01);
 };
 //------------------------------------------------------------------------------
 }
