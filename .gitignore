@@ -1,0 +1,4 @@
+*.user
+.qmake.cache
+.qmake.conf
+PDtools-*.pro
