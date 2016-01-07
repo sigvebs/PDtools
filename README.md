@@ -1,10 +1,11 @@
 PDtools
 ============
 
-A library for Peridynamics simulations written in C++11.
+A C++ library for fracture simulations using Peridynamics theory.
 
 Dependencies:
- - boost-dev: system-dev, algorithm, filesystem, mpi
+ - boost
+ - boost-dev: system, filesystem, serialization, regex
  - blas
  - armadillo
  - libconfig++
