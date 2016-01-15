@@ -15,7 +15,7 @@ public:
     ~ADRfractureAverage();
 
     virtual void initialize();
-    virtual void evaluateStepOne(const pair<int, int> &pIdcol);
+    virtual void evaluateStepOne(const int id_i, const int i);
     virtual void evaluateStepTwo(const pair<int, int> &pIdcol);
 
     virtual void evaluateStepTwo();
@@ -30,7 +30,7 @@ private:
     int m_indexS00;
     int m_indexS_avg;
     arma::mat * m_data;
-    std::unordered_map<int, int> * m_pIds;
+    std::unordered_map<int, int> * m_idToCol;
 };
 //------------------------------------------------------------------------------
 }

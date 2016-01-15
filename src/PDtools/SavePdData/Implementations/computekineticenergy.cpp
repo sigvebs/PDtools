@@ -19,20 +19,19 @@ ComputeKineticEnergy::~ComputeKineticEnergy()
 }
 
 //------------------------------------------------------------------------------
-void ComputeKineticEnergy::update(const pair<int, int> &pIdcol)
+void ComputeKineticEnergy::update(const int id_i, const int i)
 {
-    int col = pIdcol.second;
-    double rho = (*m_data)(col, m_indexRho);
-    double volume = (*m_data)(col, m_indexVolume);
+    double rho = (*m_data)(i, m_indexRho);
+    double volume = (*m_data)(i, m_indexVolume);
     double mass = rho*volume;
 
     double v_squared = 0;
     for(int d=0; d<m_dim; d++)
     {
-        v_squared += (*m_v)(col, d)*(*m_v)(col, d);
+        v_squared += (*m_v)(i, d)*(*m_v)(i, d);
     }
 
-    (*m_data)(col, m_indexKE) = 0.5*mass*v_squared;
+    (*m_data)(i, m_indexKE) = 0.5*mass*v_squared;
 }
 //------------------------------------------------------------------------------
 }

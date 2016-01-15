@@ -11,12 +11,14 @@ namespace PDtools
 {
 // Forward declerations
 class Particles;
+class Grid;
 
 //------------------------------------------------------------------------------
 template <class T_particles>
 class T_LoadParticles
 {
 protected:
+    Grid * m_grid = nullptr;
     int m_nParticles;
     string m_format;
     bool m_binary;
@@ -51,7 +53,14 @@ public:
          bool bin=false,
          unordered_map<string, int> loadParameters={{}});
 
-    void useLegacyFormat(bool ulf)
+    void
+    setGrid(Grid & grid)
+    {
+        m_grid = &grid;
+    }
+
+    void
+    useLegacyFormat(bool ulf)
     {
         m_useLegacyFormat = ulf;
     }

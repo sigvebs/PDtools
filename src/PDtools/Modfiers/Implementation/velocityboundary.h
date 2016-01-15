@@ -11,15 +11,15 @@ class VelocityBoundary: public Modifier
 public:
     VelocityBoundary(double velAmplitude, double velOrientation,
                      pair<double, double> boundary, int boundaryOrientation, double dt,
-                     int steps, bool isStatic);
+                     int steps, int isStatic);
     ~VelocityBoundary();
 
+    virtual void registerParticleParameters();
     virtual void evaluateStepOne();
     virtual void evaluateStepTwo();
     virtual void initialize();
 
 private:
-    vector<pair<int, int>> m_boundaryParticles;
     double m_velAmplitude;
     int m_velOritentation;
     pair<double, double> m_boundary;
@@ -29,6 +29,7 @@ private:
     double m_v;
     double m_dt;
     bool m_isStatic;
+    bool m_usingUnbreakableBorder = false;
 };
 //------------------------------------------------------------------------------
 }

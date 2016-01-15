@@ -15,25 +15,23 @@ ComputeAverageStretch::~ComputeAverageStretch()
 
 }
 //------------------------------------------------------------------------------
-void ComputeAverageStretch::update(const pair<int, int> &pIdcol)
+void ComputeAverageStretch::update(const int id_i, const int i)
 {
-    int pId = pIdcol.first;
-//    int col_i = pIdcol.second;
-
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    const vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
     double sAvg = 0;
     for(auto &con:PDconnections)
     {
-        double s = con.second[m_indexStretch];
+        const double s = con.second[m_indexStretch];
         sAvg += s;
     }
 
-    (*m_data)(pIdcol.second, m_indexAverageStretch) = sAvg / PDconnections.size();
+    (*m_data)(i, m_indexAverageStretch) = sAvg / PDconnections.size();
 }
 //------------------------------------------------------------------------------
-void ComputeAverageStretch::init(const pair<int, int> &pIdcol)
+void ComputeAverageStretch::init(const int id_i, const int i)
 {
-    (void) pIdcol;
+    (void) id_i;
+    (void) i;
 }
 //------------------------------------------------------------------------------
 }

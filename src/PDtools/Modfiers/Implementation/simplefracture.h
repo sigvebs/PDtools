@@ -14,7 +14,7 @@ public:
     ~SimpleFracture();
 
     virtual void initialize();
-    virtual void evaluateStepOne(const pair<int, int> &pIdcol);
+    virtual void evaluateStepOne(const int id_i, const int i);
     virtual void evaluateStepTwo();
 
 private:
@@ -28,7 +28,7 @@ private:
     int m_indexMicromodulus;
     bool m_broken;
     arma::mat * m_data;
-    std::unordered_map<int, int> * m_pIds;
+    std::unordered_map<int, int> * m_idToCol;
 };
 //------------------------------------------------------------------------------
 }

@@ -16,7 +16,7 @@ public:
     ~BondEnergyFracture();
 
     virtual void initialize();
-    virtual void evaluateStepOne(const pair<int, int> &pIdcol);
+    virtual void evaluateStepOne(const int id_i, const int i);
     virtual void evaluateStepTwo(); protected:
     vector<Force*> &m_forces;
     double m_wc; // Critical energy density
@@ -29,7 +29,7 @@ public:
     int m_indexMicromodulus;
     double  m_G;
     arma::mat * m_data;
-    std::unordered_map<int, int> * m_pIds;
+    std::unordered_map<int, int> * m_idToCol;
 };
 //------------------------------------------------------------------------------
 }

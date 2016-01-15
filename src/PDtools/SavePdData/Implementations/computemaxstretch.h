@@ -13,8 +13,8 @@ public:
     ComputeMaxStretch(PD_Particles &particles);
     ~ComputeMaxStretch();
 
-    virtual void update(const pair<int, int> &pIdcol);
-    virtual void init(const pair<int, int> &pIdcol);
+    virtual void update(const int id_i, const int i);
+    virtual void init(const int id_i, const int i);
 private:
     int m_indexDamage;
     int m_indexStretch;

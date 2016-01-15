@@ -26,22 +26,22 @@ void dynamicADR::solve()
     }
 }
 //------------------------------------------------------------------------------
-void dynamicADR::stepForward(int i)
+void dynamicADR::stepForward(int timeStep)
 {
-    save(i);
+    save(timeStep);
     modifiersStepOne();
     integrateStepOne();
-    zeroForcesAndStress();
+    zeroForces();
 
     updateGridAndCommunication();
 
-    calculateForces();
+    calculateForces(timeStep);
 
     modifiersStepTwo();
     integrateStepTwo();
 
     m_t += m_dt;
-    cout << i << " dt = " << m_t << endl;
+    cout << timeStep << " dt = " << m_t << endl;
 }
 //------------------------------------------------------------------------------
 }

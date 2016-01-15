@@ -1,6 +1,5 @@
 #include "adrmohrcoulombfracture.h"
 
-#include "PDtools/Force/force.h"
 #include "PDtools/Particles/pd_particles.h"
 
 namespace PDtools
@@ -9,12 +8,7 @@ namespace PDtools
 ADRmohrCoulombFracture::ADRmohrCoulombFracture(double mu, double C, double T, int dim):
     m_C(C), m_T(T), m_dim(dim), m_d(pow(sqrt(1 + mu*mu) + mu, 2))
 {
-
-}
-//------------------------------------------------------------------------------
-ADRmohrCoulombFracture::~ADRmohrCoulombFracture()
-{
-
+    m_neededProperties= {pair<string, int>("stress",1)};
 }
 //------------------------------------------------------------------------------
 void ADRmohrCoulombFracture::initialize()
@@ -22,140 +16,74 @@ void ADRmohrCoulombFracture::initialize()
     m_data = &m_particles->data();
     m_indexUnbreakable =  m_particles->getParamId("unbreakable");
     m_indexConnected = m_particles->getPdParamId("connected");
-    m_pIds = &m_particles->pIds();
-
-    if(m_particles->hasParameter("s_xx"))
-        m_indexStress[0] = m_particles->getParamId("s_xx");
-    else
-        m_indexStress[0] = m_particles->registerParameter("s_xx");
-
-    if(m_particles->hasParameter("s_yy"))
-        m_indexStress[1] = m_particles->getParamId("s_yy");
-    else
-        m_indexStress[1] = m_particles->registerParameter("s_yy");
-
-    if(m_particles->hasParameter("s_zz"))
-        m_indexStress[2] = m_particles->getParamId("s_zz");
-    else
-        m_indexStress[2] = m_particles->registerParameter("s_zz");
-
-    if(m_particles->hasParameter("s_xy"))
-        m_indexStress[3] = m_particles->getParamId("s_xy");
-    else
-        m_indexStress[3] = m_particles->registerParameter("s_xy");
-
-    if(m_particles->hasParameter("s_xz"))
-        m_indexStress[4] = m_particles->getParamId("s_xz");
-    else
-        m_indexStress[4] = m_particles->registerParameter("s_xz");
-
-    if(m_particles->hasParameter("s_yz"))
-        m_indexStress[5] = m_particles->getParamId("s_yz");
-    else
-        m_indexStress[5] = m_particles->registerParameter("s_yz");
+    m_idToCol = &m_particles->idToCol();
 
     m_state = false;
-    m_maxPId = pair<int, pair<int, vector<double>> *>(-1, nullptr);
+    m_maxPId = pair<int, int>(-1, -1);
     m_maxStress = std::numeric_limits<double>::min();
+
+    switch(m_dim)
+    {
+    case 1:
+        m_nStressElements = 1;
+        m_ghostParameters = {"s_xx"};
+        m_indexStress[0] = m_particles->registerParameter("s_xx");
+        break;
+    case 2:
+        m_nStressElements = 3;
+        m_ghostParameters = {"s_xx", "s_yy", "s_xy"};
+        m_indexStress[0] = m_particles->registerParameter("s_xx");
+        m_indexStress[1] = m_particles->registerParameter("s_yy");
+        m_indexStress[2] = m_particles->registerParameter("s_xy");
+        break;
+    case 3:
+        m_nStressElements = 6;
+        m_ghostParameters = {"s_xx", "s_yy", "s_zz", "s_xy", "s_xz", "s_yz"};
+        m_indexStress[0] = m_particles->registerParameter("s_xx");
+        m_indexStress[1] = m_particles->registerParameter("s_yy");
+        m_indexStress[2] = m_particles->registerParameter("s_xy");
+        m_indexStress[3] = m_particles->registerParameter("s_zz");
+        m_indexStress[4] = m_particles->registerParameter("s_xz");
+        m_indexStress[5] = m_particles->registerParameter("s_yz");
+        break;
+    }
 }
 //------------------------------------------------------------------------------
-void ADRmohrCoulombFracture::evaluateStepTwo(const pair<int, int> &id_col)
+void ADRmohrCoulombFracture::evaluateStepTwo(const int id_i, const int i)
 {
     // First calculating the total stress on an material point. The stress is averaged
     // all its bonds, and the stress state on a bond is the mean of the
     // stress at each material point.
-
-    const int id_i = id_col.first;
-    const int col_i = id_col.second;
-
-    if((*m_data)(col_i, m_indexUnbreakable) >= 1)
+    if((*m_data)(i, m_indexUnbreakable) >= 1)
         return;
-
+    mat &data = *m_data;
     vector<pair<int, vector<double>>> & PDconnections = m_particles->pdConnections(id_i);
 
-    /*
-    if(m_dim == 2)
-    {
-        arma::mat S_i(2, 2);
-        arma::mat S(2, 2);
-        S_i(0, 0) = (*m_data)(col_i, m_indexStress[0]);
-        S_i(1, 1) = (*m_data)(col_i, m_indexStress[1]);
-        S_i(0, 1) = (*m_data)(col_i, m_indexStress[3]);
-        S_i(1, 0) = S_i(0, 1);
-        arma::vec eigval;
-
-        for(auto &con:PDconnections)
-        {
-            const int id_j = con.first;
-            const int j = (*m_pIds)[id_j];
-
-            if((*m_data)(j, m_indexUnbreakable) >= 1)
-                continue;
-
-            if(con.second[m_indexConnected] <= 0.5)
-                continue;
-
-            S(0, 0) = 0.5*(S_i(0, 0) + (*m_data)(j, m_indexStress[0]));
-            S(1, 1) = 0.5*(S_i(1, 1) + (*m_data)(j, m_indexStress[1]));
-            S(0, 1) = 0.5*(S_i(0, 1) + (*m_data)(j, m_indexStress[3]));
-//            S(0, 0) = max(S_i(0, 0), (*m_data)(j, m_indexStress[0]));
-//            S(1, 1) = max(S_i(1, 1), (*m_data)(j, m_indexStress[1]));
-//            S(0, 1) = max(S_i(0, 1), (*m_data)(j, m_indexStress[3]));
-            S(1, 0) = S(0, 1);
-            const double first = 0.5*(S(0, 0) + S(1, 1));
-            const double second = sqrt(0.25*(S(0, 0) - S(1, 1))*(S(0, 0) - S(1, 1)) + S(0, 1)*S(0, 1));
-            const double s1 = first + second;
-            const double s2 = first - second;
-            const double p_1 = max(s1, s2);
-            const double p_2 = min(s1, s2);
-
-//            arma::eig_sym(eigval, S);
-//            const double p_1 = eigval(1);
-//            const double p_2 = eigval(0);
-
-//            if(m_d*p_1 - p_2 - m_C > 0)
-//            {
-//                con.second[m_indexConnected] = 0;
-//                m_maxPId = pair<int, pair<int, vector<double>> *>(id_i, &con);
-//            }
-//            else if(p_1 > m_T)
-            if(p_1 > m_T)
-            {
-//                con.second[m_indexConnected] = 0;
-                if(p_1 > m_maxStress)
-                {
-                    m_maxPId = pair<int, pair<int, vector<double>> *>(id_i, &con);
-                    m_maxStress = p_1;
-                }
-            }
-        }
-    }
-    */
     arma::vec eigval(m_dim);
     arma::mat S_i(m_dim, m_dim);
     arma::mat S(m_dim, m_dim);
 
     if(m_dim == 2)
     {
-        S_i(0, 0) = (*m_data)(col_i, m_indexStress[0]);
-        S_i(1, 1) = (*m_data)(col_i, m_indexStress[1]);
-        S_i(0, 1) = (*m_data)(col_i, m_indexStress[3]);
+        S_i(0, 0) = data(i, m_indexStress[0]);
+        S_i(1, 1) = data(i, m_indexStress[1]);
+        S_i(0, 1) = data(i, m_indexStress[2]);
         S_i(1, 0) = S_i(0, 1);
-
+        int counter = 0;
         for(auto &con:PDconnections)
         {
             const int id_j = con.first;
-            const int j = (*m_pIds)[id_j];
+            const int j = (*m_idToCol)[id_j];
 
-            if((*m_data)(j, m_indexUnbreakable) >= 1)
+            if(data(j, m_indexUnbreakable) >= 1)
                 continue;
 
             if(con.second[m_indexConnected] <= 0.5)
                 continue;
 
-            S(0, 0) = 0.5*(S_i(0, 0) + (*m_data)(j, m_indexStress[0]));
-            S(1, 1) = 0.5*(S_i(1, 1) + (*m_data)(j, m_indexStress[1]));
-            S(0, 1) = 0.5*(S_i(0, 1) + (*m_data)(j, m_indexStress[3]));
+            S(0, 0) = 0.5*(S_i(0, 0) + data(j, m_indexStress[0]));
+            S(1, 1) = 0.5*(S_i(1, 1) + data(j, m_indexStress[1]));
+            S(0, 1) = 0.5*(S_i(0, 1) + data(j, m_indexStress[2]));
             S(1, 0) = S(0, 1);
 #if 0
             arma::eig_sym(eigval, S);
@@ -170,49 +98,65 @@ void ADRmohrCoulombFracture::evaluateStepTwo(const pair<int, int> &id_col)
             const double p_2 = min(s1, s2);
 #endif
 
-            if(m_d*p_1 - p_2 - m_C > 0)
+//            if(p_1 > m_T)
+//            {
+//                con.second[m_indexConnected] = 0;
+//                m_maxPId = pair<int, int>(id_i, counter);
+//            }
+
+//            if(m_d*p_1 - p_2 - m_C > 0)
+//            {
+//                con.second[m_indexConnected] = 0;
+//                m_maxPId = pair<int, int>(id_i, counter);
+////                cout << "shearing/compression" << endl;
+//            }
+//            else
+            if(p_1 > m_T)
             {
                 con.second[m_indexConnected] = 0;
-                m_maxPId = pair<int, pair<int, vector<double>> *>(id_i, &con);
+//                cout << "tension" << endl;
+                if(p_1 > m_maxStress)
+                {
+                    m_maxPId = pair<int, int>(id_i, counter);
+                    m_maxStress = p_1;
+                    con.second[m_indexConnected] = 0;
+                }
             }
-            else if(p_1 > m_T)
-            {
-                con.second[m_indexConnected] = 0;
-                m_maxPId = pair<int, pair<int, vector<double>> *>(id_i, &con);
-            }
+            counter++;
         }
     }
     else if(m_dim == 3)
     {
-        S_i(0, 0) = (*m_data)(col_i, m_indexStress[0]);
-        S_i(1, 1) = (*m_data)(col_i, m_indexStress[1]);
-        S_i(2, 2) = (*m_data)(col_i, m_indexStress[2]);
-        S_i(0, 1) = (*m_data)(col_i, m_indexStress[3]);
+        S_i(0, 0) = data(i, m_indexStress[0]);
+        S_i(1, 1) = data(i, m_indexStress[1]);
+        S_i(0, 1) = data(i, m_indexStress[2]);
         S_i(1, 0) = S_i(0, 1);
-        S_i(0, 2) = (*m_data)(col_i, m_indexStress[4]);
+        S_i(2, 2) = data(i, m_indexStress[3]);
+        S_i(0, 2) = data(i, m_indexStress[4]);
         S_i(2, 0) = S_i(0, 2);
-        S_i(1, 2) = (*m_data)(col_i, m_indexStress[5]);
+        S_i(1, 2) = data(i, m_indexStress[5]);
         S_i(2, 1) = S_i(1, 2);
 
+        int counter = 0;
         for(auto &con:PDconnections)
         {
             const int id_j = con.first;
-            const int col_j = (*m_pIds)[id_j];
+            const int j = (*m_idToCol)[id_j];
 
-            if((*m_data)(col_j, m_indexUnbreakable) >= 1)
+            if(data(j, m_indexUnbreakable) >= 1)
                 continue;
 
             if(con.second[m_indexConnected] <= 0.5)
                 continue;
 
-            S(0, 0) = 0.5*(S_i(0, 0) + (*m_data)(col_j, m_indexStress[0]));
-            S(1, 1) = 0.5*(S_i(1, 1) + (*m_data)(col_j, m_indexStress[1]));
-            S(2, 2) = 0.5*(S_i(2, 2) + (*m_data)(col_j, m_indexStress[2]));
-            S(0, 1) = 0.5*(S_i(0, 1) + (*m_data)(col_j, m_indexStress[3]));
+            S(0, 0) = 0.5*(S_i(0, 0) + data(j, m_indexStress[0]));
+            S(1, 1) = 0.5*(S_i(1, 1) + data(j, m_indexStress[1]));
+            S(0, 1) = 0.5*(S_i(0, 1) + data(j, m_indexStress[2]));
             S(1, 0) = S(0, 1);
-            S(0, 2) = 0.5*(S_i(0, 2) + (*m_data)(col_j, m_indexStress[4]));
+            S(2, 2) = 0.5*(S_i(2, 2) + data(j, m_indexStress[3]));
+            S(0, 2) = 0.5*(S_i(0, 2) + data(j, m_indexStress[4]));
             S(2, 0) = S(0, 2);
-            S(1, 2) = 0.5*(S_i(1, 2) + (*m_data)(col_j, m_indexStress[5]));
+            S(1, 2) = 0.5*(S_i(1, 2) + data(j, m_indexStress[5]));
             S(2, 1) = S(1, 2);
 
 #if 0
@@ -249,53 +193,36 @@ void ADRmohrCoulombFracture::evaluateStepTwo(const pair<int, int> &id_col)
             if(m_d*p_1 - p_2 - m_C > 0)
             {
                 con.second[m_indexConnected] = 0;
-                m_maxPId = pair<int, pair<int, vector<double>> *>(id_i, &con);
+                m_maxPId = pair<int, int>(id_i, counter);
             }
             else if(p_1 > m_T)
             {
                 con.second[m_indexConnected] = 0;
-                m_maxPId = pair<int, pair<int, vector<double>> *>(id_i, &con);
+                m_maxPId = pair<int, int>(id_i, counter);
             }
+            counter++;
         }
     }
     //--------------------------------------------------------------------------
-}
-//------------------------------------------------------------------------------
-void ADRmohrCoulombFracture::evaluateStepOne(const pair<int, int> &pIdcol)
-//void ADRmohrCoulombFracture::evaluateStepTwo(const pair<int, int> &pIdcol)
-{
-    for(int s=0; s<6; s++)
-    {
-        (*m_data)(pIdcol.second, m_indexStress[s]) = 0;
-    }
-
-    for(Force *force: m_forces)
-    {
-        force->calculateStress(pIdcol, m_indexStress);
-    }
 }
 //------------------------------------------------------------------------------
 void ADRmohrCoulombFracture::evaluateStepTwo()
 {
     if(m_maxPId.first != -1)
     {
+        const int id_i = m_maxPId.first;
+        const int remove = m_maxPId.second;
         m_state = true;
-
-        auto &con = m_maxPId.second;
-        con->second[m_indexConnected] = 0;
+//        vector<pair<int, vector<double>>> & PDconnections = m_particles->pdConnections(id_i);
+//        PDconnections[remove].second[m_indexConnected] = 0;
     }
     else
     {
         m_state = false;
     }
 
-    m_maxPId = std::pair<int, std::pair<int, vector<double>> *>(-1, nullptr);
+    m_maxPId = std::pair<int, int>(-1, -1);
     m_maxStress = std::numeric_limits<double>::min();
-}
-//------------------------------------------------------------------------------
-void ADRmohrCoulombFracture::addForce(Force *force)
-{
-    m_forces.push_back(force);
 }
 //------------------------------------------------------------------------------
 }

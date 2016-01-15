@@ -17,24 +17,22 @@ ComputeMaxStretch::~ComputeMaxStretch()
 
 }
 //------------------------------------------------------------------------------
-void ComputeMaxStretch::update(const pair<int, int> &pIdcol)
+void ComputeMaxStretch::update(const int id_i, const int i)
 {
-    int pId = pIdcol.first;
-//    int col_i = pIdcol.second;
-
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
     double sMax = 0;
     for(auto &con:PDconnections)
     {
         double s = con.second[m_indexStretch];
         sMax = max(fabs(s), sMax);
     }
-    (*m_data)(pIdcol.second, m_indexMaxStretch) = sMax;
+    (*m_data)(i, m_indexMaxStretch) = sMax;
 }
 //------------------------------------------------------------------------------
-void ComputeMaxStretch::init(const pair<int, int> &pIdcol)
+void ComputeMaxStretch::init(const int id_i, const int i)
 {
-    (void) pIdcol;
+    (void) id_i;
+    (void) i;
 }
 //------------------------------------------------------------------------------
 }

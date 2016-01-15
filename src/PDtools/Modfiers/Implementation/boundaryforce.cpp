@@ -23,14 +23,12 @@ boundaryForce::~boundaryForce()
 //------------------------------------------------------------------------------
 void boundaryForce::evaluateStepOne()
 {
-    arma::mat & b = m_particles->b();
-    const arma::mat & data = m_particles->data();
+//    arma::mat & b = m_particles->b();
     arma::mat & F = m_particles->F();
 
     for(pair<int, int> &idCol:m_boundaryParticles)
     {
         const int col_i = idCol.second;
-        const double V_i = data(col_i, m_indexVolume);
         const double force = m_forceDensity;
 //        b(col_i, m_forceOritentation) = force;
         F(col_i, m_forceOritentation) += force;

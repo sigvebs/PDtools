@@ -18,13 +18,13 @@ ComputePotentialEnergy::~ComputePotentialEnergy()
 
 }
 //------------------------------------------------------------------------------
-void ComputePotentialEnergy::update(const pair<int, int> &pIdcol)
+void ComputePotentialEnergy::update(const int id_i, const int i)
 {
-    m_data(pIdcol.second, m_indexPotential) = 0;
+    m_data(id_i, m_indexPotential) = 0;
 
     for(Force *force: m_forces)
     {
-        force->calculatePotentialEnergy(pIdcol, m_indexPotential);
+        force->calculatePotentialEnergy(id_i, i, m_indexPotential);
     }
 }
 //------------------------------------------------------------------------------

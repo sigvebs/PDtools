@@ -260,7 +260,9 @@ template <class T_particles>
 void T_LoadParticles<T_particles>::loadBody(T_particles &particles, fstream &rawData,
                              unordered_map<string, int> parameters)
 {
+    particles.maxParticles(m_nParticles);
     particles.nParticles(m_nParticles);
+    particles.totParticles(m_nParticles);
     string line;
 
     //--------------------------------------------------------------------------
@@ -316,8 +318,8 @@ void T_LoadParticles<T_particles>::loadBody(T_particles &particles, fstream &raw
     //--------------------------------------------------------------------------
     // Creating the data matrix
     particles.initializeMatrices();
-    unordered_map<int, int> & pIds = particles.pIds();
-    arma::ivec & get_id = particles.get_id();
+    unordered_map<int, int> & idToCol = particles.idToCol();
+    arma::ivec & colToId = particles.colToId();
     arma::mat & r = particles.r();
     arma::mat & data = particles.data();
 
@@ -332,13 +334,13 @@ void T_LoadParticles<T_particles>::loadBody(T_particles &particles, fstream &raw
         // Collecting the data
         if(idIsset)
         {
-            pIds[stoi(lineSplit[idPos])] = i;
-            get_id[i] = stoi(lineSplit[idPos]);
+            idToCol[stoi(lineSplit[idPos])] = i;
+            colToId[i] = stoi(lineSplit[idPos]);
         }
         else
         {
-            pIds[i] = i;
-            get_id[i] = i;
+            idToCol[i] = i;
+            colToId[i] = i;
         }
 
         for(pair<int, int> pc:position_config)
@@ -357,7 +359,9 @@ void T_LoadParticles<T_particles>::loadBinaryBody(T_particles &particles,
                                    FILE *rawData,
                                    unordered_map<string, int> parameters)
 {
+    particles.maxParticles(m_nParticles);
     particles.nParticles(m_nParticles);
+    particles.totParticles(m_nParticles);
     // Storing only non-basic parameters in the parameters
     int counter = 0;
     vector<pair<int, int>> data_config_mapping;
@@ -412,8 +416,8 @@ void T_LoadParticles<T_particles>::loadBinaryBody(T_particles &particles,
     particles.initializeMatrices();
 
     int nColumns = m_nColumns;
-    unordered_map<int, int> & pIds = particles.pIds();
-    arma::ivec & get_id = particles.get_id();
+    unordered_map<int, int> & idToCol= particles.idToCol();
+    arma::ivec & colToId= particles.colToId();
     arma::mat & r = particles.r();
     arma::mat & data = particles.data();
 
@@ -426,13 +430,13 @@ void T_LoadParticles<T_particles>::loadBinaryBody(T_particles &particles,
         // Collecting the data
         if(idIsset)
         {
-            pIds[int(line[idPos])] = i;
-            get_id[i] = int(line[idPos]);
+            idToCol[int(line[idPos])] = i;
+            colToId[i] = int(line[idPos]);
         }
         else
         {
-            pIds[i] = i;
-            get_id[i] = i;
+            idToCol[i] = i;
+            colToId[i] = i;
         }
 
         for(pair<int, int> pc:position_config)

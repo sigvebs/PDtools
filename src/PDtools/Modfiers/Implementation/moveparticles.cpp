@@ -18,7 +18,8 @@ MoveParticles::MoveParticles(double velAmplitude,
     m_boundaryOrientation = boundaryOrientation;
     m_dt = dt;
     m_isStatic = isStatic;
-    m_time = 0;
+    m_time = 1;
+    m_usingUnbreakableBorder = true;
 }
 //------------------------------------------------------------------------------
 MoveParticles::~MoveParticles()
@@ -26,23 +27,27 @@ MoveParticles::~MoveParticles()
 
 }
 //------------------------------------------------------------------------------
+void MoveParticles::registerParticleParameters()
+{
+    m_particles->registerParameter("unbreakable");
+    m_ghostParameters = {"unbreakable"};
+}
+//------------------------------------------------------------------------------
 void MoveParticles::evaluateStepOne()
 {
+    const unordered_map<int, int> &idToCol = m_particles->idToCol();
     mat & r = m_particles->r();
     const mat & r0 = m_particles->r0();
     const double dr = m_time*m_velAmplitude;
-//    mat & v = m_particles->v();
-//    mat & F = m_particles->F();
-//    mat & Fold = m_particles->Fold();
 
-    for(pair<int, int> &idCol:m_boundaryParticles)
+    for(const int &id:m_localParticleIds)
     {
-        int col_i = idCol.second;
-        for(int d=0;d<3; d++)
+        const int i =  idToCol.at(id);
+        for(int d=0;d<DIM; d++)
         {
-            r(col_i, d) = r0(col_i, d);
+            r(i, d) = r0(i, d);
         }
-        r(col_i, m_boundaryOrientation) = r0(col_i, m_boundaryOrientation) + dr;
+        r(i, m_boundaryOrientation) = r0(i, m_boundaryOrientation) + dr;
     }
 
     m_time += m_dt;
@@ -51,19 +56,11 @@ void MoveParticles::evaluateStepOne()
 void MoveParticles::initialize()
 {
     // Selecting particles
+    const ivec &colToId = m_particles->colToId();
     const arma::mat & r = m_particles->r();
     arma::mat & data = m_particles->data();
     arma::imat & isStatic = m_particles->isStatic();
-    int unbreakablePos;
-
-    if(m_particles->hasParameter("unbreakable"))
-    {
-        unbreakablePos = m_particles->getParamId("unbreakable");
-    }
-    else
-    {
-        unbreakablePos = m_particles->registerParameter("unbreakable");
-    }
+    const int unbreakablePos = m_particles->registerParameter("unbreakable");
 
     double uRadius = 0.5*(m_boundary.second - m_boundary.first);
     int n = 0;
@@ -73,44 +70,48 @@ void MoveParticles::initialize()
 #endif
     for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
-        int col_i = i;
-        double pos = r(col_i, m_boundaryOrientation);
+        double pos = r(i, m_boundaryOrientation);
         if(m_boundary.first <= pos && pos < m_boundary.second)
         {
-            pair<int, int> pId(i, i);
+            const int id = colToId(i);
+
             if(m_isStatic)
-                isStatic(pId.second) = 1;
+                isStatic(i) = 1;
 #ifdef USE_OPENMP
 #pragma omp critical
 #endif
-            m_boundaryParticles.push_back(pId);
-        }
-
-        if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second)
-        {
+            m_localParticleIds.push_back(id);
             data(i, unbreakablePos) = 1;
-            n++;
+        }
+        if(m_usingUnbreakableBorder)
+        {
+            if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second)
+            {
+#ifdef USE_OPENMP
+#pragma omp critical
+#endif
+                data(i, unbreakablePos) = 1;
+                n++;
+            }
         }
     }
 }
 //------------------------------------------------------------------------------
 void MoveParticles::staticEvaluation()
 {
+    const unordered_map<int, int> &idToCol = m_particles->idToCol();
     arma::mat & v = m_particles->v();
     arma::mat & F = m_particles->F();
     arma::mat & Fold = m_particles->Fold();
 
-    for(pair<int, int> &idCol:m_boundaryParticles)
+    for(const int &id:m_localParticleIds)
     {
-        int col_i = idCol.second;
-//        v(col_i, m_boundaryOrientation) = 0.0;
-//        F(col_i, m_boundaryOrientation) = 0.0;
-//        Fold(col_i, m_boundaryOrientation) = 0.0;
-        for(int d=0;d<3; d++)
+        const int i = idToCol.at(id);
+        for(int d=0;d<DIM; d++)
         {
-            v(col_i, d) = 0.0;
-            F(col_i, d) = 0.0;
-            Fold(col_i, d) = 0.0;
+            v(i, d) = 0.0;
+            F(i, d) = 0.0;
+            Fold(i, d) = 0.0;
         }
     }
 }

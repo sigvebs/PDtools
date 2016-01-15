@@ -30,16 +30,14 @@ PD_OSP::~PD_OSP()
 
 }
 //------------------------------------------------------------------------------
-void PD_OSP::calculateForces(const std::pair<int, int> &idCol)
+void PD_OSP::calculateForces(const int id, const int i)
 {
-    const int pId = idCol.first;
-    const int i = idCol.second;
     const double a_i = m_data(i, m_indexA);
     const double b_i = m_data(i, m_indexB);
     const double d_i = m_data(i, m_indexD);
     const double theta_i = m_data(i, m_indexTheta);
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id);
 
     double f_i[3];
     for(int d=0; d<m_dim; d++)
@@ -58,7 +56,7 @@ void PD_OSP::calculateForces(const std::pair<int, int> &idCol)
             continue;
 
         const int id_j = con.first;
-        const int j = m_pIds[id_j];
+        const int j = m_idToCol.at(id_j);
 
         const double a_j = m_data(j, m_indexA);
         const double b_j = m_data(j, m_indexB);
@@ -111,16 +109,14 @@ void PD_OSP::calculateForces(const std::pair<int, int> &idCol)
     m_data(i, m_indexThetaNew) = m_delta*thetaNew;
 }
 //------------------------------------------------------------------------------
-double PD_OSP::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
+double PD_OSP::calculatePotentialEnergyDensity(const int id_i, const int i)
 {
-    const int pId = idCol.first;
-    const int i = idCol.second;
     const double a_i = m_data(i, m_indexA);
     const double b_i = m_data(i, m_indexB);
     const double d_i = m_data(i, m_indexD);
 //    const double theta_i = m_data(i, m_indexTheta);
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
 
     const int nConnections = PDconnections.size();
     double dr_ij[3];
@@ -134,7 +130,7 @@ double PD_OSP::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
             continue;
 
         const int id_j = con.first;
-        const int j = m_pIds[id_j];
+        const int j = m_idToCol.at(id_j);
 
         const double b_j = m_data(j, m_indexB);
         const double d_j = m_data(j, m_indexD);
@@ -172,23 +168,20 @@ double PD_OSP::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
     return m_delta*(a_i*theta_sum*theta_sum + W_i);
 }
 //------------------------------------------------------------------------------
-void PD_OSP::calculatePotentialEnergy(const std::pair<int, int> &idCol, int indexPotential)
+void PD_OSP::calculatePotentialEnergy(const int id_i, const int i, int indexPotential)
 {
-    int col_i = idCol.second;
-    double vol_i = m_data(col_i, m_indexVolume);
-    m_data(col_i, indexPotential) += calculatePotentialEnergyDensity(idCol)*vol_i;
+    double vol_i = m_data(i, m_indexVolume);
+    m_data(i, indexPotential) += calculatePotentialEnergyDensity(id_i, i)*vol_i;
 }
 //------------------------------------------------------------------------------
-void PD_OSP::calculateStress(const std::pair<int, int> &idCol, const int (&indexStress)[6])
+void PD_OSP::calculateStress(const int id_i, const int i, const int (&indexStress)[6])
 {
-    const int pId = idCol.first;
-    const int i = idCol.second;
     const double a_i = m_data(i, m_indexA);
     const double b_i = m_data(i, m_indexB);
     const double d_i = m_data(i, m_indexD);
     const double theta_i = m_data(i, m_indexTheta);
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
 
     const int nConnections = PDconnections.size();
     double dr_ij[3];
@@ -201,7 +194,7 @@ void PD_OSP::calculateStress(const std::pair<int, int> &idCol, const int (&index
             continue;
 
         const int id_j = con.first;
-        const int j = m_pIds[id_j];
+        const int j = m_idToCol.at(id_j);
 
         const double a_j = m_data(j, m_indexA);
         const double b_j = m_data(j, m_indexB);
@@ -245,17 +238,21 @@ void PD_OSP::calculateStress(const std::pair<int, int> &idCol, const int (&index
 
         m_data(i, indexStress[0]) += 0.5*f[X]*dr_ij[X];
         m_data(i, indexStress[1]) += 0.5*f[Y]*dr_ij[Y];
-        m_data(i, indexStress[2]) += 0.5*f[Z]*dr_ij[Z];
-        m_data(i, indexStress[3]) += 0.5*f[X]*dr_ij[Y];
-        m_data(i, indexStress[4]) += 0.5*f[X]*dr_ij[Z];
-        m_data(i, indexStress[5]) += 0.5*f[Y]*dr_ij[Z];
+        m_data(i, indexStress[2]) += 0.5*f[X]*dr_ij[Y];
+
+        if(m_dim == 3)
+        {
+            m_data(i, indexStress[3]) += 0.5*f[Z]*dr_ij[Z];
+            m_data(i, indexStress[4]) += 0.5*f[X]*dr_ij[Z];
+            m_data(i, indexStress[5]) += 0.5*f[Y]*dr_ij[Z];
+        }
     }
 }
 //------------------------------------------------------------------------------
-void PD_OSP::updateState(const std::pair<int, int> &idCol)
+void PD_OSP::updateState(int id, int i)
 {
-    const int col_i = idCol.second;
-    m_data(col_i, m_indexTheta) = m_data(col_i, m_indexThetaNew);
+    (void) id;
+    m_data(i, m_indexTheta) = m_data(i, m_indexThetaNew);
 }
 //------------------------------------------------------------------------------
 void PD_OSP::initialize(double E, double nu, double delta, int dim, double h, double lc)
@@ -304,17 +301,20 @@ void PD_OSP::initialize(double E, double nu, double delta, int dim, double h, do
 
     if(m_numericalInitialization){
         double strain = 0.001;
-        applySurfaceCorrection(mu, nu, dim, strain);
+        applySurfaceCorrectionStep1(mu, nu, dim, strain);
     }
 }
 //------------------------------------------------------------------------------
-void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain)
+void PD_OSP::applySurfaceCorrectionStep1(double mu, double nu, int dim, double strain)
 {
     (void) nu;
     arma::vec3 strainFactor;
     arma::mat gd = arma::zeros(m_particles.nParticles(), dim); // Dilation correction
     arma::mat gb = arma::zeros(m_particles.nParticles(), dim); // Bond correction
 
+    cerr << "TODO: fix the PD_OSP::applySurfaceCorrectionStep1" << endl;
+    exit(1);
+    /*
     //--------------------------------------------------------------------------
     // Apllying correction to the dilation term
     //--------------------------------------------------------------------------
@@ -471,7 +471,7 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
         for(auto &con:PDconnections)
         {
             int id_j = con.first;
-            int col_j = m_pIds[id_j];
+            int col_j = m_idToCol.at(id_j);
 
             double dr0Len = con.second[m_indexDr0];
             arma::vec3 n = (m_r.col(col_i) - m_r.col(col_j))/dr0Len;
@@ -494,15 +494,14 @@ void PD_OSP::applySurfaceCorrection(double mu, double nu, int dim, double strain
             con.second[m_indexForceScalingBond] *= Gb;
         }
     }
+    */
 }
 //------------------------------------------------------------------------------
-double PD_OSP::calculateDilationTerm(const std::pair<int, int> &idCol)
+double PD_OSP::calculateDilationTerm(const int id_i, const int i)
 {
-    const int pId = idCol.first;
-    const int i = idCol.second;
     const double d_i = m_data(i, m_indexD);
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
     const int nConnections = PDconnections.size();
     double dr_ij[3];
 
@@ -514,7 +513,7 @@ double PD_OSP::calculateDilationTerm(const std::pair<int, int> &idCol)
             continue;
 
         const int id_j = con.first;
-        const int j = m_pIds[id_j];
+        const int j = m_idToCol.at(id_j);
 
         const double d_j = m_data(j, m_indexD);
         const double vol_j = m_data(j, m_indexVolume);
@@ -547,12 +546,10 @@ double PD_OSP::calculateDilationTerm(const std::pair<int, int> &idCol)
     return m_delta*theta_i;
 }
 //------------------------------------------------------------------------------
-double PD_OSP::calculateBondPotential(const std::pair<int, int> &idCol)
+double PD_OSP::calculateBondPotential(const int id_i, const int i)
 {
-    const int pId = idCol.first;
-    const int i = idCol.second;
     const double b_i = m_data(i, m_indexB);
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
 
     const int nConnections = PDconnections.size();
     double dr_ij[3];
@@ -565,7 +562,7 @@ double PD_OSP::calculateBondPotential(const std::pair<int, int> &idCol)
             continue;
 
         const int id_j = con.first;
-        const int j = m_pIds[id_j];
+        const int j = m_idToCol.at(id_j);
 
         const double b_j = m_data(j, m_indexD);
         const double vol_j = m_data(j, m_indexVolume);

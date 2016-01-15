@@ -30,33 +30,33 @@ public:
     ~PD_OSP();
 
     virtual void
-    calculateForces(const std::pair<int, int> & idCol);
+    calculateForces(const int id, const int i);
 
     virtual double
-    calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
+    calculatePotentialEnergyDensity(const int id_i, const int i);
 
     virtual void
-    calculatePotentialEnergy(const std::pair<int, int> & idCol,
+    calculatePotentialEnergy(const int id_i, const int i,
                                           int indexPotential);
 
     virtual void
-    calculateStress(const std::pair<int, int> & idCol,
+    calculateStress(const int id_i, const int i,
                                  const int (&indexStress)[6]);
 
     virtual void
-    updateState(const std::pair<int, int> &idCol);
+    updateState(int id, int i);
 
     virtual void
     initialize(double E, double nu, double delta, int dim, double h, double lc);
 
     virtual void
-    applySurfaceCorrection(double mu, double nu, int dim, double strain);
+    applySurfaceCorrectionStep1(double mu, double nu, int dim, double strain);
 
     double
-    calculateDilationTerm(const std::pair<int, int> & idCol);
+    calculateDilationTerm(const int id_i, const int i);
 
     double
-    calculateBondPotential(const std::pair<int, int> &idCol);
+    calculateBondPotential(const int id_i, const int i);
 };
 //------------------------------------------------------------------------------
 }

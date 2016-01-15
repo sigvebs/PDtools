@@ -31,7 +31,6 @@ HEADERS += \
     SavePdData/Implementations/computedamage.h \
     SavePdData/Implementations/computekineticenergy.h \
     SavePdData/Implementations/computepotentialenergy.h \
-    SavePdData/Implementations/computestress.h \
     Force/PdForces/contactforce.h \
     Solver/adr.h \
     Modfiers/Implementation/moveparticles.h \
@@ -51,7 +50,19 @@ HEADERS += \
     Force/PdForces/pd_lps.h \
     Solver/ADRsolvers/dynamicadr.h \
     Solver/staticsolver.h \
-    Solver/TimeIntegrators/eulercromerintegrator.h
+    Solver/TimeIntegrators/eulercromerintegrator.h \
+    PdFunctions/pdfunctionsmpi.h \
+    SavePdData/Implementations/computegridid.h \
+    Force/PdForces/viscousdamper.h \
+    CalculateProperties/calculateproperty.h \
+    CalculateProperties/Implementation/calculatepdangles.h \
+    Modfiers/Implementation/micropolarfracture.h \
+    CalculateProperties/calculateproperties.h \
+    Force/DemForces/demforce.h \
+    CalculateProperties/Implementation/calculatestress.h \
+    Modfiers/Implementation/mohrcoulombbondfracture.h \
+    Modfiers/Implementation/rigidwall.h \
+    Modfiers/Implementation/adrmohrcoulombbondfracture.h
 
 SOURCES += \
     Grid/grid.cpp \
@@ -73,7 +84,6 @@ SOURCES += \
     SavePdData/Implementations/computedamage.cpp \
     SavePdData/Implementations/computekineticenergy.cpp \
     SavePdData/Implementations/computepotentialenergy.cpp \
-    SavePdData/Implementations/computestress.cpp \
     Force/PdForces/contactforce.cpp \
     Particles/particles.cpp \
     Solver/adr.cpp \
@@ -94,7 +104,18 @@ SOURCES += \
     Force/PdForces/pd_lps.cpp \
     Solver/ADRsolvers/dynamicadr.cpp \
     Solver/staticsolver.cpp \
-    Solver/TimeIntegrators/eulercromerintegrator.cpp
+    Solver/TimeIntegrators/eulercromerintegrator.cpp \
+    PdFunctions/pdfunctionsmpi.cpp \
+    SavePdData/Implementations/computegridid.cpp \
+    Force/PdForces/viscousdamper.cpp \
+    CalculateProperties/calculateproperty.cpp \
+    CalculateProperties/Implementation/calculatepdangles.cpp \
+    Modfiers/Implementation/micropolarfracture.cpp \
+    Force/DemForces/demforce.cpp \
+    CalculateProperties/Implementation/calculatestress.cpp \
+    Modfiers/Implementation/mohrcoulombbondfracture.cpp \
+    Modfiers/Implementation/rigidwall.cpp \
+    Modfiers/Implementation/adrmohrcoulombbondfracture.cpp
 
 #headers.path    = $$OUT_PWD
 #headers.files   += $$HEADERS

@@ -12,8 +12,8 @@ namespace PDtools
 class PD_Particles: public Particles
 {
 protected:
+    // For all particles
     mat m_r0;
-    mat m_v;
     mat m_F;
     mat m_b;
     mat m_u;
@@ -25,6 +25,10 @@ protected:
     unordered_map<int, vector<pair<int, vector<double>>>> m_PdConnections;
     unordered_map<string, int> m_PdParameters;
 
+    unordered_map<int, vector<int>> m_sendtParticles;
+    unordered_map<int, vector<int>> m_receivedParticles;
+    vector<vector<int>>  m_sendtParticles2;
+    vector<vector<int>>  m_receivedParticles2;
 public:
     PD_Particles();
 
@@ -34,105 +38,130 @@ public:
     initializeMatrices();
 
     void
-    initializeADR();
-
-    void
     initializeBodyForces();
 
     void
-    setPdConnections(int id, vector<pair<int, vector<double>>> connections)
-    {
-        m_PdConnections[id] = connections;
-    }
+    setPdConnections(int id, vector<pair<int, vector<double>>> connections);
 
     vector<pair<int, vector<double>>> &
-    pdConnections(int id)
-    {
-        return m_PdConnections.at(id);
-    }
+    pdConnections(int id);
+
+    virtual void
+    deleteParticleById(const int deleteId);
 
     mat &
-    r0()
-    {
-        return m_r0;
-    }
-
+    r0();
     mat &
-    v()
-    {
-        return m_v;
-    }
-
-    mat &
-    F()
-    {
-        return m_F;
-    }
-
+    F();
     vec &
-    stableMass()
-    {
-        return m_stableMass;
-    }
-
+    stableMass();
     mat &
-    Fold()
-    {
-        return m_Fold;
-    }
-
+    Fold();
     mat &
-    b()
-    {
-        return m_b;
-    }
-
+    b();
     mat &
-    u()
-    {
-        return m_u;
-    }
+    u();
 
+
+    const unordered_map<string, int> &
+    PdParameters() const;
     int
-    getPdParamId(string paramId)
-    {
-        if(m_PdParameters.count(paramId) != 1)
-        {
-            cerr << "ERROR: accessing a PD_particles parameter that does not exist: "
-                 << paramId << endl;
-            throw ParameterDoesNotExist;
-        }
-        return m_PdParameters.at(paramId);
-    }
-
-    int registerPdParameter(string paramId, double value=0)
-    {
-        if(m_PdParameters.count(paramId) == 1)
-        {
-            cerr << "ERROR: PD-parameter already registerd: "
-                 << paramId << endl;
-            return m_PdParameters.at(paramId);
-//            throw ParameterExist;
-        }
-        int pos = m_PdParameters.size();
-        m_PdParameters[paramId] = pos;
-
-        // Adding the new parameter to all connections
-        for(unsigned int col=0;col<m_nParticles; col++)
-        {
-            for(auto &con:m_PdConnections[col])
-            {
-                con.second.push_back(value);
-            }
-        }
-
-        return pos;
-    }
-
+    getPdParamId(string paramId) const;
+    int
+    registerPdParameter(string paramId, double value=0);
     void
     dimensionalScaling(const double E0, const double L0, const double v0,
                        const double t0, const double rho0);
+
+    void
+    sendtParticles(unordered_map<int, vector<int>> sp);
+    const unordered_map<int, vector<int> > &
+    sendtParticles() const;
+    void
+    receivedParticles(unordered_map<int, vector<int>> sp);
+    const unordered_map<int, vector<int> > &
+    receivedParticles() const;
+    void
+    clearGhostParameters();
+    vector<vector<int> > getSendtParticles2() const;
+    void setSendtParticles2(const vector<vector<int> > &sendtParticles2);
+    vector<vector<int> > getReceivedParticles2() const;
+    void setReceivedParticles2(const vector<vector<int> > &receivedParticles2);
 };
+//------------------------------------------------------------------------------
+// Inline functions
+
+inline void
+PD_Particles::setPdConnections(int id, vector<pair<int, vector<double>>> connections)
+{
+    m_PdConnections[id] = connections;
+}
+
+inline vector<pair<int, vector<double>>> &
+PD_Particles::pdConnections(int id)
+{
+    return m_PdConnections.at(id);
+}
+
+inline mat &
+PD_Particles::u()
+{
+    return m_u;
+}
+
+inline mat &
+PD_Particles::r0()
+{
+    return m_r0;
+}
+
+inline mat &
+PD_Particles::F()
+{
+    return m_F;
+}
+
+inline vec &
+PD_Particles::stableMass()
+{
+    return m_stableMass;
+}
+
+inline mat &
+PD_Particles::Fold()
+{
+    return m_Fold;
+}
+
+inline mat &
+PD_Particles::b()
+{
+    return m_b;
+}
+
+inline void
+PD_Particles::sendtParticles(unordered_map<int, vector<int> > sp)
+{
+    m_sendtParticles = sp;
+}
+
+inline const unordered_map<int, vector<int>> &
+PD_Particles::sendtParticles() const
+{
+    return m_sendtParticles;
+}
+
+inline void
+PD_Particles::receivedParticles(unordered_map<int, vector<int> > sp)
+{
+    m_receivedParticles = sp;
+}
+
+inline const unordered_map<int, vector<int>> &
+PD_Particles::receivedParticles() const
+{
+    return m_receivedParticles;
+}
 //------------------------------------------------------------------------------
 }
 #endif // PD_PARTICLES_H

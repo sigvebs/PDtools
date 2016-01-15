@@ -24,22 +24,22 @@ void ADRfractureAverage::initialize()
     m_indexStretch = m_particles->getPdParamId("stretch");
     m_indexS00 = m_particles->registerPdParameter("s00");
     m_indexS_avg = m_particles->registerParameter("s_avg");
-    m_pIds = &m_particles->pIds();
+    m_idToCol = &m_particles->idToCol();
     m_data = &m_particles->data();
+    const ivec & colToId = m_particles->colToId();
 
     // Setting the initial max stretch between two particles
     for(unsigned int i=0;i<m_particles->nParticles();i++)
     {
-        int pId = i;
-        int col_i = i;
-        double s0_i = (*m_data)(col_i, m_indexS0);
+        const int pId = colToId(i);
+        const double s0_i = (*m_data)(i, m_indexS0);
 
         vector<pair<int, vector<double>>> & PDconnections = m_particles->pdConnections(pId);
         for(auto &con:PDconnections)
         {
-            int id_j = con.first;
-            int col_j = (*m_pIds)[id_j];
-            double s0_j = (*m_data)(col_j, m_indexS0);
+            const int id_j = con.first;
+            const int col_j = (*m_idToCol)[id_j];
+            const double s0_j = (*m_data)(col_j, m_indexS0);
             con.second[m_indexS00] = 0.5*(s0_i + s0_j);
         }
     }
@@ -49,36 +49,33 @@ void ADRfractureAverage::initialize()
     m_state = false;
 }
 //------------------------------------------------------------------------------
-void ADRfractureAverage::evaluateStepOne(const pair<int, int> &pIdcol)
+void ADRfractureAverage::evaluateStepOne(const int id_i, const int i)
 {
-    int pId = pIdcol.first;
-    int col_i = pIdcol.second;
-
-    if((*m_data)(col_i, m_indexUnbreakable) >= 1)
+    if((*m_data)(i, m_indexUnbreakable) >= 1)
         return;
 
-    double s0_i = (*m_data)(col_i, m_indexS0);
-    double s_i = (*m_data)(col_i, m_indexS_avg);
-    vector<pair<int, vector<double>>> & PDconnections = m_particles->pdConnections(pId);
+    const double s0_i = (*m_data)(i, m_indexS0);
+    const double s_i = (*m_data)(i, m_indexS_avg);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles->pdConnections(id_i);
 
 
     for(auto &con:PDconnections)
     {
-        int id_j = con.first;
-        int col_j = (*m_pIds)[id_j];
-        if((*m_data)(col_j, m_indexUnbreakable) >= 1)
+        const int id_j = con.first;
+        const int j = (*m_idToCol)[id_j];
+        if((*m_data)(j, m_indexUnbreakable) >= 1)
             continue;
 
-        double s0_j = (*m_data)(col_j, m_indexS0);
-        double s_j = (*m_data)(col_j, m_indexS_avg);
-        double s = 0.5*(s_i + s_j);
-        double s0 = std::min(s0_i, s0_j);
+        const double s0_j = (*m_data)(j, m_indexS0);
+        const double s_j = (*m_data)(j, m_indexS_avg);
+        const double s = 0.5*(s_i + s_j);
+        const double s0 = std::min(s0_i, s0_j);
 
         if(s > s0)
         {
             if(s > m_maxStretch)
             {
-                m_maxPId = pair<int, pair<int, vector<double>> *>(pId, &con);
+                m_maxPId = pair<int, pair<int, vector<double>> *>(id_i, &con);
                 m_maxStretch = s;
             }
         }
@@ -88,8 +85,8 @@ void ADRfractureAverage::evaluateStepOne(const pair<int, int> &pIdcol)
 //------------------------------------------------------------------------------
 void ADRfractureAverage::evaluateStepTwo(const pair<int, int> &pIdcol)
 {
-    int pId = pIdcol.first;
-    int col_i = pIdcol.second;
+    const int pId = pIdcol.first;
+    const int col_i = pIdcol.second;
 
     if((*m_data)(col_i, m_indexUnbreakable) >= 1)
         return;

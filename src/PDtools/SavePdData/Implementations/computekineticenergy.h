@@ -14,7 +14,7 @@ public:
     ComputeKineticEnergy(PD_Particles &particles);
     ~ComputeKineticEnergy();
 
-    virtual void update(const pair<int, int> &pIdcol);
+    virtual void update(const int id_i, const int i);
 
 private:
     const int m_dim = 3;

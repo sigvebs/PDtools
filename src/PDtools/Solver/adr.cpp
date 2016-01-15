@@ -1,9 +1,15 @@
 #include "adr.h"
 
+#if USE_MPI
+#include <mpi.h>
+#endif
+
 #include "PDtools/Particles/pd_particles.h"
 #include "PDtools/Force/force.h"
 #include "PDtools/Modfiers/modifier.h"
 #include "PDtools/SavePdData/savepddata.h"
+#include "PDtools/Grid/grid.h"
+#include "PDtools/PdFunctions/pdfunctions.h"
 
 using namespace arma;
 
@@ -25,7 +31,7 @@ void ADR::solve()
 {
     initialize();
     checkInitialization();
-
+    save(0);
     // Looping over all time, particles and components.
     for (int i = 0; i < m_steps; i++)
     {
@@ -35,15 +41,18 @@ void ADR::solve()
 //------------------------------------------------------------------------------
 void ADR::stepForward(int i)
 {
-    save(i);
+//    cerr << "void ADR::stepForward(int i): must be update with calc properties" << endl;
+//    exit(1);
     modifiersStepOne();
 
     m_globalError = 2*m_errorThreshold;
     iterate(m_maxSteps);
+    updateProperties(i);
 
-    cout << "i = " << i << " " << m_globalError << endl;
-
+    if(m_myRank == 0)
+        cout << "i = " << i << " " << m_globalError << endl;
     modifiersStepTwo();
+    save(i+1);
     m_t += m_dt;
 }
 //------------------------------------------------------------------------------
@@ -52,17 +61,15 @@ void ADR::iterate(int maxNumberOfSteps)
     int counter = 0;
     int minSteps = 5;
     int nFractureRelaxationSteps = m_maxStepsFracture;
-    int nParticles = m_particles->nParticles();
+    const ivec &colToId = m_particles->colToId();
 
     do
     {
         integrateStepOne();
-        zeroForcesAndStress();
-
+        zeroForces();
         updateGridAndCommunication();
-        calculateForces();
+        calculateForces(0);
         staticModifiers();
-
         integrateStepTwo();
 
         counter++;
@@ -70,34 +77,40 @@ void ADR::iterate(int maxNumberOfSteps)
             break;
     }
     while( (m_globalError > m_errorThreshold) || (counter < minSteps));
-
-    cout << "counter = " << counter << " error = " << m_globalError << endl;
-//    calculateForces();
-
+    if(m_myRank == 0)
+        cout << "counter:" << counter << endl;
+    int nParticles;
+#if USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
     //--------------------------------------------------
     if(!m_qsModifiers.empty())
     {
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
+        nParticles = m_particles->nParticles();
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
         for(int i=0; i<nParticles; i++)
         {
-            pair<int, int> id(i, i);
+            const int id = colToId(i);
             for(Modifier *modifier:m_qsModifiers)
             {
-                modifier->evaluateStepOne(id);
+                modifier->evaluateStepOne(id, i);
             }
-
         }
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
+        updateGridAndCommunication();
+        updateProperties(0);
+        updateGridAndCommunication();
+        nParticles = m_particles->nParticles();
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
         for(int i=0; i<nParticles; i++)
         {
-            pair<int, int> id(i, i);
+            const int id = colToId(i);
             for(Modifier *modifier:m_qsModifiers)
             {
-                modifier->evaluateStepTwo(id);
+                modifier->evaluateStepTwo(id, i);
             }
 
         }
@@ -106,20 +119,108 @@ void ADR::iterate(int maxNumberOfSteps)
             modifier->evaluateStepTwo();
         }
 
-        bool continueState = false;
+        int continueState = false;
 
         for(Modifier *modifier:m_qsModifiers)
         {
             if(modifier->state())
-                continueState = true;
+                continueState = 1;
         }
 
-        if(continueState)
+#if USE_MPI
+    MPI_Allreduce(&continueState, &continueState, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+#endif
+        if(continueState > 0)
         {
             m_globalError = 2*m_errorThreshold;
             iterate(nFractureRelaxationSteps);
         }
+        else
+        {
+            if(m_myRank == 0)
+               cout << "counter = " << counter << " error = " << m_globalError << endl;
+        }
     }
+//    int counter = 0;
+//    int minSteps = 5;
+//    int nFractureRelaxationSteps = m_maxStepsFracture;
+//    const ivec &colToId = m_particles->colToId();
+
+//    do
+//    {
+//        integrateStepOne();
+//        zeroForcesAndStress();
+
+//        updateGridAndCommunication();
+//        calculateForces(0);
+//        staticModifiers();
+
+//        integrateStepTwo();
+
+//        counter++;
+//        if(counter > maxNumberOfSteps)
+//            break;
+//    }
+//    while( (m_globalError > m_errorThreshold) || (counter < minSteps));
+
+//    const int nParticles = m_particles->nParticles();
+//#if USE_MPI
+//    MPI_Barrier(MPI_COMM_WORLD);
+//#endif
+//    //--------------------------------------------------
+//    if(!m_qsModifiers.empty())
+//    {
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
+//        for(int i=0; i<nParticles; i++)
+//        {
+//            const int id = colToId(i);
+//            for(Modifier *modifier:m_qsModifiers)
+//            {
+//                modifier->evaluateStepOne(id, i);
+//            }
+//        }
+//        updateGridAndCommunication();
+//#ifdef USE_OPENMP
+//# pragma omp parallel for
+//#endif
+//        for(int i=0; i<nParticles; i++)
+//        {
+//            const int id = colToId(i);
+//            for(Modifier *modifier:m_qsModifiers)
+//            {
+//                modifier->evaluateStepTwo(id, i);
+//            }
+
+//        }
+//        for(Modifier *modifier:m_qsModifiers)
+//        {
+//            modifier->evaluateStepTwo();
+//        }
+
+//        int continueState = false;
+
+//        for(Modifier *modifier:m_qsModifiers)
+//        {
+//            if(modifier->state())
+//                continueState = 1;
+//        }
+
+//#if USE_MPI
+//    MPI_Allreduce(&continueState, &continueState, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+//#endif
+//        if(continueState > 0)
+//        {
+//            m_globalError = 2*m_errorThreshold;
+//            iterate(nFractureRelaxationSteps);
+//        }
+//        else
+//        {
+//            if(m_myRank == 0)
+//               cout << "counter = " << counter << " error = " << m_globalError << endl;
+//        }
+//    }
 }
 //------------------------------------------------------------------------------
 void ADR::checkInitialization()
@@ -145,29 +246,31 @@ void ADR::initialize()
         }
     }
 
+    updateGridAndCommunication();
     //-----------------------------
-    calculateForces();
+    calculateForces(0);
     calculateStableMass();
     Solver::initialize();
 }
 //------------------------------------------------------------------------------
 void ADR::calculateStableMass()
 {
+    const ivec &colToId = m_particles->colToId();
     arma::vec &stableMass = m_particles->stableMass();
-    int nParticles = m_particles->nParticles();
+    const int nParticles = m_particles->nParticles();
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
     for(int i=0; i<nParticles; i++)
     {
-        pair<int, int> id(i, i);
+        const int id = colToId(i);
         double stableMassMax = 0;
         for(Force *oneBodyForce:m_oneBodyForces)
         {
-            double sm = oneBodyForce->calculateStableMass(id, m_dt);
+            const double sm = oneBodyForce->calculateStableMass(id, i, m_dt);
             stableMassMax = max(stableMassMax, sm);
         }
-        stableMass(id.second) = stableMassMax;
+        stableMass(i) = stableMassMax;
     }
 }
 //------------------------------------------------------------------------------
@@ -175,51 +278,42 @@ void ADR::integrateStepOne()
 {
     using namespace arma;
 
-    double alpha = (2.*m_dt)/(2. + m_c*m_dt);
-    double beta = (2. - m_c*m_dt)/(2. + m_c*m_dt);
-    double rho = sqrt(beta);
-    double errorScaling = rho/(1.0001 - rho);
+    const double alpha = (2.*m_dt)/(2. + m_c*m_dt);
+    const double beta = (2. - m_c*m_dt)/(2. + m_c*m_dt);
 
+    const arma::imat & isStatic = m_particles->isStatic();
+    const vec & stableMass = m_particles->stableMass();
     mat & r = m_particles->r();
     mat & v = m_particles->v();
     mat & F = m_particles->F();
     mat & Fold = m_particles->Fold();
-    arma::imat & isStatic = m_particles->isStatic();
-    const vec & stableMass = m_particles->stableMass();
-    double error = 0.0;
+
     double Fn = 0;
     double deltaFn = 0;
-    int nParticles = m_particles->nParticles();
-//#ifdef USE_OPENMP
-//# pragma omp parallel for reduction(max: error)
-//#endif
+    const int nParticles = m_particles->nParticles();
+#ifdef USE_OPENMP
+# pragma omp parallel for reduction(+: deltaFn, Fn)
+#endif
     for(int i=0; i<nParticles; i++)
     {
-        int col_i = i;
-        if(isStatic(col_i))
+        if(isStatic(i))
+        {
             continue;
-
-        double drSquared = 0;
-
-        for(int d=0; d<m_dim; d++){
-            double rPrev = r(col_i, d);
-
-            v(col_i, d) = beta*v(col_i, d) + alpha*F(col_i, d)/stableMass(col_i);
-            r(col_i, d) += v(col_i, d)*m_dt;
-
-            deltaFn += pow(Fold(col_i, d) - F(col_i, d), 2);
-            Fn += pow(F(col_i, d), 2);
-
-            Fold(col_i, d) = F(col_i, d);
-
-            drSquared += (r(col_i, d) - rPrev)*(r(col_i, d) - rPrev);
         }
+        for(int d=0; d<m_dim; d++){
+            v(i, d) = beta*v(i, d) + alpha*F(i, d)/stableMass(i);
+            r(i, d) += v(i, d)*m_dt;
 
-        double error_i = errorScaling*sqrt(drSquared);
-        error = std::max(error, error_i);
+            deltaFn += pow(Fold(i, d) - F(i, d), 2);
+            Fn += pow(F(i, d), 2);
+
+            Fold(i, d) = F(i, d);
+        }
     }
-
-    m_globalError = error;
+#if USE_MPI
+    MPI_Allreduce(&deltaFn, &deltaFn, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&Fn, &Fn, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
     m_globalError = sqrt(deltaFn/Fn);
 
     if(std::isnan(m_globalError))
@@ -228,7 +322,6 @@ void ADR::integrateStepOne()
 //------------------------------------------------------------------------------
 void ADR::integrateStepTwo()
 {
-
     const mat & v = m_particles->v();
     const mat & F = m_particles->F();
     const mat & Fold = m_particles->Fold();
@@ -238,23 +331,27 @@ void ADR::integrateStepTwo()
     // Calculating the damping coefficient
     double numerator = 0;
     double denominator = 0;
-    int nParticles = m_particles->nParticles();
+    int const nParticles = m_particles->nParticles();
 
 #ifdef USE_OPENMP
-# pragma omp parallel for
+# pragma omp parallel for reduction(+: numerator, denominator)
 #endif
     for(int i=0; i<nParticles; i++)
     {
-        int col_i = i;
-        if(isStatic(col_i))
+        if(isStatic(i))
             continue;
         for(int d=0; d<m_dim; d++)
         {
-            numerator += -v(col_i, d)*(F(col_i, d) - Fold(col_i, d))
-                    /(stableMass(col_i)*m_dt);
-            denominator += v(col_i, d)*v(col_i, d);
+            numerator += -v(i, d)*(F(i, d) - Fold(i, d))
+                    /(stableMass(i)*m_dt);
+            denominator += v(i, d)*v(i, d);
         }
     }
+
+#if USE_MPI
+    MPI_Allreduce(&numerator, &numerator, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&denominator, &denominator, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
 
     m_c = 0;
     if(denominator > 0)
@@ -277,6 +374,25 @@ void ADR::staticModifiers()
     {
         modifier->staticEvaluation();
     }
+}
+//------------------------------------------------------------------------------
+void ADR::updateGridAndCommunication()
+{
+    m_mainGrid->clearParticles();
+    updateGrid(*m_mainGrid, *m_particles, true);
+
+#if USE_MPI
+    m_mainGrid->clearGhostParticles();
+    exchangeGhostParticles(*m_mainGrid, *m_particles);
+
+    // Updating lists in modifiers
+    int counter = 0;
+    for(Modifier *modifier:m_modifiers)
+    {
+        updateModifierLists(*modifier, *m_particles, counter);
+        counter++;
+    }
+#endif
 }
 //------------------------------------------------------------------------------
 }

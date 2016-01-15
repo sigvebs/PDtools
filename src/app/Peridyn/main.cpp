@@ -1,28 +1,33 @@
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
+
 #include <iostream>
 #include <armadillo>
 #include <memory>
-
 #include "pdsolver.h"
 
 int main(int argc, char** argv)
 {
     using namespace arma;
     using namespace std;
-
     wall_clock timer;
-    int myRank = 0;
-//    int nNodes = 1;
-
-    if(argc != 2)
-    {
-        cerr << "usage: peridyn [path to config file]" << endl;
-        return 1;
-    }
-
+#ifdef USE_MPI
+    MPI::Init (argc, argv);
+    const int myRank = MPI::COMM_WORLD.Get_rank( );
+    const int nCores = MPI::COMM_WORLD.Get_size( );
+#else
+    const int myRank = 0;
+    const int nCores = 1;
+#endif
     string configPath = argv[1];
-    cout << configPath << endl;
 
-    PdSolver Solver(configPath);
+    if(myRank == 0)
+    {
+        cout << "Starting with " << nCores << endl;
+        cout << "input file: " << configPath << endl;
+    }
+    PdSolver Solver(configPath, myRank, nCores);
     Solver.initialize();
 
     timer.tic();
@@ -42,6 +47,8 @@ int main(int argc, char** argv)
              << ", \t seconds: " << nSec
              << endl;
     }
-
-     return 0;
+#ifdef USE_MPI
+    MPI::Finalize( );
+#endif
+    return 0;
 }

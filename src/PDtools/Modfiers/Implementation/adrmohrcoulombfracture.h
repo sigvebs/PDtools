@@ -7,35 +7,28 @@
 
 namespace PDtools
 {
-class Force;
 //------------------------------------------------------------------------------
 class ADRmohrCoulombFracture : public Modifier
 {
 public:
     ADRmohrCoulombFracture(double mu, double C, double T, int dim);
-    ~ADRmohrCoulombFracture();
-
     virtual void initialize();
-    virtual void evaluateStepOne(const pair<int, int> &pIdcol);
-    virtual void evaluateStepTwo(const pair<int, int> &pIdcol);
+    virtual void evaluateStepTwo(const int id_i, const int i);
     virtual void evaluateStepTwo();
-
-    void addForce(Force *force);
-
 private:
     double m_C;
     double m_T;
     int m_dim;
     double m_d;
-    vector<Force *> m_forces;
     arma::mat *m_data;
-    std::unordered_map<int, int> * m_pIds;
+    std::unordered_map<int, int> * m_idToCol;
 
     int m_indexStress[6];
     int m_indexUnbreakable;
     int m_indexConnected;
-    pair<int, pair<int, vector<double>> *> m_maxPId;
+    pair <int, int> m_maxPId;
     double m_maxStress;
+    int m_nStressElements;
 };
 //------------------------------------------------------------------------------
 }

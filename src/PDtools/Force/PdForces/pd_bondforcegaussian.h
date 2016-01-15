@@ -33,25 +33,25 @@ public:
     ~PD_bondforceGaussian();
 
     virtual void
-    calculateForces(const std::pair<int, int> & idCol);
+    calculateForces(const int id, const int i);
 
     virtual double
-    calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
+    calculatePotentialEnergyDensity(const int id_i, const int i);
 
     virtual void
-    calculatePotentialEnergy(const std::pair<int, int> & idCol,
+    calculatePotentialEnergy(const int id_i, const int i,
                                           int indexPotential);
 
     virtual double
-    calculateBondEnergy(const std::pair<int, int> &idCol,
+    calculateBondEnergy(const int id_i, const int i,
                                     std::pair<int, std::vector<double> > &con);
 
     virtual void
-    calculateStress(const std::pair<int, int> & idCol,
+    calculateStress(const int id_i, const int i,
                                  const int (&indexStress)[6]);
 
     virtual double
-    calculateStableMass(const std::pair<int, int> & idCol,
+    calculateStableMass(const int id_a, const int a,
                                      double dt);
 
     virtual void
@@ -68,9 +68,6 @@ public:
 
     void
     initializeSigmoid();
-
-    virtual void
-    applySurfaceCorrection(double strain);
 
 };
 //------------------------------------------------------------------------------

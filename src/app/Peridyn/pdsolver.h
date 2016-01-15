@@ -10,14 +10,17 @@ using namespace std;
 class PdSolver
 {
 public:
-    PdSolver(string configPath);
+    PdSolver(string configPath, int myRank, int nMpiNodes);
     ~PdSolver();
 
-    void initialize();
+    int initialize();
     void solve();
 
 protected:
-    string m_configPath;
+    const string m_configPath;
+    const int m_myRank;
+    const int m_nCores;
+    bool isRoot = 0;
     libconfig::Config m_cfg;
     PDtools::PD_Particles m_particles;
     PDtools::Grid m_grid;

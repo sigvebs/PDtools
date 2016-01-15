@@ -15,15 +15,16 @@ public:
     ADRfracture(double alpha);
     ~ADRfracture();
 
+    virtual void registerParticleParameters();
     virtual void initialize();
-    virtual void evaluateStepOne(const pair<int, int> &pIdcol);
-    virtual void evaluateStepTwo(const pair<int, int> &pIdcol);
+    virtual void evaluateStepOne(const int id, const int i);
+    virtual void evaluateStepTwo(const int id_i, const int i);
 
     virtual void evaluateStepTwo();
 
 private:
     double m_alpha;
-    pair<int, pair<int, vector<double>> *> m_maxPId;
+    pair <int, int> m_maxPId;
     double m_maxStretch;
     int m_indexS0;
     int m_indexStretch;
@@ -32,7 +33,7 @@ private:
     int m_indexConnected;
     int m_indexS_tmp;
     arma::mat * m_data;
-    std::unordered_map<int, int> * m_pIds;
+    std::unordered_map<int, int> * m_idToCol;
 };
 //------------------------------------------------------------------------------
 }

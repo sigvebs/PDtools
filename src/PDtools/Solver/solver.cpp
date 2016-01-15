@@ -5,6 +5,8 @@
 #include "PDtools/Force/force.h"
 #include "PDtools/SavePdData/savepddata.h"
 #include "PDtools/Modfiers/modifier.h"
+#include "PDtools/PdFunctions/pdfunctions.h"
+#include "PDtools/CalculateProperties/calculateproperty.h"
 #include <iostream>
 
 #include <armadillo>
@@ -23,82 +25,77 @@ void Solver::setErrorThreshold(double errorThreshold)
     m_errorThreshold = errorThreshold;
 }
 //------------------------------------------------------------------------------
+void Solver::setRankAndCores(int rank, int cores)
+{
+    m_myRank = rank;
+    m_nCores = cores;
+}
+//------------------------------------------------------------------------------
+void Solver::setCalculateProperties(vector<CalculateProperty*> &calcProp)
+{
+    m_properties = calcProp;
+}
+//------------------------------------------------------------------------------
+void Solver::setSaveParticles(SavePdData *saveParticles)
+{
+    m_saveParticles = saveParticles;
+}
+//------------------------------------------------------------------------------
 Solver::Solver()
 {
-
+    
 }
 //------------------------------------------------------------------------------
 Solver::~Solver()
-{
-
-}
-//------------------------------------------------------------------------------
-std::vector<std::string> Solver::saveParameters() const
-{
-    return m_saveParameters;
-}
-//------------------------------------------------------------------------------
-void Solver::setSaveParameters(const std::vector<std::string> &saveParameters)
-{
-    m_saveParameters = saveParameters;
+{ 
+    
+    for(Force *force:m_oneBodyForces)
+    {
+      delete force;
+    } 
+    m_oneBodyForces.clear();
 }
 //------------------------------------------------------------------------------
 void Solver::updateGridAndCommunication()
 {
-    m_mainGrid->placeParticlesInGrid(*m_particles);
-    // MPI COMMUNICATIONS HERE
+    m_mainGrid->clearParticles();
+    updateGrid(*m_mainGrid, *m_particles);
+
+#if USE_MPI
+    exchangeGhostParticles(*m_mainGrid, *m_particles);
+
+    // Updating lists in modifiers
+    int counter = 0;
+    for(Modifier *modifier:m_modifiers)
+    {
+        updateModifierLists(*modifier, *m_particles, counter);
+        counter++;
+    }
+#endif
 }
 //------------------------------------------------------------------------------
-void Solver::save(int i)
+void Solver::updateGhosts()
 {
-    if(i%m_saveInterval == 0)
+    // TODO: needs optimization
+    m_mainGrid->clearGhostParticles();
+    exchangeGhostParticles(*m_mainGrid, *m_particles);
+}
+//------------------------------------------------------------------------------
+void Solver::save(int timesStep)
+{
+    if(timesStep % m_saveInterval == 0)
     {
-        saveParticles->evaluate(m_t, i);
-        saveParticles->saveData(m_t, i);
+        m_saveParticles->evaluate(m_t, timesStep);
+        m_saveParticles->saveData(m_t, timesStep);
 
-        const double progress = (double)i/(double)m_steps;
-        printProgress(progress);
+        const double progress = (double)timesStep/(double)m_steps;
+        if(m_myRank == 0)
+            printProgress(progress);
     }
 }
 //------------------------------------------------------------------------------
 void Solver::initialize()
 {
-    saveParticles = new SavePdData(m_saveParameters);
-    saveParticles->setScaling(m_E0, m_L0, m_v0, m_t0, m_rho0);
-    saveParticles->setSavePath(m_savePath);
-    saveParticles->setParticles(m_particles);
-    saveParticles->setForces(m_oneBodyForces);
-    saveParticles->initialize();
-
-    if(m_particles->hasParameter("s_xx"))
-        m_indexStress[0] = m_particles->getParamId("s_xx");
-    else
-        m_indexStress[0] = m_particles->registerParameter("s_xx");
-
-    if(m_particles->hasParameter("s_yy"))
-        m_indexStress[1] = m_particles->getParamId("s_yy");
-    else
-        m_indexStress[1] = m_particles->registerParameter("s_yy");
-
-    if(m_particles->hasParameter("s_zz"))
-        m_indexStress[2] = m_particles->getParamId("s_zz");
-    else
-        m_indexStress[2] = m_particles->registerParameter("s_zz");
-
-    if(m_particles->hasParameter("s_xy"))
-        m_indexStress[3] = m_particles->getParamId("s_xy");
-    else
-        m_indexStress[3] = m_particles->registerParameter("s_xy");
-
-    if(m_particles->hasParameter("s_xz"))
-        m_indexStress[4] = m_particles->getParamId("s_xz");
-    else
-        m_indexStress[4] = m_particles->registerParameter("s_xz");
-
-    if(m_particles->hasParameter("s_yz"))
-        m_indexStress[5] = m_particles->getParamId("s_yz");
-    else
-        m_indexStress[5] = m_particles->registerParameter("s_yz");
 }
 //------------------------------------------------------------------------------
 void Solver::modifiersStepOne()
@@ -108,17 +105,31 @@ void Solver::modifiersStepOne()
         modifier->evaluateStepOne();
     }
 
+    const ivec &colToId = m_particles->colToId();
+    const int nParticles =  m_particles->nParticles();
     if(!m_spModifiers.empty())
     {
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-        for(unsigned int i=0; i<m_particles->nParticles(); i++)
+        for(int i=0; i<nParticles; i++)
         {
-            pair<int, int> id(i, i);
+            const int id = colToId(i);
             for(Modifier *modifier:m_spModifiers)
             {
-                modifier->evaluateStepOne(id);
+                modifier->evaluateStepOne(id, i);
+            }
+        }
+
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
+        for(int i=0; i<nParticles; i++)
+        {
+            const int id = colToId(i);
+            for(Modifier *modifier:m_spModifiers)
+            {
+                modifier->updateStepOne(id, i);
             }
         }
     }
@@ -131,40 +142,38 @@ void Solver::modifiersStepTwo()
         modifier->evaluateStepTwo();
     }
 
+    const ivec &colToId = m_particles->colToId();
+    const int nParticles =  m_particles->nParticles();
+
     if(!m_spModifiers.empty())
     {
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-        for(unsigned int i=0; i<m_particles->nParticles(); i++)
+        for(int i=0; i<nParticles; i++)
         {
-            pair<int, int> id(i, i);
+            const int id = colToId(i);
             for(Modifier *modifier:m_spModifiers)
             {
-                modifier->evaluateStepTwo(id);
+                modifier->evaluateStepTwo(id, i);
             }
         }
     }
 }
 //------------------------------------------------------------------------------
-void Solver::zeroForcesAndStress()
+void Solver::zeroForces()
 {
+    const int nParticles = m_particles->nParticles() + m_particles->nGhostParticles();
     mat & F = m_particles->F();
-    mat & data = m_particles->data();
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<m_particles->nParticles(); i++)
+    for(unsigned int i=0; i<nParticles; i++)
     {
-        pair<int, int> id(i, i);
         for(int d=0; d<m_dim; d++)
         {
             F(i, d) = 0;
-        }
-        for(int s=0; s<6; s++)
-        {
-            data(i, m_indexStress[s]) = 0;
         }
     }
 }
@@ -209,23 +218,9 @@ void Solver::addForce(Force *force)
     m_oneBodyForces.push_back(force);
 }
 //------------------------------------------------------------------------------
-void Solver::setSavePath(const string &savePath)
-{
-    m_savePath = savePath;
-}
-//------------------------------------------------------------------------------
 void Solver::setSaveInterval(double saveInterval)
 {
     m_saveInterval = saveInterval;
-}
-//------------------------------------------------------------------------------
-void Solver::setSaveScaling(const double E0, const double L0, const double v0, const double t0, const double rho0)
-{
-    m_E0 = E0;
-    m_L0 = L0;
-    m_v0 = v0;
-    m_t0 = t0;
-    m_rho0 = rho0;
 }
 //------------------------------------------------------------------------------
 void Solver::addSpModifier(Modifier * modifier)
@@ -264,42 +259,58 @@ void Solver::checkInitialization()
     }
 }
 //------------------------------------------------------------------------------
-void Solver::calculateForces()
+void Solver::calculateForces(int timeStep)
 {
+    const ivec &colToId = m_particles->colToId();
     const imat & isStatic = m_particles->isStatic();
-    int nParticles = m_particles->nParticles();
+    const int nParticles = m_particles->nParticles();
 
     // Updating overall state
     for(Force *oneBodyForce:m_oneBodyForces)
     {
         oneBodyForce->updateState();
     }
-
     // Updating single particle states
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
     for(int i=0; i<nParticles; i++)
     {
-        pair<int, int> id(i, i);
+        const int id = colToId(i);
         for(Force *oneBodyForce:m_oneBodyForces)
         {
-            oneBodyForce->updateState(id);
+            oneBodyForce->updateState(id, i);
         }
     }
 
-    // Calculateing the one-body forces
+    // Calculating one-body forces
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
     for(int i=0; i<nParticles; i++)
     {
-        pair<int, int> id(i, i);
+        const int id = colToId(i);
+
         if(isStatic(i))
             continue;
+
         for(Force *oneBodyForce:m_oneBodyForces)
         {
-            oneBodyForce->calculateForces(id);
+            oneBodyForce->calculateForces(id, i);
+        }
+    }
+}
+//------------------------------------------------------------------------------
+void Solver::updateProperties(const int timeStep)
+{
+    for(CalculateProperty* property:m_properties)
+    {
+        const int updateFrequency = property->updateFrquency();
+
+        if(timeStep % updateFrequency == 0)
+        {
+            property->clean();
+            property->update();
         }
     }
 }

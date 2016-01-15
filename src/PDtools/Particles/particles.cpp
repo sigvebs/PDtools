@@ -14,6 +14,31 @@ void Particles::setVerletUpdateFreq(int verletUpdateFreq)
     m_verletUpdateFreq = verletUpdateFreq;
 }
 //------------------------------------------------------------------------------
+void Particles::addGhostParameter(const string &g_parameter)
+{
+    const int paramId = getParamId(g_parameter);
+    for(const string & gp:m_ghostParametersString)
+    {
+        if(g_parameter == gp)
+        {
+            return;
+        }
+    }
+
+    m_ghostParametersString.push_back(g_parameter);
+    m_ghostParameters.push_back(paramId);
+}
+//------------------------------------------------------------------------------
+const vector<int> &Particles::ghostParameters()
+{
+    return m_ghostParameters;
+}
+//------------------------------------------------------------------------------
+const vector<string> &Particles::ghostParametersString()
+{
+    return m_ghostParametersString;
+}
+//------------------------------------------------------------------------------
 Particles::Particles()
 {
 
@@ -31,10 +56,11 @@ void Particles::initializeMatrices()
         cerr << "nParticles can not be zero when initializeing particle matrices" << endl;
         throw ZeroParticles;
     }
-    m_r = mat(PARTICLE_BUFFER*m_nParticles, DIM);
-    m_data = mat(PARTICLE_BUFFER*m_nParticles, PARAMETER_BUFFER);
-    m_posToId = ivec(PARTICLE_BUFFER*m_nParticles);
-    m_isStatic = zeros<ivec>(PARTICLE_BUFFER*m_nParticles);
+    m_r = mat(PARTICLE_BUFFER*m_maxParticles, DIM);
+    m_v  = mat(m_maxParticles*PARTICLE_BUFFER, DIM);
+    m_data = mat(PARTICLE_BUFFER*m_maxParticles, PARAMETER_BUFFER);
+    m_colToId = ivec(PARTICLE_BUFFER*m_maxParticles);
+    m_isStatic = zeros<ivec>(PARTICLE_BUFFER*m_maxParticles);
 }
 //------------------------------------------------------------------------------
 const string &Particles::type() const
@@ -62,23 +88,61 @@ void Particles::dim(int d)
     m_dim = d;
 }
 //------------------------------------------------------------------------------
+int Particles::nGhostParticles()
+{
+    return m_nGhostParticles;
+}
+//------------------------------------------------------------------------------
+void Particles::nGhostParticles(int ngp)
+{
+    m_nGhostParticles = ngp;
+}
+//------------------------------------------------------------------------------
+void Particles::deleteParticleById(const int deleteId)
+{
+    const int deleteCol = m_idToCol.at(deleteId);
+    const int moveCol = m_nParticles - 1;
+    const int moveId = m_colToId.at(moveCol);
+
+    for(int d=0;d<DIM; d++)
+    {
+        m_r(deleteCol, d) = m_r(moveCol, d);
+    }
+    m_isStatic(deleteCol) = m_isStatic(moveCol);
+
+    for(const auto & param:m_parameters)
+    {
+        const int pos = param.second;
+        m_data(deleteCol, pos) = m_data(moveCol, pos);
+    }
+
+    m_colToId[deleteCol] = moveId;
+    m_idToCol[moveId] = deleteCol;
+    m_nParticles--;
+}
+//------------------------------------------------------------------------------
 unordered_map<string, int> &Particles::parameters()
 {
     return m_parameters;
 }
 //------------------------------------------------------------------------------
-int &Particles::parameters(string id)
+int Particles::parameters(const string &id)
 {
     return m_parameters.at(id);
 }
 //------------------------------------------------------------------------------
-int Particles::registerVerletList(string verletId)
+int Particles::registerVerletList(const string &verletId)
 {
     int id = m_verletListIds.size();
     m_verletListIds[verletId] = id;
     unordered_map<int, vector<int>> list;
     m_verletLists.push_back(list);
     return id;
+}
+//------------------------------------------------------------------------------
+int Particles::getVerletSize() const
+{
+    return m_verletListIds.size();
 }
 //------------------------------------------------------------------------------
 int Particles::getVerletId(string verletId) const
@@ -128,13 +192,12 @@ int Particles::getParamId(string paramId)
     }
     return m_parameters.at(paramId);
 }
-
 //------------------------------------------------------------------------------
 void Particles::setParameter(string paramId, double value)
 {
     int param_pos = m_parameters.at(paramId);
 
-    for(unsigned int p=0;p<m_data.n_rows; p++)
+    for(unsigned int p=0;p<m_nParticles; p++)
     {
         m_data(p, param_pos) = value;
     }
@@ -145,8 +208,8 @@ int Particles::registerParameter(string paramId, double value)
     // It the parameter exists return the original position.
     if(m_parameters.count(paramId) > 0)
     {
-        cerr << "Parameter '" << paramId
-             << "' already registerd. Using that." << endl;
+        cerr << "WARNING: Parameter '" << paramId
+             << "' already registered. Using that." << endl;
         return m_parameters.at(paramId);
     }
 
@@ -160,7 +223,7 @@ int Particles::registerParameter(string paramId, double value)
         throw OutOfBounds;
     }
 
-    for(unsigned int p=0;p<m_data.n_rows; p++)
+    for(unsigned int p=0;p<m_nParticles; p++)
     {
         m_data(p, param_pos) = value;
     }
@@ -180,7 +243,7 @@ void Particles::scaleParameter(const string &paramId, double value)
         throw OutOfBounds;
     }
 
-    for(unsigned int p=0;p<m_data.n_rows; p++)
+    for(unsigned int p=0;p<m_nParticles; p++)
     {
         m_data(p, param_pos) *= value;
     }

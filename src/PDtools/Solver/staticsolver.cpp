@@ -44,9 +44,9 @@ void StaticSolver::stepForward(int i)
 //------------------------------------------------------------------------------
 void StaticSolver::iterate()
 {
-    const int nParticles = m_particles->nParticles();
 //ARMA_USE_WRAPPER
 #ifdef ARMA_USE_WRAPPER
+    const int nParticles = m_particles->nParticles();
     //--------------------------------------------------------------------------
     // Setting the boundary conditions
     //--------------------------------------------------------------------------
@@ -71,7 +71,7 @@ void StaticSolver::iterate()
     vec test = C*u_k;
     r_k = b_k - C*u_k;
     p_k = r_k;
-    int l_k;
+    int l_k = 0;
     double r_k2;
     r_k2 = dot(r_k, r_k);
     double t2 = r_k2 = dot(test, test);
@@ -155,9 +155,9 @@ void StaticSolver::save(int i)
 {
     if(i%m_saveInterval == 0)
     {
-        saveParticles->evaluate(m_t, i);
+        m_saveParticles->evaluate(m_t, i);
         computeStress();
-        saveParticles->saveData(m_t, i);
+        m_saveParticles->saveData(m_t, i);
     }
 }
 //------------------------------------------------------------------------------
@@ -165,7 +165,7 @@ void StaticSolver::createStiffnessMatrix()
 {
     const int nParticles = m_particles->nParticles();
     arma::mat & m_data = m_particles->data();
-    std::unordered_map<int, int> & m_pIds = m_particles->pIds();
+    std::unordered_map<int, int> & m_idToCol = m_particles->idToCol();
 
     arma::mat &m_dr0 = m_particles->r0();
 
@@ -209,7 +209,7 @@ void StaticSolver::createStiffnessMatrix()
                 continue;
 
             const int id_j = con.first;
-            const int b = m_pIds[id_j];
+            const int b = m_idToCol.at(id_j);
             const int i_b = b*m_dim;
 
             const double c_j = m_data(b, m_indexMicromodulus);
@@ -300,14 +300,13 @@ void StaticSolver::computeStress()
     const arma::mat & U = m_particles->u();
     const arma::mat & R = m_particles->r();
     const arma::mat &m_dr0 = m_particles->r0();
-    std::unordered_map<int, int> & m_pIds = m_particles->pIds();
+    const std::unordered_map<int, int> & idToCol= m_particles->idToCol();
 
 //#ifdef USE_OPENMP
 //# pragma omp parallel for
 //#endif
     for(unsigned int a=0; a<m_particles->nParticles(); a++)
     {
-        const pair<int, int> idCol(a, a);
         vector<pair<int, vector<double>>> & PDconnections = m_particles->pdConnections(a);
         const int nConnections = PDconnections.size();
         const double c_i = m_data(a, m_indexMicromodulus);
@@ -315,11 +314,11 @@ void StaticSolver::computeStress()
 
         for(int l_j=0; l_j<nConnections; l_j++)
         {
-            const auto &con = PDconnections[l_j];
+            const auto &con = PDconnections.at(l_j);
             if(con.second[m_indexConnected] <= 0.5 || !con.second[m_indexCompute])
                 continue;
             const int id_b = con.first;
-            const int b = m_pIds[id_b];
+            const int b = idToCol.at(id_b);
 
             const double c_j = m_data(b, m_indexMicromodulus);
             const double vol_j = m_data(b, m_indexVolume);

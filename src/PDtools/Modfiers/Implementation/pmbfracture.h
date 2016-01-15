@@ -13,9 +13,10 @@ public:
     PmbFracture(double alpha);
     ~PmbFracture();
 
+    virtual void registerParticleParameters();
     virtual void initialize();
-    virtual void evaluateStepOne(const pair<int, int> &id_col);
-    virtual void evaluateStepTwo(const pair<int, int> &id_col);
+    virtual void evaluateStepOne(const int id_i, const int i);
+    virtual void updateStepOne(const int id, const int i);
 
 private:
     double m_alpha;
@@ -27,7 +28,7 @@ private:
     int m_indexS_tmp;
     double m_s00;
     arma::mat * m_data;
-    std::unordered_map<int, int> * m_pIds;
+    std::unordered_map<int, int> * m_idToCol;
 };
 //------------------------------------------------------------------------------
 }

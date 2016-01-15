@@ -21,6 +21,9 @@ PD_LPS::PD_LPS(PD_Particles &particles):
     m_iForceScalingDilation = m_particles.registerPdParameter("forceScalingDilation", 1.);
     m_iForceScalingBond = m_particles.registerPdParameter("forceScalingBond", 1.);
     m_iCompute = m_particles.getPdParamId("compute");
+
+
+    m_ghostParameters = {"volume", "theta", "LMP_mass"};
 }
 //------------------------------------------------------------------------------
 PD_LPS::~PD_LPS()
@@ -28,10 +31,8 @@ PD_LPS::~PD_LPS()
 
 }
 //------------------------------------------------------------------------------
-void PD_LPS::calculateForces(const std::pair<int, int> &idCol)
+void PD_LPS::calculateForces(const int id, const int i)
 {
-    const int pId = idCol.first;
-    const int i = idCol.second;
     const double theta_i = m_data(i, m_iTheta);
     const double m_i = m_data(i, m_iMass);
 
@@ -43,7 +44,7 @@ void PD_LPS::calculateForces(const std::pair<int, int> &idCol)
 
     const double c = (3*m_k - 5*m_mu);
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id);
 
     const int nConnections = PDconnections.size();
     double dr_ij[m_dim];
@@ -57,7 +58,7 @@ void PD_LPS::calculateForces(const std::pair<int, int> &idCol)
             continue;
 
         const int id_j = con.first;
-        const int j = m_pIds[id_j];
+        const int j = m_idToCol.at(id_j);
 
         const double m_j = m_data(j, m_iMass);
         const double theta_j = m_data(j, m_iTheta);
@@ -93,13 +94,11 @@ void PD_LPS::calculateForces(const std::pair<int, int> &idCol)
     m_data(i, m_iThetaNew) = m_dim/m_i*thetaNew;
 }
 //------------------------------------------------------------------------------
-double PD_LPS::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
+double PD_LPS::calculatePotentialEnergyDensity(const int id_i, const int i)
 {
-    const int pId = idCol.first;
-    const int i = idCol.second;
     const double m_i = m_data(i, m_iMass);
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
 
     const int nConnections = PDconnections.size();
     double dr_ij[m_dim];
@@ -110,16 +109,17 @@ double PD_LPS::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
     else
         alpha = 8*m_mu/m_i;
 
-    double theta_i = this->computeDilation(idCol);
+    double theta_i = this->computeDilation(id_i, i);
 
     double W_i = 0;
-    for(int l_j=0; l_j<nConnections; l_j++) {
+    for(int l_j=0; l_j<nConnections; l_j++)
+    {
         auto &con = PDconnections[l_j];
         if(con.second[m_iConnected] <= 0.5)
             continue;
 
         const int id_j = con.first;
-        const int j = m_pIds[id_j];
+        const int j = m_idToCol.at(id_j);
 
         const double vol_j = m_data(j, m_iVolume);
         const double dr0 = con.second[m_iDr0];
@@ -143,13 +143,11 @@ double PD_LPS::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
     return 0.5* W_i;
 }
 //------------------------------------------------------------------------------
-double PD_LPS::computeDilation(const std::pair<int, int> &idCol)
+double PD_LPS::computeDilation(const int id_i, const int i)
 {
-    const int pId = idCol.first;
-    const int i = idCol.second;
     const double m_i = m_data(i, m_iMass);
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
     const int nConnections = PDconnections.size();
 
     double dr_ij[m_dim];
@@ -162,7 +160,7 @@ double PD_LPS::computeDilation(const std::pair<int, int> &idCol)
             continue;
 
         const int id_j = con.first;
-        const int j = m_pIds[id_j];
+        const int j = m_idToCol.at(id_j);
 
         const double vol_j = m_data(j, m_iVolume);
         const double dr0 = con.second[m_iDr0];
@@ -183,17 +181,14 @@ double PD_LPS::computeDilation(const std::pair<int, int> &idCol)
     return theta_i*m_dim/m_i;
 }
 //------------------------------------------------------------------------------
-void PD_LPS::calculatePotentialEnergy(const std::pair<int, int> &idCol, int indexPotential)
+void PD_LPS::calculatePotentialEnergy(const int id_i, const int i, int indexPotential)
 {
-    int col_i = idCol.second;
-    double vol_i = m_data(col_i, m_iVolume);
-    m_data(col_i, indexPotential) += calculatePotentialEnergyDensity(idCol)*vol_i;
+    double vol_i = m_data(i, m_iVolume);
+    m_data(i, indexPotential) += calculatePotentialEnergyDensity(id_i, i)*vol_i;
 }
 //------------------------------------------------------------------------------
-void PD_LPS::calculateStress(const std::pair<int, int> &idCol, const int (&indexStress)[6])
+void PD_LPS::calculateStress(const int id_i, const int i, const int (&indexStress)[6])
 {
-    const int pId = idCol.first;
-    const int i = idCol.second;
     const double theta_i = m_data(i, m_iTheta);
     const double m_i = m_data(i, m_iMass);
 
@@ -205,7 +200,7 @@ void PD_LPS::calculateStress(const std::pair<int, int> &idCol, const int (&index
 
     const double alpha_i = beta/m_i;
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
 
     const int nConnections = PDconnections.size();
     double dr_ij[m_dim];
@@ -217,7 +212,7 @@ void PD_LPS::calculateStress(const std::pair<int, int> &idCol, const int (&index
             continue;
 
         const int id_j = con.first;
-        const int j = m_pIds[id_j];
+        const int j = m_idToCol.at(id_j);
 
         const double m_j = m_data(j, m_iMass);
         const double theta_j = m_data(j, m_iTheta);
@@ -245,30 +240,30 @@ void PD_LPS::calculateStress(const std::pair<int, int> &idCol, const int (&index
 
         m_data(i, indexStress[0]) += 0.5*bond_ij*dr_ij[X]*dr_ij[X];
         m_data(i, indexStress[1]) += 0.5*bond_ij*dr_ij[Y]*dr_ij[Y];
-        m_data(i, indexStress[3]) += 0.5*bond_ij*dr_ij[X]*dr_ij[Y];
+        m_data(i, indexStress[2]) += 0.5*bond_ij*dr_ij[X]*dr_ij[Y];
 
         if(m_dim == 3)
         {
-            m_data(i, indexStress[2]) += 0.5*bond_ij*dr_ij[Z]*dr_ij[Z];
+            m_data(i, indexStress[3]) += 0.5*bond_ij*dr_ij[Z]*dr_ij[Z];
             m_data(i, indexStress[4]) += 0.5*bond_ij*dr_ij[X]*dr_ij[Z];
             m_data(i, indexStress[5]) += 0.5*bond_ij*dr_ij[Y]*dr_ij[Z];
         }
     }
 }
 //------------------------------------------------------------------------------
-void PD_LPS::updateState(const std::pair<int, int> &idCol)
+void PD_LPS::updateState(int id, int i)
 {
-    const int col_i = idCol.second;
-    m_data(col_i, m_iTheta) = m_data(col_i, m_iThetaNew);
+    (void) id;
+    m_data(i, m_iTheta) = m_data(i, m_iThetaNew);
 }
 //------------------------------------------------------------------------------
-double PD_LPS::calculateStableMass(const std::pair<int, int> &idCol, double dt)
+double PD_LPS::calculateStableMass(const int id_a, const int a, double dt)
 {
-    const int pId = idCol.first;
-    const int a = idCol.second;
+    dt *= 1.1;
+
     const double vol_a = m_data(a, m_iVolume);
     const double m_a = m_data(a, m_iMass);
-    const arma::mat & matR0 = m_particles.r0();
+    const arma::mat & R0 = m_particles.r0();
 
     double beta = 0;
     if(m_dim == 3)
@@ -285,7 +280,7 @@ double PD_LPS::calculateStableMass(const std::pair<int, int> &idCol, double dt)
         m[d] = 0;
     }
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    const vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_a);
 
     double k[m_dim];
 
@@ -302,11 +297,11 @@ double PD_LPS::calculateStableMass(const std::pair<int, int> &idCol, double dt)
                 continue;
 
             const int id_b = con.first;
-            const int b = m_pIds[id_b];
+            const int b = m_idToCol.at(id_b);
 
             for(int d=0; d<m_dim; d++)
             {
-                dr0[d] = matR0(a, d) - matR0(b, d);
+                dr0[d] = R0(a, d) - R0(b, d);
             }
 
             const double m_b = m_data(b, m_iMass);
@@ -335,7 +330,7 @@ double PD_LPS::calculateStableMass(const std::pair<int, int> &idCol, double dt)
         m[i] = k[i];
     }
 
-    double stiffness = 0;
+    double stiffness = numeric_limits<double>::min();
 
     for(int d=0;d<m_dim; d++)
     {
@@ -344,8 +339,8 @@ double PD_LPS::calculateStableMass(const std::pair<int, int> &idCol, double dt)
             stiffness = m[d];
         }
     }
-    double stableMass = 4*0.25*pow(dt, 2)*stiffness;
-    return stableMass;
+
+    return 4.*0.25*pow(dt, 2)*stiffness;
 }
 //------------------------------------------------------------------------------
 void PD_LPS::initialize(double E, double nu, double delta, int dim, double h, double lc)
@@ -374,25 +369,24 @@ void PD_LPS::initialize(double E, double nu, double delta, int dim, double h, do
         cerr << "use 1, 2 or 3." << endl;
         exit(EXIT_FAILURE);
     }
+
     calculateMass();
 }
 //------------------------------------------------------------------------------
 void PD_LPS::calculateMass()
 {
+    const int nParticles = m_particles.nParticles();
     bool analytical = false;
 
-    // Calculateing the one-body forces
+    // Calculating the one-body forces
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<m_particles.nParticles(); i++)
+    for(int i=0; i<nParticles; i++)
     {
-        pair<int, int> id_col(i, i);
+        const int id_i = m_colToId.at(i);
 
-        const int pId = id_col.first;
-        const int col_i = id_col.second;
-
-        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+        const vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
         const int nConnections = PDconnections.size();
         double m = 0;
         for(int l_j=0; l_j<nConnections; l_j++)
@@ -402,7 +396,7 @@ void PD_LPS::calculateMass()
                 continue;
 
             const int id_j = con.first;
-            const int j = m_pIds[id_j];
+            const int j = m_idToCol.at(id_j);
             const double volumeScaling = con.second[m_iVolumeScaling];
             const double vol_j = m_data(j, m_iVolume);
             const double dr0 = con.second[m_iDr0];
@@ -420,12 +414,17 @@ void PD_LPS::calculateMass()
             }
 
         }
-        m_data(col_i, m_iMass) = m;
+        m_data(i, m_iMass) = m;
     }
 }
 //------------------------------------------------------------------------------
-void PD_LPS::applySurfaceCorrection(double strain)
+void PD_LPS::applySurfaceCorrectionStep1(double strain)
 {
+    const ivec &colToId = m_particles.colToId();
+    const unsigned int nParticlesAndGhosts = m_particles.nParticles() + m_particles.nGhostParticles();
+    cerr << "TODO: fix the PD_LPS::applySurfaceCorrectionStep1" << endl;
+    exit(1);
+    /*
     arma::vec3 strainFactor;
     arma::mat gd = arma::zeros(m_particles.nParticles(), m_dim); // Dilation correction
     arma::mat gb = arma::zeros(m_particles.nParticles(), m_dim); // Bond correction
@@ -521,19 +520,16 @@ void PD_LPS::applySurfaceCorrection(double strain)
             axis(1) = 0;
             axis(2) = 0;
         }
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
         // Applying uniaxial stretch
         for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
-            pair<int, int> idCol(i, i);
-            int col_i = idCol.second;
-
             for(int d=0; d<m_dim; d++)
             {
-                double shear = strainFactor(d)*m_r(axis(d), col_i);
-                m_r(col_i, d) = m_r(col_i, d) + shear;
+                double shear = strainFactor(d)*m_r(axis(d), i);
+                m_r(i, d) = m_r(i, d) + shear;
             }
         }
 
@@ -585,7 +581,7 @@ void PD_LPS::applySurfaceCorrection(double strain)
         for(auto &con:PDconnections)
         {
             int id_j = con.first;
-            int col_j = m_pIds[id_j];
+            int col_j = m_idToCol.at(id_j);
 
             double dr0Len = con.second[m_iDr0];
             arma::vec3 n = (m_r.row(col_i).t() - m_r.row(col_j).t())/dr0Len;
@@ -612,6 +608,7 @@ void PD_LPS::applySurfaceCorrection(double strain)
             con.second[m_iForceScalingBond] *= Gb;
         }
     }
+    */
 }
 //------------------------------------------------------------------------------
 }

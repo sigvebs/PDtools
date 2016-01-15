@@ -12,27 +12,34 @@ void TimeIntegrator::solve()
 {
     initialize();
     checkInitialization();
-    calculateForces();
-
-    cout << "Starting time integration " << endl;
+    calculateForces(0);
+    updateProperties(0);
+    save(0);
 
     // Looping over all time, particles and components.
     for (int i = 0; i < m_steps; i++)
     {
+//        if(m_myRank == 0)
+//            cout << "i: " << i << endl;
         stepForward(i);
     }
 }
 //------------------------------------------------------------------------------
-void TimeIntegrator::stepForward(int i)
+void TimeIntegrator::stepForward(int timeStep)
 {
-    save(i);
-    modifiersStepOne();
     integrateStepOne();
-    zeroForcesAndStress();
-
     updateGridAndCommunication();
 
-    calculateForces();
+    modifiersStepOne();
+
+    updateGridAndCommunication();
+    updateProperties(timeStep + 1);
+    updateGridAndCommunication();
+    save(timeStep + 1);
+    //----------------------------------------------------------------------
+    zeroForces();
+    calculateForces(timeStep+1);
+    //----------------------------------------------------------------------
 
     modifiersStepTwo();
     integrateStepTwo();
@@ -44,11 +51,11 @@ void TimeIntegrator::initialize()
 {
     if(m_particles->hasParameter("rho"))
     {
-        m_colRho = m_particles->getParamId("rho");
+        m_indexRho = m_particles->getParamId("rho");
     }
     else if(m_particles->hasParameter("mass"))
     {
-        m_colRho = m_particles->getParamId("mass");
+        m_indexRho = m_particles->getParamId("mass");
     }
     else
     {

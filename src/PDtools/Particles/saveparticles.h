@@ -18,12 +18,16 @@ private:
     std::vector<std::pair<std::string, double>> m_saveParameters;
     bool m_binary = false;
     bool m_saveId;
+    bool m_saveCoreId;
     vector<pair<int, double>> m_saveCoordinates;
+    vector<pair<int, double>> m_saveVelocities;
     vector<pair<int, double>> m_dataParameters;
     vector<string> m_header;
     bool m_append = false;
     int m_timestep = 0;
 
+    int m_myRank = 0;
+    int m_nCores = 1;
 public:
     SaveParticles();
     SaveParticles(string format,
@@ -43,8 +47,9 @@ public:
     {
         ;
     }
+
     void
-    writeToFile(Particles &particles, const string &savePath);
+    writeToFile(Particles &particles, string savePath);
 
     void
     append(bool append)
@@ -64,6 +69,8 @@ public:
         m_timestep = timestep;
     }
 
+    void
+    setRankAndCores(int rank, int cores);
 private:
     void
     initialize(Particles &particles);

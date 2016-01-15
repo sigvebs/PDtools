@@ -9,7 +9,7 @@ namespace PDtools
 class TimeIntegrator: public Solver
 {
 protected:
-    int m_colRho;
+    int m_indexRho;
 
 public:
     TimeIntegrator()

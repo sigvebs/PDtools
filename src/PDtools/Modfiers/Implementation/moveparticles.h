@@ -14,12 +14,16 @@ public:
                   double dt, bool isStatic);
     ~MoveParticles();
 
-    virtual void evaluateStepOne();
-    virtual void initialize();
-    virtual void staticEvaluation();
+    virtual void
+    registerParticleParameters();
+    virtual void
+    evaluateStepOne();
+    virtual void
+    initialize();
+    virtual void
+    staticEvaluation();
 
 private:
-    vector<pair<int, int>> m_boundaryParticles;
     double m_velAmplitude;
     int m_velOritentation;
     pair<double, double> m_boundary;
@@ -27,6 +31,7 @@ private:
     double m_dt;
     double m_time;
     bool m_isStatic;
+    bool m_usingUnbreakableBorder;
 };
 //------------------------------------------------------------------------------
 }

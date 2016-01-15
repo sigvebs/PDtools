@@ -15,7 +15,7 @@ public:
     ComputePotentialEnergy(PD_Particles &particles, vector<Force*> &forces);
     ~ComputePotentialEnergy();
 
-    virtual void update(const pair<int, int> &pIdcol);
+    virtual void update(const int id_i, const int i);
 private:
     vector<Force *> &m_forces;
     arma::mat &m_data;

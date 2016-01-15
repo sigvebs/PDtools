@@ -3,73 +3,80 @@
 #include <algorithm>
 #include <cfloat>
 #include "particles.h"
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
 
 namespace PDtools
 {
 //------------------------------------------------------------------------------
 // SaveParticles functions
 //------------------------------------------------------------------------------
-void SaveParticles::writeToFile(Particles &particles, const string &savePath)
+void SaveParticles::writeToFile(Particles &particles, string savePath)
 {
     initialize(particles);
 
     if(m_binary)
     {
-        if(m_format == "xyz")
+        if(m_myRank == 0)
         {
-            cerr << "Binary xyz not implemented" << endl;
-            throw 10;
+            if(m_format == "xyz")
+            {
+                cerr << "Binary xyz not implemented" << endl;
+                throw 10;
+            }
+            else if(m_format == "ply")
+            {
+                write_plyBinaryHeader(particles, savePath);
+            }
+            else if(m_format == "lmp")
+            {
+                write_lmpBinaryHeader(particles, savePath);
+            }
         }
-        else if(m_format == "ply")
+        else
         {
-            write_plyBinaryHeader(particles, savePath);
+            savePath = savePath + to_string(m_myRank);
         }
-        else if(m_format == "lmp")
-        {
-            write_lmpBinaryHeader(particles, savePath);
-        }
-
         writeBinaryBody(particles, savePath);
     }
     else
     {
-
-        if(m_format == "xyz")
+        if(m_myRank == 0)
         {
-            write_xyzHeader(particles, savePath);
+            if(m_format == "xyz")
+            {
+                write_xyzHeader(particles, savePath);
+            }
+            else if(m_format == "ply")
+            {
+                write_plyHeader(particles, savePath);
+            }
+            else if(m_format == "lmp")
+            {
+                write_lmpHeader(particles, savePath);
+            }
         }
-        else if(m_format == "ply")
+        else
         {
-            write_plyHeader(particles, savePath);
+            savePath = savePath + to_string(m_myRank);
         }
-        else if(m_format == "lmp")
-        {
-            write_lmpHeader(particles, savePath);
-        }
-
         writeBody(particles, savePath);
     }
 }
 //------------------------------------------------------------------------------
+void SaveParticles::setRankAndCores(int rank, int cores)
+{
+    m_myRank = rank;
+    m_nCores = cores;
+}
+//------------------------------------------------------------------------------
 void SaveParticles::initialize(Particles &particles)
 {
-    // The default is that all data-parameters are saved
-    /*
-    if(m_saveParameters.empty())
-    {
-        m_saveParameters.push_back("id");
-        m_saveParameters.push_back("x");
-        m_saveParameters.push_back("y");
-        m_saveParameters.push_back("z");
-
-        for(auto id_pos:particles.parameters())
-        {
-            m_saveParameters.push_back(id_pos.first);
-        }
-    }*/
-
     m_saveId = false;
+    m_saveCoreId = false;
     m_saveCoordinates.clear();
+    m_saveVelocities.clear();
     m_header.clear();
 
     // Checking for particle ids and positions
@@ -81,6 +88,11 @@ void SaveParticles::initialize(Particles &particles)
         if(parameter == "id")
         {
             m_saveId = true;
+        }
+        if(parameter == "coreId")
+        {
+            m_saveCoreId = true;
+            m_header.push_back(parameter);
         }
         else if(parameter == "x")
         {
@@ -95,6 +107,21 @@ void SaveParticles::initialize(Particles &particles)
         else if(parameter == "z")
         {
             m_saveCoordinates.push_back(pair<int, double>(2, scale));
+            m_header.push_back(parameter);
+        }
+        else if(parameter == "v_x")
+        {
+            m_saveVelocities.push_back(pair<int, double>(0, scale));
+            m_header.push_back(parameter);
+        }
+        else if(parameter == "v_y")
+        {
+            m_saveVelocities.push_back(pair<int, double>(1, scale));
+            m_header.push_back(parameter);
+        }
+        else if(parameter == "v_z")
+        {
+            m_saveVelocities.push_back(pair<int, double>(2, scale));
             m_header.push_back(parameter);
         }
     }
@@ -116,60 +143,103 @@ void SaveParticles::initialize(Particles &particles)
 }
 //------------------------------------------------------------------------------
 void SaveParticles::writeBody(Particles &particles,
-                             const string &savePath)
+                              const string &savePath)
 {
+    const ivec &colToId = particles.colToId();
+    const int nParticles = particles.nParticles();
+
     ofstream outStream;
     outStream.open(savePath.c_str(), std::ofstream::out | std::ofstream::app);
     outStream.setf(ios::scientific);
     outStream.precision(14);
 
-    for(auto id_pos:particles.pIds())
+    for(int i=0; i<nParticles; i++)
     {
-        int id  = id_pos.first + 1;
-        int j = id_pos.second;
+        const int id  = colToId(i);
 
         if(m_saveId)
         {
             outStream << id;
         }
 
+        if(m_saveCoreId)
+        {
+            outStream << " " <<  m_myRank;
+        }
         for(const auto & coord:m_saveCoordinates)
         {
-            outStream << " " << particles.r()(j, coord.first)*coord.second;
+            outStream << " " << particles.r()(i, coord.first)*coord.second;
+        }
+
+        for(const auto & coord:m_saveVelocities)
+        {
+            outStream << " " << particles.v()(i, coord.first)*coord.second;
         }
 
         for(const auto & parameter:m_dataParameters)
         {
-            outStream << " " << particles.data()(j, parameter.first)*parameter.second;
+            outStream << " " << particles.data()(i, parameter.first)*parameter.second;
         }
 
         outStream << endl;
     }
     //--------------------------------------------------------------------------
     outStream.close();
+
+#ifdef USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if(m_myRank <= 0)
+    {
+        // Writing the header
+        ofstream of_fileConcatenated(savePath.c_str(), ios::out | ios::app );
+
+        // Concatingating the files
+        for(int node=1; node < m_nCores; node++)
+        {
+            string fName = savePath + to_string(node);
+            std::ifstream if_node(fName, std::ios_base::binary);
+            of_fileConcatenated << if_node.rdbuf();
+            if_node.close();
+            remove( fName.c_str() );
+        }
+        of_fileConcatenated.close();
+    }
+#endif
 }
 //--------------------------------------------------------------------------
 void SaveParticles::writeBinaryBody(Particles &particles,
-                                   const string &savePath)
+                                    const string &savePath)
 {
     FILE* binaryData = fopen(savePath.c_str(), "a+");
     const arma::mat & r = particles.r();
+    const arma::mat & v = particles.v();
     const arma::mat & data = particles.data();
 
-    for(auto id_pos:particles.pIds())
+    for(auto id_pos:particles.idToCol())
     {
-        const double id  = id_pos.first + 1;
+        const double id  = id_pos.first;
         int j = id_pos.second;
 
         if(m_saveId)
         {
             fwrite((char*)(&id), sizeof(double), 1, binaryData);
         }
+        if(m_saveCoreId)
+        {
+            fwrite((char*)(&m_myRank), sizeof(double), 1, binaryData);
+        }
 
         for(const auto & coord:m_saveCoordinates)
         {
             const double r_i = r(j, coord.first)*coord.second;
             fwrite((char*)(&r_i), sizeof(double), 1, binaryData);
+        }
+
+        for(const auto & coord:m_saveVelocities)
+        {
+            const double v_i = v(j, coord.first)*coord.second;
+            fwrite((char*)(&v_i), sizeof(double), 1, binaryData);
         }
 
         for(const auto & parameter:m_dataParameters)
@@ -180,6 +250,28 @@ void SaveParticles::writeBinaryBody(Particles &particles,
     }
     //--------------------------------------------------------------------------
     fclose(binaryData);
+    /*
+#ifdef USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if(m_myRank <= 0)
+    {
+        // Writing the header
+        ofstream of_fileConcatenated(savePath.c_str(), ios::out | ios::app );
+
+        // Concatingating the files
+        for(int node=1; node < m_nCores; node++)
+        {
+            string fName = savePath + to_string(node);
+            std::ifstream if_node(fName, std::ios_base::binary);
+            of_fileConcatenated << if_node.rdbuf();
+            if_node.close();
+            remove( fName.c_str() );
+        }
+        of_fileConcatenated.close();
+    }
+#endif
+*/
 }
 //------------------------------------------------------------------------------
 void SaveParticles::write_xyzHeader(const Particles &particles, const string &savePath)
@@ -193,7 +285,7 @@ void SaveParticles::write_xyzHeader(const Particles &particles, const string &sa
     {
         outStream.open(savePath.c_str());
     }
-    outStream << particles.nParticles() << endl;
+    outStream << particles.totParticles() << endl;
 
     // This program follows a convenction that the comments in a xyz-file
     // names the variables.
@@ -214,7 +306,7 @@ void SaveParticles::write_xyzHeader(const Particles &particles, const string &sa
 }
 //------------------------------------------------------------------------------
 void SaveParticles::write_plyHeader(const Particles &particles,
-                                   const string &savePath)
+                                    const string &savePath)
 {
     ofstream outStream;
     if(m_append)
@@ -227,7 +319,7 @@ void SaveParticles::write_plyHeader(const Particles &particles,
     }
     outStream << "ply" << endl;
     outStream << "format ascii 1.0" << endl;
-    outStream << "element vertex " << particles.nParticles() << endl;
+    outStream << "element vertex " << particles.totParticles() << endl;
 
     if(m_saveId)
     {
@@ -243,7 +335,7 @@ void SaveParticles::write_plyHeader(const Particles &particles,
 }
 //------------------------------------------------------------------------------
 void SaveParticles::write_lmpHeader(const Particles &particles,
-                                   const string &savePath)
+                                    const string &savePath)
 {
     ofstream outStream;
     if(m_append)
@@ -257,7 +349,7 @@ void SaveParticles::write_lmpHeader(const Particles &particles,
     outStream << "ITEM: TIMESTEP" << endl;
     outStream << m_timestep << endl;
     outStream << "ITEM: NUMBER OF ATOMS" << endl;
-    outStream << particles.nParticles() << endl;
+    outStream << particles.totParticles() << endl;
 
     outStream << "ITEM: ATOMS";
 
@@ -274,7 +366,7 @@ void SaveParticles::write_lmpHeader(const Particles &particles,
 }
 //------------------------------------------------------------------------------
 void SaveParticles::write_plyBinaryHeader(const Particles &particles,
-                                         const string &savePath)
+                                          const string &savePath)
 {
     ofstream outStream;
     if(m_append)
@@ -287,7 +379,7 @@ void SaveParticles::write_plyBinaryHeader(const Particles &particles,
     }
     outStream << "ply" << endl;
     outStream << "format binary_little_endian 1.0" << endl;
-    outStream << "element vertex " << particles.nParticles() << endl;
+    outStream << "element vertex " << particles.totParticles() << endl;
 
     if(m_saveId)
     {
@@ -303,7 +395,7 @@ void SaveParticles::write_plyBinaryHeader(const Particles &particles,
 }
 //------------------------------------------------------------------------------
 void SaveParticles::write_lmpBinaryHeader(Particles &particles,
-                                         const string &savePath)
+                                          const string &savePath)
 {
     // Finding the domain boundaries
     double xMin = DBL_MAX;
@@ -320,7 +412,7 @@ void SaveParticles::write_lmpBinaryHeader(Particles &particles,
     int b_zMin = 2;
     int b_zMax = 2;
 
-    for(auto id_pos:particles.pIds())
+    for(auto id_pos:particles.idToCol())
     {
         const int j = id_pos.second;
         xMin = xMin < particles.r()(j, 0) ? xMin : particles.r()(j, 0);
@@ -333,7 +425,7 @@ void SaveParticles::write_lmpBinaryHeader(Particles &particles,
 
     // Writing the header
     long long int currentTimeStep = m_timestep;
-    long long int nParticles = particles.nParticles();
+    long long int nParticles = particles.totParticles();
     int triclinic = 0.0;
     int nChunks = 1;
 

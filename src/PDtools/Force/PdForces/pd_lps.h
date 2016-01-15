@@ -34,26 +34,26 @@ public:
     ~PD_LPS();
 
     virtual void
-    calculateForces(const std::pair<int, int> & idCol);
+    calculateForces(const int id, const int i);
 
     virtual double
-    calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
+    calculatePotentialEnergyDensity(const int id_i, const int i);
 
     double
-    computeDilation(const std::pair<int, int> & idCol);
+    computeDilation(const int id_i, const int i);
 
     virtual void
-    calculatePotentialEnergy(const std::pair<int, int> & idCol,
+    calculatePotentialEnergy(const int id_i, const int i,
                                           int indexPotential);
     virtual void
-    calculateStress(const std::pair<int, int> & idCol,
+    calculateStress(const int id_i, const int i,
                                  const int (&indexStress)[6]);
 
     virtual void
-    updateState(const std::pair<int, int> & idCol);
+    updateState(int id, int i);
 
     virtual double
-    calculateStableMass(const std::pair<int, int> & idCol,
+    calculateStableMass(const int id_a, const int a,
                                      double dt);
     virtual void
     initialize(double E, double nu, double delta, int dim, double h, double lc);
@@ -62,7 +62,7 @@ public:
     calculateMass();
 
     virtual void
-    applySurfaceCorrection(double strain=0.01);
+    applySurfaceCorrectionStep1(double strain=0.01);
 };
 //------------------------------------------------------------------------------
 }

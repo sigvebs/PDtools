@@ -15,7 +15,6 @@ protected:
     double m_epsilon = 0.2;
     int m_maxSteps = 2000;
     int m_maxStepsFracture = 1000;
-//    double m_errorThreshold = 0.001;
 
 public:
     ADR();
@@ -51,6 +50,8 @@ protected:
     integrateStepTwo();
     void
     staticModifiers();
+    virtual void
+    updateGridAndCommunication();
 };
 //------------------------------------------------------------------------------
 }

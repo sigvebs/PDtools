@@ -12,8 +12,8 @@ public:
     ComputeAverageStretch(PD_Particles &particles);
     ~ComputeAverageStretch();
 
-    virtual void update(const pair<int, int> &pIdcol);
-    virtual void init(const pair<int, int> &pIdcol);
+    virtual void update(const int id_i, const int i);
+    virtual void init(const int id_i, const int i);
 private:
     int m_indexStretch;
     int m_indexAverageStretch;

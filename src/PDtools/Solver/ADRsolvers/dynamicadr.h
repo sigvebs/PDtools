@@ -11,7 +11,7 @@ class dynamicADR : public ADR
 public:
     dynamicADR();
     virtual void solve();
-    virtual void stepForward(int i);
+    virtual void stepForward(int timeStep);
 };
 //------------------------------------------------------------------------------
 }

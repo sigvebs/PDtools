@@ -6,15 +6,16 @@
 namespace PDtools
 {
 //------------------------------------------------------------------------------
-Force::Force(PD_Particles &particles):
+Force::Force(PD_Particles &particles, string _type):
     m_particles(particles),
     m_r(m_particles.r()),
     m_r0(m_particles.r0()),
     m_F(m_particles.F()),
     m_data(m_particles.data()),
-    m_pIds(m_particles.pIds())
+    m_idToCol(m_particles.idToCol()),
+    m_colToId(m_particles.colToId()),
+    name(_type)
 {
-
 }
 //------------------------------------------------------------------------------
 Force::~Force()
@@ -32,22 +33,24 @@ void Force::initialize(double E, double nu, double delta, int dim, double h, dou
     m_lc = lc;
 }
 //------------------------------------------------------------------------------
-double Force::calculatePotentialEnergyDensity(const std::pair<int, int> &idCol)
+double Force::calculatePotentialEnergyDensity(const int id_i, const int i)
 {
-    (void) idCol;
+    (void) id_i;
+    (void) i;
     return 0;
 }
 //------------------------------------------------------------------------------
-void Force::calculatePotentialEnergy(const std::pair<int, int> &idCol,
+void Force::calculatePotentialEnergy(const int id_i, const int i,
                                      int indexPotential)
 {
-    (void) idCol;
+    (void) id_i;
+    (void) i;
     (void) indexPotential;
-    //    std::cerr << "ERROR: potential energy not implemented for this force" << std::endl;
+    //    cerr << "ERROR: potential energy not implemented for this force" << endl;
 }
 //------------------------------------------------------------------------------
-double Force::calculateBondEnergy(const std::pair<int, int> &idCol,
-                                  std::pair<int, std::vector<double> > &con)
+double Force::calculateBondEnergy(const pair<int, int> &idCol,
+                                  pair<int, vector<double> > &con)
 {
     (void) idCol;
     (void) con;
@@ -55,26 +58,29 @@ double Force::calculateBondEnergy(const std::pair<int, int> &idCol,
     return 0;
 }
 //------------------------------------------------------------------------------
-void Force::calculateStress(const std::pair<int, int> &idCol, const int (&indexStress)[6])
+void Force::calculateStress(const int id_i, const int i, const int (&indexStress)[6])
 {
-    (void) idCol;
+    (void) id_i;
+    (void) i;
     (void) indexStress;
-    //    std::cerr << "ERROR: stress not implemented for this force" << std::endl;
+    //    cerr << "ERROR: stress not implemented for this force" << endl;
 }
 //------------------------------------------------------------------------------
 void Force::updateState()
 {
-
+    m_counter++;
 }
 //------------------------------------------------------------------------------
-void Force::updateState(const std::pair<int, int> &idCol)
+void Force::updateState(int id, int i)
 {
-    (void) idCol;
+    (void) id;
+    (void) i;
 }
 //------------------------------------------------------------------------------
-double Force::calculateStableMass(const std::pair<int, int> &idCol, double dt)
+double Force::calculateStableMass(const int id_i, const int i, double dt)
 {
-    (void) idCol;
+    (void) id_i;
+    (void) i;
     (void) dt;
 
     return 0.;
@@ -90,136 +96,134 @@ void Force::setDim(int dim)
     m_dim = dim;
 }
 //------------------------------------------------------------------------------
-void Force::applySurfaceCorrection(double strain)
+int Force::initializeSurfaceCorrection()
+{
+    if(!m_hasSurfaceCorrection)
+        return 0;
+
+    // Temporary registering the correction vectors
+    for(int d=0;d<m_dim; d++){
+        m_g(d) = m_particles.registerParameter(forceScalingStringIds[d]);
+    }
+
+    return 1;
+}
+//------------------------------------------------------------------------------
+void Force::applySurfaceCorrectionStep1(double strain)
 {
     applyStrainCorrection(strain);
-//    applyShearCorrection(strain);
+    //    applyShearCorrection(strain);
 }
 //------------------------------------------------------------------------------
 void Force::applyStrainCorrection(double strain)
 {
-    arma::vec3 scaleFactor;
-    arma::mat g = arma::zeros(m_particles.nParticles(), m_dim);
+    const ivec &colToId = m_particles.colToId();
+    const int nParticles = m_particles.nParticles();
+    const int nParticlesAndGhosts = m_particles.nParticles() + m_particles.nGhostParticles();
 
-    const int iDr0 = m_particles.getPdParamId("dr0");
-    const int iForceScaling = m_particles.getPdParamId("forceScalingBond");
 
     // Stretching all particle in the x-direction
+    arma::vec3 scaleFactor;
     scaleFactor(0) = strain;
     scaleFactor(1) = 0;
     scaleFactor(2) = 0;
-//    scaleFactor(1) = -m_nu*strain;
-//    scaleFactor(2) = -m_nu*strain;
 
-    double W_infty = 0;
+    double W_bulk = 0; // Analytical bulk energy
     switch(m_dim)
     {
     case 3:
-        W_infty = 0.6*m_E*pow(strain, 2);
+        W_bulk = 0.6*m_E*pow(strain, 2);
         break;
     case 2:
-        W_infty = 9./16.*m_E*pow(strain, 2);
+        W_bulk = 9./16.*m_E*pow(strain, 2);
         break;
     case 1:
-        W_infty = 0.5*m_E*pow(strain, 2);
+        W_bulk = 0.5*m_E*pow(strain, 2);
         break;
     }
 
     for(int a=0; a<m_dim; a++)
     {
         if(a == 1)
-            scaleFactor.swap_rows(0,1);
+            scaleFactor.swap_rows(0, 1);
         else if(a == 2)
-            scaleFactor.swap_rows(1,2);
+            scaleFactor.swap_rows(1, 2);
 
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
         // Loading the geometry
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
+        for(int i=0; i<nParticlesAndGhosts; i++)
         {
-            pair<int, int> idCol(i, i);
-            const int col_i = idCol.second;
-
             for(int d=0; d<m_dim; d++)
             {
-                m_r(col_i, d) = (1 + scaleFactor(d))*m_r(col_i, d);
+                m_r(i, d) = (1 + scaleFactor(d))*m_r(i, d);
             }
         }
 
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
         // Calculating the elastic energy density
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
+        for(int i=0; i<nParticles; i++)
         {
-            pair<int, int> idCol(i, i);
-            const int col_i = idCol.second;
-            double W = this->calculatePotentialEnergyDensity(idCol);
-            g(col_i, a) = W;
+            const int id_i = colToId(i);
+            const double W = this->calculatePotentialEnergyDensity(id_i, i);
+            m_data(i, m_g(a)) = W_bulk/W;
+
+//            if(id_i == 820){
+//                cout << nParticles << " " << m_particles.nGhostParticles() << endl;
+//                cout << "id_i: " << id_i << " " << i << " " <<  W << endl;
+//            }
         }
 
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
         // Resetting the positions
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
+        for(unsigned int i=0; i<nParticlesAndGhosts; i++)
         {
-            pair<int, int> idCol(i, i);
-            int col_i = idCol.second;
-
             for(int d=0; d<m_dim; d++)
             {
-                m_r(col_i, d) = m_r(col_i, d)/(1 + scaleFactor(d));
+                m_r(i, d) = m_r(i, d)/(1 + scaleFactor(d));
             }
         }
     }
-
-    // Scaling the energy with the median energy, which we assume
-    // to be the bulk energy
-    for(int a=0; a<m_dim; a++)
-    {
-        //#ifdef USE_OPENMP
-        //# pragma omp parallel for
-        //#endif
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
-        {
-            pair<int, int> idCol(i, i);
-            const int col_i = idCol.second;
-            const double g_i = g(col_i, a);
-            const double W =  W_infty/g_i;
-            g(col_i, a) = W;
-        }
-    }
+}
+//------------------------------------------------------------------------------
+void Force::applySurfaceCorrectionStep2()
+{
+    const ivec &colToId = m_particles.colToId();
+    const int iDr0 = m_particles.getPdParamId("dr0");
+    const int iForceScaling = m_particles.getPdParamId("forceScalingBond");
+    const int nParticles = m_particles.nParticles();
 
     // Calculating the scaling
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
-    for(unsigned int i=0; i<m_particles.nParticles(); i++)
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
+    for(int i=0; i<nParticles; i++)
     {
-        pair<int, int> idCol(i, i);
-        const int pId = idCol.first;
-        const int col_i = idCol.second;
-
-        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+        const int id_i = colToId(i);
+        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
 
         for(auto &con:PDconnections)
         {
             const int id_j = con.first;
-            const int col_j = m_pIds[id_j];
+            const int j = m_idToCol.at(id_j);
 
             const double dr0Len = con.second[iDr0];
-            const arma::vec3 &n = (m_r.row(col_i).t() - m_r.row(col_j).t())/dr0Len;
+            const arma::vec3 &n = (m_r.row(i).t() - m_r.row(j).t())/dr0Len;
 
             arma::vec3 g_mean;
             double G = 0;
             for(int d=0; d<m_dim; d++)
             {
-                g_mean(d) = 0.5*(g(col_i, d) + g(col_j, d));
+                const double g_i = m_data(i, m_g(d));
+                const double g_j = m_data(j, m_g(d));
+                g_mean(d) = 0.5*(g_i + g_j);
                 G += pow(n(d)/g_mean(d), 2);
             }
-
             G = pow(G, -0.5);
             con.second[iForceScaling] *= G;
         }
@@ -228,14 +232,10 @@ void Force::applyStrainCorrection(double strain)
 //------------------------------------------------------------------------------
 void Force::applyShearCorrection(double shear)
 {
+    const ivec &colToId = m_particles.colToId();
     double m_mu = 0.5*m_E/(1 + m_nu); // Tmp
-
     arma::vec3 strainFactor;
-    arma::vec3 scaleFactor;
-    arma::mat g = arma::zeros(m_particles.nParticles(), m_dim);
 
-    const int iDr0 = m_particles.getPdParamId("dr0");
-    const int iForceScaling = m_particles.getPdParamId("forceScalingBond");
 
     // Performing a simple shear of all particle in the x, y and z-direction
     arma::ivec3 axis;
@@ -245,6 +245,8 @@ void Force::applyShearCorrection(double shear)
     axis(0) = 1;
     axis(1) = 0;
     axis(2) = 0;
+
+    const double W_s = 0.5*m_mu*shear*shear; // Analytical solution
 
     for(int a=0; a<m_dim; a++)
     {
@@ -271,28 +273,22 @@ void Force::applyShearCorrection(double shear)
         // Loading the geometry
         for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
-            pair<int, int> idCol(i, i);
-            const int col_i = idCol.second;
-
             for(int d=0; d<m_dim; d++)
             {
-                double shearFactor = strainFactor(d)*m_r(col_i, axis(d));
-                m_r(col_i, d) = m_r(col_i, d) + shearFactor;
+                const double shearFactor = strainFactor(d)*m_r(i, axis(d));
+                m_r(i, d) = m_r(i, d) + shearFactor;
             }
         }
 
-        double W_s = 0.5*m_mu*shear*shear;
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
         // Calculating the elastic energy density
         for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
-            pair<int, int> idCol(i, i);
-            const int col_i = idCol.second;
-            double W = this->calculatePotentialEnergyDensity(idCol);
-            const double factor =  W_s/W;
-            g(col_i, a) = factor;
+            const int id_i = colToId(i);
+            double W = this->calculatePotentialEnergyDensity(id_i, i);
+            m_data(i, m_g(a)) = W_s/W;
         }
 
 #ifdef USE_OPENMP
@@ -301,48 +297,32 @@ void Force::applyShearCorrection(double shear)
         // Resetting the positions
         for(unsigned int i=0; i<m_particles.nParticles(); i++)
         {
-            pair<int, int> idCol(i, i);
-            int col_i = idCol.second;
-
             for(int d=0; d<m_dim; d++)
             {
-                m_r(col_i, d) = m_r0(col_i, d); // Tmp
+                m_r(i, d) = m_r0(i, d); // Tmp
             }
         }
     }
-
-    // Calculating the scaling
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
-    for(unsigned int i=0; i<m_particles.nParticles(); i++)
+}
+//------------------------------------------------------------------------------
+vector<string> Force::initalGhostDependencies()
+{
+    return m_initialGhostParameters;
+}
+//------------------------------------------------------------------------------
+vector<string> Force::ghostDependencies()
+{
+    return m_ghostParameters;
+}
+//------------------------------------------------------------------------------
+vector<string> Force::getSurfaceCorrectionGhostParameters()
+{
+    vector<string> param;
+    for(int d=0; d<m_dim; d++)
     {
-        pair<int, int> idCol(i, i);
-        const int pId = idCol.first;
-        const int col_i = idCol.second;
-
-        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-        for(auto &con:PDconnections)
-        {
-            const int id_j = con.first;
-            const int col_j = m_pIds[id_j];
-
-            const double dr0Len = con.second[iDr0];
-            const arma::vec3 &n = (m_r.row(col_i).t() - m_r.row(col_j).t())/dr0Len;
-
-            arma::vec3 g_mean;
-            double G = 0;
-            for(int d=0; d<m_dim; d++)
-            {
-                g_mean(d) = 0.5*(g(col_i, d) + g(col_j, d));
-                G += pow(n(d)/g_mean(d), 2);
-            }
-
-            G = pow(G, -0.5);
-            con.second[iForceScaling] *= G;
-        }
+        param.push_back(forceScalingStringIds[d]);
     }
+    return param;
 }
 //------------------------------------------------------------------------------
 }

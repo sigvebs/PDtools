@@ -36,19 +36,18 @@ void VelocityVerletIntegrator::integrateStepOne()
 #endif
     for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
-        const int col_i = i;
-        if(isStatic(col_i))
+        if(isStatic(i))
         {
             continue;
         }
-        const double rho = data(col_i, m_colRho);
+        const double rho = data(i, m_indexRho);
         const double dtRho = dtRhoHalf/rho;
 
         for(int d=0; d<m_dim; d++)
         {
-            const double Fd = F(col_i, d)*dtRho;
-            v(col_i, d) += Fd;
-            r(col_i, d) += v(col_i, d)*m_dt;
+            const double Fd = F(i, d)*dtRho;
+            v(i, d) += Fd;
+            r(i, d) += v(i, d)*m_dt;
         }
     }
 }
@@ -62,22 +61,20 @@ void VelocityVerletIntegrator::integrateStepTwo()
     const double dtRhoHalf = 0.5*m_dt;
     const arma::imat & isStatic = m_particles->isStatic();
 
-
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
     for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
-        const int col_i = i;
-        if(isStatic(col_i))
+        if(isStatic(i))
             continue;
 
-        const double rho = data(col_i, m_colRho);
+        const double rho = data(i, m_indexRho);
         const double dtRho = dtRhoHalf/rho;
 
         for(int d=0; d<m_dim; d++)
         {
-            v(col_i, d) += F(col_i, d)*dtRho;
+            v(i, d) += F(i, d)*dtRho;
         }
     }
 }

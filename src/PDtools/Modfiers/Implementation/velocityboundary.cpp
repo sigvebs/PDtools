@@ -10,7 +10,7 @@ VelocityBoundary::VelocityBoundary(double velAmplitude,
                                    pair<double, double> boundary,
                                    int boundaryOrientation,
                                    double dt,
-                                   int steps, bool isStatic)
+                                   int steps, int isStatic)
 {
     m_velAmplitude = velAmplitude;
     m_velOritentation = velOrientation;
@@ -33,11 +33,19 @@ VelocityBoundary::VelocityBoundary(double velAmplitude,
     {
         m_otherAxis = {1, 2};
     }
+
+    m_usingUnbreakableBorder = true;
 }
 //------------------------------------------------------------------------------
 VelocityBoundary::~VelocityBoundary()
 {
 
+}
+//------------------------------------------------------------------------------
+void VelocityBoundary::registerParticleParameters()
+{
+    m_particles->registerParameter("unbreakable");
+    m_ghostParameters = {"unbreakable"};
 }
 //------------------------------------------------------------------------------
 void VelocityBoundary::evaluateStepOne()
@@ -46,105 +54,91 @@ void VelocityBoundary::evaluateStepOne()
     {
         m_v += m_dv;
     }
-
+    const unordered_map<int, int> &idToCol = m_particles->idToCol();
     arma::mat & v = m_particles->v();
     arma::mat & r = m_particles->r();
     arma::mat & F = m_particles->F();
-//    arma::mat &data = m_particles->data();
     arma::imat & isStatic = m_particles->isStatic();
 
-//    const int colRho = m_particles->getParamId("rho");
     const double v_dt = m_v * m_dt;
-//    const double dtRhoHalf = 0.5*m_dt;
 
-    for(pair<int, int> &idCol:m_boundaryParticles)
+    for(const int &id:m_localParticleIds)
     {
-        int col_i = idCol.second;
+        const int i = idToCol.at(id);
 
-        v(col_i, m_boundaryOrientation) = m_v;
-        if(isStatic(col_i))
-            r(col_i, m_boundaryOrientation) += v_dt;
-
-//        double rho = data(col_i, colRho);
-//        double dtRho = dtRhoHalf/rho;
-//        for(int d:m_otherAxis)
-//        {
-//            v(col_i, d) += F(col_i, d)*dtRho;
-//            r(col_i, d) += v(col_i, d)*m_dt;
-//        }
-//        for(int d:m_otherAxis)
-//        {
-//            F(col_i, d) = 0;
-//        }
-        F(col_i, m_boundaryOrientation) = 0;
+        v(i, m_velOritentation) = m_v;
+        if(isStatic(i))
+        {
+            r(i, m_velOritentation) += v_dt;
+        }
     }
 }
 //------------------------------------------------------------------------------
 void VelocityBoundary::evaluateStepTwo()
 {
-//    arma::mat & v = m_particles->v();
-//    arma::mat & F = m_particles->F();
-//    arma::mat &data = m_particles->data();
-//    const int colRho = m_particles->getParamId("rho");
-//    const double dtRhoHalf = 0.5*m_dt;
+    const unordered_map<int, int> &idToCol = m_particles->idToCol();
+    arma::mat & v = m_particles->v();
+    arma::mat & F = m_particles->F();
+    arma::imat & isStatic = m_particles->isStatic();
 
+    for(const int &id:m_localParticleIds)
+    {
+        const int i = idToCol.at(id);
 
-//    for(pair<int, int> &idCol:m_boundaryParticles)
-//    {
-//        int col_i = idCol.second;
+        v(i, m_velOritentation) = m_v;
+        F(i, m_velOritentation) = 0;
 
-//        double rho = data(col_i, colRho);
-//        double dtRho = dtRhoHalf/rho;
-//        for(int d:m_otherAxis)
-//        {
-//            v(col_i, d) += F(col_i, d)*dtRho;
-//        }
-//    }
+        if(isStatic(i))
+        {
+            for(int d:m_otherAxis)
+            {
+                F(i, d) = 0;
+            }
+        }
+    }
 }
 //------------------------------------------------------------------------------
 void VelocityBoundary::initialize()
 {
     // Selecting particles
     const arma::mat & r = m_particles->r();
+    const ivec &colToId = m_particles->colToId();
     arma::mat & data = m_particles->data();
     arma::imat & isStatic = m_particles->isStatic();
-    int unbreakablePos;
+    const int unbreakablePos = m_particles->registerParameter("unbreakable");
 
-    if(m_particles->hasParameter("unbreakable"))
-    {
-        unbreakablePos = m_particles->getParamId("unbreakable");
-    }
-    else
-    {
-        unbreakablePos = m_particles->registerParameter("unbreakable");
-    }
-
-    double uRadius = 0.5*(m_boundary.second - m_boundary.first);
+    const double uRadius = 0.5*(m_boundary.second - m_boundary.first);
     int n = 0;
+
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
     for(unsigned int i=0; i<m_particles->nParticles(); i++)
     {
-        int col_i = i;
-        double pos = r(col_i, m_boundaryOrientation);
+        const double pos = r(i, m_boundaryOrientation);
         if(m_boundary.first <= pos && pos < m_boundary.second)
         {
-            pair<int, int> pId(i, i);
+            const int id = colToId(i);
+
             if(m_isStatic)
-                isStatic(pId.second) = 1;
+                isStatic(i) = 1;
 #ifdef USE_OPENMP
 #pragma omp critical
 #endif
-            m_boundaryParticles.push_back(pId);
+            m_localParticleIds.push_back(id);
             data(i, unbreakablePos) = 1;
         }
 
-        if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second)
+        if(m_usingUnbreakableBorder)
         {
-//#pragma omp critical
-//            data(i, unbreakablePos) = 1;
-            n++;
+            if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second)
+            {
+#ifdef USE_OPENMP
+#pragma omp critical
+#endif
+                data(i, unbreakablePos) = 1;
+                n++;
+            }
         }
     }
 }

@@ -2,6 +2,7 @@
 #define PDFUNCTIONS_H
 
 #include <vector>
+#include "pdfunctionsmpi.h"
 
 using namespace std;
 //------------------------------------------------------------------------------

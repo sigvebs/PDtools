@@ -19,7 +19,7 @@ private:
     int m_indexForceScaling;
     int m_indexWeightfunction;
     int m_indexConnected;
-    int m_indexCompute;
+    int m_indexMyPdPosition;
 
     enum PD_bondForceErrorMessages
     {
@@ -32,25 +32,24 @@ public:
     ~PD_bondForce();
 
     virtual void
-    calculateForces(const std::pair<int, int> & idCol);
+    calculateForces(const int id_i, const int i);
 
     virtual void
-    calculateLinearForces(const std::pair<int, int> & idCol);
+    calculateLinearForces(const int id_i, const int i);
 
     virtual double
-    calculatePotentialEnergyDensity(const std::pair<int, int> & idCol);
+    calculatePotentialEnergyDensity(const int id_i, const int i);
 
     virtual void
-    calculatePotentialEnergy(const std::pair<int, int> & idCol,
+    calculatePotentialEnergy(const int id_i, const int i,
                                           int indexPotential);
 
     virtual void
-    calculateStress(const std::pair<int, int> & idCol,
+    calculateStress(const int id_i, const int i,
                                  const int (&indexStress)[6]);
 
     virtual double
-    calculateStableMass(const std::pair<int, int> & idCol,
-                                     double dt);
+    calculateStableMass(const int id_a, const int a, double dt);
 
     virtual void
     initialize(double E, double nu, double delta, int dim, double h, double lc);

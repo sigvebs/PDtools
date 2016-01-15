@@ -1,6 +1,7 @@
 #ifndef CONTACTFORCE_H
 #define CONTACTFORCE_H
 
+#include <unordered_map>
 #include "PDtools/Force/force.h"
 
 namespace PDtools
@@ -17,20 +18,22 @@ private:
     double m_verletRadius;
     double m_forceScaling;
     int m_indexVolume;
-    int m_verletUpdateFrq = 20;
+    int m_verletUpdateFrq = 25;
     int m_verletListId;
     int m_indexMicromodulus;
     int m_indexRadius;
+    int m_indexConnected;
     int m_dim;
+    std::unordered_map<int, int> *m_idToCol ;
 public:
     ContactForce(PD_Particles &particles, Grid &grid, double spacing);
     ~ContactForce();
 
     virtual void
-    calculateForces(const std::pair<int, int> & idCol);
+    calculateForces(const int id_i, const int i);
 
     virtual void
-    calculateStress(const std::pair<int, int> & idCol,
+    calculateStress(const int id_i, const int i,
                                  const int (&indexStress)[6]);
     virtual void
     updateState();
@@ -45,7 +48,10 @@ public:
     initialize(double E, double nu, double delta, int dim, double h, double lc);
 
     virtual void
-    applySurfaceCorrection(double strain);
+    applySurfaceCorrectionStep1(double strain);
+
+    virtual void
+    applySurfaceCorrectionStep2();
 };
 //------------------------------------------------------------------------------
 }

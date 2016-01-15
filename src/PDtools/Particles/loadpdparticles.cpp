@@ -1,6 +1,7 @@
 #include "loadpdparticles.h"
 
 #include "pd_particles.h"
+#include "Grid/grid.h"
 
 namespace PDtools
 {
@@ -13,7 +14,9 @@ void LoadPdParticles::loadBody(PD_Particles &particles,
                              fstream &rawData,
                              unordered_map<string, int> parameters)
 {
+    particles.maxParticles(m_nParticles);
     particles.nParticles(m_nParticles);
+    particles.totParticles(m_nParticles);
     string line;
 
     //--------------------------------------------------------------------------
@@ -85,14 +88,24 @@ void LoadPdParticles::loadBody(PD_Particles &particles,
     // Creating the data matrix
     particles.initializeMatrices();
 
-    unordered_map<int, int> & pIds = particles.pIds();
-    arma::ivec & get_id = particles.get_id();
+    unordered_map<int, int> & idToCol = particles.idToCol();
+    arma::ivec & get_id = particles.colToId();
     arma::mat & r = particles.r();
     arma::mat & v = particles.v();
     arma::mat & data = particles.data();
 
-
+    bool useGrid = false;
+    int myRank = 0;
+    double L0;
+    if(m_grid != nullptr)
+    {
+        useGrid = true;
+        myRank = m_grid->myRank();
+        L0 = m_grid->initialPositionScaling();
+    }
+    vec3 r_local;
     // Reading all the data from file
+    int j = 0;
     for(unsigned int i=0; i<particles.nParticles(); i++)
     {
         vector<string> lineSplit;
@@ -103,35 +116,52 @@ void LoadPdParticles::loadBody(PD_Particles &particles,
         // Collecting the data
         if(idIsset)
         {
-            pIds[stoi(lineSplit[idPos])] = i;
-            get_id[i] = stoi(lineSplit[idPos]);
+            idToCol[stoi(lineSplit[idPos])] = j;
+            get_id[j] = stoi(lineSplit[idPos]);
         }
         else
         {
-            pIds[i] = i;
-            get_id[i] = i;
+            idToCol[j] = j;
+            get_id[j] = j;
         }
 
-        for(pair<int, int> pc:position_config)
+        if(useGrid)
         {
-            r(i, pc.first) = stod(lineSplit[pc.second]);
+            r_local.zeros();
+            for(const pair<int, int> & pc:position_config)
+            {
+                r_local(pc.first) = stod(lineSplit[pc.second]);
+            }
+
+            const int cpuId = m_grid->particlesBelongsTo(r_local/L0);
+            if(myRank != cpuId)
+                continue;
         }
-        for(pair<int, int> vc:velocity_config)
+
+        for(const pair<int, int> & pc:position_config)
         {
-            v(i, vc.first) = stod(lineSplit[vc.second]);
+            r(j, pc.first) = stod(lineSplit[pc.second]);
         }
-        for(pair<int, int> dfc:data_config_mapping)
+        for(const pair<int, int> & vc:velocity_config)
         {
-            data(i, dfc.first) = stod(lineSplit[dfc.second]);
+            v(j, vc.first) = stod(lineSplit[vc.second]);
         }
+        for(const pair<int, int> & dfc:data_config_mapping)
+        {
+            data(j, dfc.first) = stod(lineSplit[dfc.second]);
+        }
+        j++;
     }
+    particles.nParticles(j);
 }
 //------------------------------------------------------------------------------
 void LoadPdParticles::loadBinaryBody(PD_Particles &particles,
                                      FILE *rawData,
                                      unordered_map<string, int> parameters)
 {
+    particles.maxParticles(m_nParticles);
     particles.nParticles(m_nParticles);
+    particles.totParticles(m_nParticles);
     // Storing only non-basic parameters in the parameters
     int counter = 0;
     vector<pair<int, int>> data_config_mapping;
@@ -200,8 +230,8 @@ void LoadPdParticles::loadBinaryBody(PD_Particles &particles,
     // Creating the data matrix
     particles.initializeMatrices();
 
-    unordered_map<int, int> & pIds = particles.pIds();
-    arma::ivec & get_id = particles.get_id();
+    unordered_map<int, int> & idToCol = particles.idToCol();
+    arma::ivec & get_id = particles.colToId();
     arma::mat & r = particles.r();
     arma::mat & v = particles.v();
     arma::mat & data = particles.data();
@@ -217,24 +247,24 @@ void LoadPdParticles::loadBinaryBody(PD_Particles &particles,
         // Collecting the data
         if(idIsset)
         {
-            pIds[int(line[idPos])] = i;
+            idToCol[int(line[idPos])] = i;
             get_id[i] = int(line[idPos]);
         }
         else
         {
-            pIds[i] = i;
+            idToCol[i] = i;
             get_id[i] = i;
         }
 
-        for(pair<int, int> pc:position_config)
+        for(const pair<int, int> &pc:position_config)
         {
             r(i, pc.first) = line[pc.second];
         }
-        for(pair<int, int> vc:velocity_config)
+        for(const pair<int, int> &vc:velocity_config)
         {
             v(i, vc.first) = line[vc.second];
         }
-        for(pair<int, int> dfc:data_config_mapping)
+        for(const pair<int, int> &dfc:data_config_mapping)
         {
             data(i, dfc.first) = line[dfc.second];
         }
@@ -266,6 +296,21 @@ PD_Particles load_pd(string loadPath, unordered_map<string, double> particlePara
             particles.registerParameter(pm.first, pm.second);
         }
     }
+    return particles;
+}
+//------------------------------------------------------------------------------
+PD_Particles load_pd(string loadPath, Grid &grid)
+{
+    LoadPdParticles loadParticles;
+    loadParticles.setGrid(grid);
+    vector<string> lineSplit;
+
+    boost::split(lineSplit, loadPath, boost::is_any_of("."), boost::token_compress_on);
+    const string type = lineSplit.back();
+
+    PD_Particles particles = loadParticles.load(loadPath, type);
+
+    particles.type(type);
     return particles;
 }
 //------------------------------------------------------------------------------

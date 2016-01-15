@@ -37,7 +37,7 @@ void EulerCromerIntegrator::integrateStepOne()
         {
             continue;
         }
-        const double rho = data(col_i, m_colRho);
+        const double rho = data(col_i, m_indexRho);
         const double dtRho = m_dt/rho;
 
         for(int d=0; d<m_dim; d++)

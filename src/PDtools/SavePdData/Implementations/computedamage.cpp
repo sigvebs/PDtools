@@ -18,17 +18,16 @@ ComputeDamage::~ComputeDamage()
 
 }
 //------------------------------------------------------------------------------
-void ComputeDamage::update(const pair<int, int> &pIdcol)
+void ComputeDamage::update(const int id_i, const int i)
 {
-    const double maxConnections = (*m_data)(pIdcol.second, m_indexMaxPdConnections);
+    const double maxConnections = (*m_data)(i, m_indexMaxPdConnections);
     if(maxConnections <= 0)
     {
-        (*m_data)(pIdcol.second, m_indexDamage) = 0;
+        (*m_data)(i, m_indexDamage) = 0;
         return;
     }
 
-    const int pId = pIdcol.first;
-    const vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+    const vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
     const int jnum = PDconnections.size();
 
     double tot = 0;
@@ -40,12 +39,13 @@ void ComputeDamage::update(const pair<int, int> &pIdcol)
         tot += 1;
     }
 
-    (*m_data)(pIdcol.second, m_indexDamage) = 1. - tot/maxConnections;
+    (*m_data)(i, m_indexDamage) = 1. - tot/maxConnections;
+//    (*m_data)(i, m_indexDamage) = tot;
 }
 //------------------------------------------------------------------------------
-void ComputeDamage::init(const pair<int, int> &pIdcol)
+void ComputeDamage::init(const int id_i, const int i)
 {
-    (*m_data)(pIdcol.second, m_indexMaxPdConnections) = m_particles.pdConnections(pIdcol.first).size();
+    (*m_data)(i, m_indexMaxPdConnections) = m_particles.pdConnections(id_i).size();
 }
 //------------------------------------------------------------------------------
 

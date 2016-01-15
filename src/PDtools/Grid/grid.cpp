@@ -2,8 +2,8 @@
 
 #include "Domain/domain.h"
 #include "Particles/particles.h"
+#include "Particles/pd_particles.h"
 #include <map>
-
 namespace PDtools
 {
 //------------------------------------------------------------------------------
@@ -13,7 +13,7 @@ Grid::Grid()
 }
 //------------------------------------------------------------------------------
 Grid::Grid(const Domain &domain, double gridspacing):
-    dim(domain.dim), m_gridspacing(gridspacing),
+    m_dim(domain.dim), m_gridspacing(gridspacing),
     m_periodicBoundaries(domain.periodicBoundaries())
 {
     m_boundaryLength = domain.boundaryLength();
@@ -21,11 +21,11 @@ Grid::Grid(const Domain &domain, double gridspacing):
 }
 //------------------------------------------------------------------------------
 Grid::Grid(const vector<pair<double, double>> &boundary, double gridspacing):
-    dim(boundary.size()),
+    m_dim(boundary.size()),
     m_gridspacing(gridspacing),
     m_boundary(boundary)
 {
-    for(int d=0; d<dim; d++)
+    for(int d=0; d<m_dim; d++)
     {
         m_boundaryLength.push_back(m_boundary[d].second - m_boundary[d].first);
     }
@@ -56,15 +56,14 @@ void Grid::createGrid()
     int ny = floor(y_len/m_gridspacing) > 0 ? floor(y_len/m_gridspacing) : 1;
     int nz = floor(z_len/m_gridspacing) > 0 ? floor(z_len/m_gridspacing) : 1;
 
-
     m_gridSpacing = {x_len/nx, y_len/ny, z_len/nz };
-    if(dim <= 1)
+    if(m_dim <= 1)
     {
         ny = 1;
         y_len = m_gridspacing;
         m_gridSpacing(1) = 1.;
     }
-    if(dim <= 2)
+    if(m_dim <= 2)
     {
         nz = 1;
         z_len = m_gridspacing;
@@ -108,11 +107,9 @@ void Grid::createGrid()
 
                 const int id = gridId(center);
                 m_gridpoints[id] = new GridPoint(id, center, false);
-                m_myGridPoints.push_back(id);
             }
         }
     }
-    cout << m_myGridPoints.size() << endl;
 
     // Boundary conditions
     for(int d=0; d<3; d++)
@@ -124,10 +121,10 @@ void Grid::createGrid()
             vector<int> inn_p = {0, 1, 2};
             inn_p.erase(inn_p.begin() + d);
 
-            ivec p1 = join_cols(inner_points[inn_p[0]], boundary_points[inn_p[0]]);
+            const ivec p1 = join_cols(inner_points[inn_p[0]], boundary_points[inn_p[0]]);
             for(int point_1:p1)
             {
-                ivec p2 = join_cols(inner_points[inn_p[1]], boundary_points[inn_p[1]]);
+                const ivec p2 = join_cols(inner_points[inn_p[1]], boundary_points[inn_p[1]]);
 
                 for(int point_2:p2)
                 {
@@ -147,6 +144,8 @@ void Grid::createGrid()
             }
         }
     }
+
+    setOwnership();
 }
 //------------------------------------------------------------------------------
 void Grid::setNeighbours()
@@ -180,7 +179,7 @@ void Grid::setNeighbours()
 
         const vec3 center = gridpoint.center();
         ivec3 l_gridId = {0, 0, 0};
-        for(int d=0; d<dim; d++)
+        for(int d=0; d<m_dim; d++)
             l_gridId(d) = int((center(d) - m_boundary[d].first)/m_gridSpacing(d));
 
         vector<GridPoint*> neighbours;
@@ -234,8 +233,7 @@ int Grid::gridId(const vec3 &r) const
 {
     ivec3 i;
 
-    for(int d=0; d<3; d++)
-//        for(int d=0; d<dim; d++)
+    for(int d=0; d<DIM; d++)
     {
         i(d) = int((r(d) - m_boundary[d].first)/m_gridSpacing(d));
 
@@ -249,7 +247,19 @@ int Grid::gridId(const vec3 &r) const
             i(d) = 0;
         }
     }
+
+#if DIM == 2
+    return i(X) + m_nGrid(X)*i(Y);
+#else
     return i(X) + m_nGrid(X)*i(Y) + m_nGrid(X)*m_nGrid(Y)*i(Z);
+#endif
+}
+//------------------------------------------------------------------------------
+int Grid::particlesBelongsTo(const vec3 &r) const
+{
+    const int gId = gridId(r);
+//    return m_gridpoints.at(gId)->ownedBy();
+    return belongsTo(gId);
 }
 //------------------------------------------------------------------------------
 void Grid::update()
@@ -263,15 +273,17 @@ void Grid::placeParticlesInGrid(Particles &particles)
 {
     clearParticles();
     const mat & R = particles.r();
+    const ivec & colToId = particles.colToId();
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
     for(unsigned int i=0; i<particles.nParticles(); i++)
     {
-        pair<int, int> id_pos(i, i);
-        const vec3 &r = R.row(id_pos.second).t();
-        int gId = gridId(r);
+        const int id = colToId.at(i);
+        const vec3 &r = R.row(i).t();
+        const int gId = gridId(r);
+        const pair<int, int> id_pos(id, i);
 #ifdef USE_OPENMP
 #pragma omp critical
 #endif
@@ -281,10 +293,130 @@ void Grid::placeParticlesInGrid(Particles &particles)
 //------------------------------------------------------------------------------
 void Grid::clearParticles()
 {
+    for(int id:m_myGridPoints)
+    {
+        GridPoint* gp = m_gridpoints[id];
+        gp->clearParticles();
+    }
+    clearGhostParticles();
+}
+//------------------------------------------------------------------------------
+void Grid::clearAllParticles()
+{
     for(pair<int, GridPoint*> id_gridpoint:m_gridpoints)
     {
         id_gridpoint.second->clearParticles();
     }
+}
+//------------------------------------------------------------------------------
+void Grid::clearGhostParticles()
+{
+    for(int id:m_ghostGridIds)
+    {
+        GridPoint* gp = m_gridpoints[id];
+        gp->clearParticles();
+    }
+}
+//------------------------------------------------------------------------------
+void Grid::setIdAndCores(int myRank, int nCores)
+{
+    m_myRank = myRank;
+    m_nCores = nCores;
+}
+//------------------------------------------------------------------------------
+void Grid::setMyGridpoints()
+{
+    vector<int> boundaryGridPoints;
+    vector<int> ghostGridIds;
+    vector<int> neighbouringCores;
+
+    for(auto &gridPoint:m_gridpoints)
+    {
+        if(gridPoint.second->ownedBy() == m_myRank)
+        {
+            const int id = gridPoint.first;
+            m_myGridPoints.push_back(id);
+
+            // Setting boundary cells and cpu-ids
+            const vector<GridPoint*> & neighbours = gridPoint.second->neighbours();
+            vector<int> neighbourRanks;
+
+            for(const GridPoint *neighbour:neighbours)
+            {
+                const int neighbourRank = neighbour->ownedBy();
+                if(neighbourRank != m_myRank)
+                {
+                    neighbourRanks.push_back(neighbourRank);
+                    ghostGridIds.push_back(neighbour->id());
+
+                    bool found = false;
+                    for(int i:neighbouringCores)
+                    {
+                        if(neighbourRank == i)
+                            found = true;
+                    }
+                    if(!found)
+                        neighbouringCores.push_back(neighbourRank);
+                }
+            }
+
+            if(neighbourRanks.size() > 0)
+            {
+                // Only picking the uniqe ids
+                sort( neighbourRanks.begin(), neighbourRanks.end() );
+                neighbourRanks.erase( unique( neighbourRanks.begin(),
+                                              neighbourRanks.end() ),
+                                      neighbourRanks.end() );
+
+                boundaryGridPoints.push_back(id);
+                gridPoint.second->setNeighbourRanks(neighbourRanks);
+            }
+        }
+    }
+    sort( neighbouringCores.begin(), neighbouringCores.end() );
+    m_boundaryGridPoints = boundaryGridPoints;
+    m_ghostGridIds = ghostGridIds;
+    m_neighbouringCores = neighbouringCores;
+}
+//------------------------------------------------------------------------------
+int Grid::belongsTo(const int gId) const
+{
+    const double nPoints = m_gridpoints.size();
+    return (m_nCores*(gId + 1.) - 1.)/nPoints;
+}
+//------------------------------------------------------------------------------
+void Grid::setOwnership()
+{
+    for(const auto &gridPoint:m_gridpoints)
+    {
+        const int id = gridPoint.first;
+        gridPoint.second->ownedBy(belongsTo(id));
+    }
+}
+//------------------------------------------------------------------------------
+const std::vector<int> &Grid::ghostGrid()
+{
+    return m_ghostGridIds;
+}
+//------------------------------------------------------------------------------
+void Grid::setInitialPositionScaling(const double L0)
+{
+    m_L0 = L0;
+}
+//------------------------------------------------------------------------------
+double Grid::initialPositionScaling()
+{
+    return m_L0;
+}
+//------------------------------------------------------------------------------
+const arma::ivec3 &Grid::nGrid()
+{
+    return m_nGrid;
+}
+//------------------------------------------------------------------------------
+const vector<pair<double, double> > &Grid::boundary()
+{
+    return m_boundary;
 }
 //------------------------------------------------------------------------------
 Grid::~Grid()
@@ -317,10 +449,11 @@ void updateVerletList(const string &verletStringId,
 {
     double radiusSquared = radius*radius;
 
-    int verletId = particles.getVerletId(verletStringId);
+    const int verletId = particles.getVerletId(verletStringId);
     const unordered_map<int, GridPoint*> &gridpoints = grid.gridpoints();
     const mat & R = particles.r();
     const vector<int> &mygridPoints = grid.myGridPoints();
+    const int dim = grid.dim();
     particles.clearVerletList(verletId);
 
 #ifdef USE_OPENMP
@@ -328,56 +461,59 @@ void updateVerletList(const string &verletStringId,
 #endif
     for(unsigned int i=0; i<mygridPoints.size(); i++)
     {
-        double dx, dy, dz;
-        int gridId = mygridPoints.at(i);
+        double dr;
+        const int gridId = mygridPoints.at(i);
         const GridPoint & gridPoint = *gridpoints.at(gridId);
 
         for(const pair<int, int> & idCol_i:gridPoint.particles())
         {
-            int id_i = idCol_i.first;
+            const int id_i = idCol_i.first;
+            const int i = idCol_i.second;
             vector<int> verletList;
-            const vec & r_i = R.row(idCol_i.second);
-
             for(const pair<int, int> & idCol_j:gridPoint.particles())
             {
-                int id_j = idCol_j.first;
+                const int id_j = idCol_j.first;
+                const int j = idCol_j.second;
+
                 if(id_i == id_j)
                     continue;
 
-                const vec & r_j = R.row(idCol_j.second);
-                dx = r_i(0) - r_j(0);
-                dy = r_i(1) - r_j(1);
-                dz = r_i(2) - r_j(2);
-
-                double drSquared = dx*dx + dy*dy + dz*dz;
+                double drSquared = 0;
+                for(int d=0;d<dim; d++)
+                {
+                    dr = R(i, d) - R(j, d);
+                    drSquared += dr*dr;
+                }
 
                 if(drSquared < radiusSquared)
                 {
                     verletList.push_back(id_j);
                 }
             }
-
             // Neighbouring cells
+
             const vector<GridPoint*> & neighbours = gridPoint.neighbours();
 
             for(const GridPoint *neighbour:neighbours)
             {
                 for(const pair<int, int> & idCol_j:neighbour->particles())
                 {
-                    const vec & r_j = R.row(idCol_j.second);
-                    dx = r_i(0) - r_j(0);
-                    dy = r_i(1) - r_j(1);
-                    dz = r_i(2) - r_j(2);
+                    const int id_j = idCol_j.first;
+                    const int j = idCol_j.second;
+                    double drSquared = 0;
 
-                    double drSquared = dx*dx + dy*dy + dz*dz;
+                    for(int d=0;d<dim; d++)
+                    {
+                        dr = R(i, d) - R(j, d);
+                        drSquared += dr*dr;
+                    }
 
                     if(drSquared < radiusSquared)
                     {
-                        verletList.push_back(idCol_j.first);
+                        verletList.push_back(id_j);
                     }
                 }
             }
-
 #ifdef USE_OPENMP
 #pragma omp critical
             {

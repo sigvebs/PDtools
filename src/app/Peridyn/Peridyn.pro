@@ -6,8 +6,6 @@ CONFIG   -= qt
 
 INCLUDEPATH += $$SRC_DIR/PDtools
 LIBS *= $$TOP_OUT_PWD/src/PDtools/libPDtools.a
-#LIBS *= -lboost_regex
-#LIBS *= -lconfig++
 include(../../../defaults.pri)
 
 # For dynamic linking:
