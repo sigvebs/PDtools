@@ -87,7 +87,6 @@ void PmbFracture::evaluateStepOne(const int id_i, const int i)
 
         double s0_tmp = s00 - m_alpha*stretch;
         s0_new = std::max(s0_new, s0_tmp);
-//        cout << stretch << " " << s0_i << " " << s0_j << endl;
     }
 
     (*m_data)(i, m_indexS_tmp) = s0_new;

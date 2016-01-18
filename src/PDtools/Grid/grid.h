@@ -96,8 +96,15 @@ public:
         return m_neighbourRanks;
     }
 
+    void
+    setnGridId(const vector<int> & ids);
+
+    const vector<int> &
+    nGridId();
+
 protected:
     int m_id;
+    vector<int> m_nGridId;
     int m_ownedBy = 0;
     vec3 m_center;
     bool m_ghost;
@@ -115,7 +122,8 @@ protected:
     double m_gridspacing;
     int m_myRank = 0;
     int m_nCores = 1;
-    arma::ivec3 m_nGrid;
+    int m_nGrid[DIM];
+    arma::ivec3 m_nGridArma;
     arma::ivec6 m_nGrid_with_boundary;
     arma::vec3 m_gridSpacing;
     std::unordered_map<int, GridPoint*> m_gridpoints;
@@ -134,7 +142,6 @@ protected:
 
 public:
     Grid();
-    Grid(const Domain & domain, double gridspacing);
     Grid(const vector<pair<double, double> > &boundary, double gridSpacing);
     Grid(const vector<pair<double, double> > &boundary, double gridSpacing,
                   const ivec3 &periodicBoundaries);

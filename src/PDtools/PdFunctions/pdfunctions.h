@@ -1,7 +1,9 @@
 #ifndef PDFUNCTIONS_H
 #define PDFUNCTIONS_H
 
+#include <array>
 #include <vector>
+#include <armadillo>
 #include "pdfunctionsmpi.h"
 
 using namespace std;
@@ -47,6 +49,14 @@ applyInitialStrainStrain(PD_Particles & particles, double strain, int axis, pair
 void
 setPD_N3L(PD_Particles & particles);
 
+vector<array<int, 3>>
+possibleConfigurations2d(const int n);
+
+vector<array<int, 3>>
+possibleConfigurations3d(const int n);
+
+vector<int>
+optimalConfigurationCores(const int nCores, const vector<double> &domain, const int dim);
 }
 //------------------------------------------------------------------------------
 #endif // PDFUNCTIONS_H

@@ -95,7 +95,6 @@ int PdSolver::initialize()
         m_cfg.lookupValue("t0", t0);
         m_cfg.lookupValue("rho0", rho0);
     }
-
     //--------------------------------------------------------------------------
     // Setting the domain
     //--------------------------------------------------------------------------
@@ -116,9 +115,9 @@ int PdSolver::initialize()
         exit(EXIT_FAILURE);
     }
 
-    double dxdydz[3];
+    double dxdydz[DIM];
     vector<pair<double,double>> domain;
-    for(int d=0; d<3; d++)
+    for(int d=0; d<DIM; d++)
     {
         pair<double, double> bound(cfg_domain[2*d], cfg_domain[2*d+1]);
         bound.first /= L0;
@@ -127,8 +126,22 @@ int PdSolver::initialize()
         domain.push_back(bound);
     }
 
+    // Setting periodicity
+    arma::ivec3 periodicBoundaries = {0, 0, 0};
 
-    // TODO: periodic boundaries
+    try
+    {
+        Setting &cfg_periodic= m_cfg.lookup("periodic");
+        for(int d=0; d<DIM; d++)
+        {
+            periodicBoundaries(d) = (int) cfg_periodic[d];
+        }
+    }
+    catch(libconfig::SettingNotFoundException s)
+    {
+        if(m_myRank == 0)
+            cout << "No periodicity set." << endl;
+    }
     //--------------------------------------------------------------------------
     // Setting the grid
     //--------------------------------------------------------------------------
@@ -150,12 +163,13 @@ int PdSolver::initialize()
     delta /= L0;
 
     double gridspacing = 1.15*(delta + 0.5*lc);
-    m_grid = Grid(domain, gridspacing);
+    m_grid = Grid(domain, gridspacing, periodicBoundaries);
     m_grid.setIdAndCores(m_myRank, m_nCores);
     m_grid.dim(dim);
     m_grid.initialize();
     m_grid.setMyGridpoints();
     m_grid.setInitialPositionScaling(L0);
+
     //--------------------------------------------------------------------------
     // Loading the particles
     //--------------------------------------------------------------------------
@@ -182,6 +196,8 @@ int PdSolver::initialize()
             r0(i, d) = r(i, d);
         }
     }
+
+
     //--------------------------------------------------------------------------
     // Setting particles parameters
     //--------------------------------------------------------------------------

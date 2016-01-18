@@ -1,5 +1,7 @@
 #include "pdfunctions.h"
 
+#include <limits>
+#include <math.h>
 #include <armadillo>
 #include <unordered_map>
 #include "Particles/pd_particles.h"
@@ -731,6 +733,95 @@ void addFractures(PD_Particles &particles, const vector<pair<double, double> > &
             }
         }
     }
+}
+
+//------------------------------------------------------------------------------
+vector<array<int, 3> > possibleConfigurations2d(const int n)
+{
+    vector<array<int, 3>> configurations;
+
+    for(int nx=1; nx<=n; nx++)
+    {
+        if(n%nx > 0)
+            continue;
+        const int ny = n/nx;
+        configurations.push_back(array<int, 3>{nx, ny, 1});
+    }
+
+    return configurations;
+}
+//------------------------------------------------------------------------------
+vector<array<int, 3> > possibleConfigurations3d(const int n)
+{
+    vector<array<int, 3>> configurations;
+
+    for(int nx=1; nx<=n; nx++)
+    {
+        if(n%nx > 0)
+            continue;
+
+        const int nyz = n/nx;
+        for(int ny=1; ny<=n; ny++)
+        {
+            if(nyz%ny > 0)
+                continue;
+
+            const int nz = nyz/ny;
+            configurations.push_back(array<int, 3>{nx, ny, nz});
+        }
+    }
+
+    return configurations;
+}
+//------------------------------------------------------------------------------
+vector<int> optimalConfigurationCores(const int nCores,
+                                      const vector<double> &domain,
+                                      const int dim)
+{
+    vector<int> optimal = {1, 1, 1}; // default
+    vector<double> nOptimal= {0, 0, 0};
+    double totalLength = 0.;
+    for(int d=0; d<dim; d++)
+    {
+        nOptimal[d] = domain[d];
+        totalLength += domain[d];
+    }
+    for(int d=0; d<dim; d++)
+    {
+        nOptimal[d] = nCores*nOptimal[d]/totalLength;
+    }
+
+    vector<std::array<int, 3> > coreConfigurations;
+
+    if(dim == 2)
+        coreConfigurations = possibleConfigurations2d(nCores);
+    else if(dim == 3)
+        coreConfigurations = possibleConfigurations3d(nCores);
+
+    double lowSigma = numeric_limits<double>::max();
+    int optimalConfiguration = 0;
+    int counter = 0;
+
+    for(auto n:coreConfigurations)
+    {
+        double sigma = 0;
+        for(int d=0; d<dim; d++)
+            sigma += pow(n[d] - nOptimal[d], 2);
+        sigma = sqrt(sigma);
+        if(sigma < lowSigma)
+        {
+            lowSigma = sigma;
+            optimalConfiguration = counter;
+        }
+        counter++;
+    }
+
+    for(int d=0; d<dim; d++)
+    {
+        optimal[d] = coreConfigurations[optimalConfiguration][d];
+    }
+
+    return optimal;
 }
 //------------------------------------------------------------------------------
 }

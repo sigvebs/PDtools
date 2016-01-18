@@ -1,6 +1,8 @@
 #include "grid.h"
 
+#include <array>
 #include "Domain/domain.h"
+#include "PDtools/PdFunctions/pdfunctions.h"
 #include "Particles/particles.h"
 #include "Particles/pd_particles.h"
 #include <map>
@@ -10,14 +12,6 @@ namespace PDtools
 Grid::Grid()
 {
 
-}
-//------------------------------------------------------------------------------
-Grid::Grid(const Domain &domain, double gridspacing):
-    m_dim(domain.dim), m_gridspacing(gridspacing),
-    m_periodicBoundaries(domain.periodicBoundaries())
-{
-    m_boundaryLength = domain.boundaryLength();
-    m_boundary = domain.boundaries();
 }
 //------------------------------------------------------------------------------
 Grid::Grid(const vector<pair<double, double>> &boundary, double gridspacing):
@@ -70,7 +64,11 @@ void Grid::createGrid()
         m_gridSpacing(2) = 1.;
     }
 
-    m_nGrid = {nx, ny, nz};
+    m_nGrid[0] = nx;
+    m_nGrid[1] = ny;
+    m_nGrid[2] = nz;
+    m_nGridArma = {nx, ny, nz};
+
     vector<ivec> inner_points;
     vector<ivec> boundary_points;
 
@@ -78,15 +76,15 @@ void Grid::createGrid()
     {
         if(m_periodicBoundaries[d])
         {
-            inner_points.push_back(linspace<ivec>(1, m_nGrid(d), m_nGrid(d)));
-            boundary_points.push_back({0, m_nGrid(d) + 1});
-            m_nGrid(d) += 2;
+            inner_points.push_back(linspace<ivec>(1, m_nGrid[d], m_nGrid[d]));
+            boundary_points.push_back({0, m_nGrid[d] + 1});
+            m_nGrid[d] += 2;
             m_boundary[d].first -= m_gridSpacing(d);
             m_boundary[d].second += m_gridSpacing(d);
         }
         else
         {
-            inner_points.push_back(linspace<ivec>(0, m_nGrid(d)-1, m_nGrid(d)));
+            inner_points.push_back(linspace<ivec>(0, m_nGrid[d]-1, m_nGrid[d]));
             boundary_points.push_back({});
         }
     }
@@ -106,7 +104,9 @@ void Grid::createGrid()
                     ,m_boundary[Z].first + m_gridSpacing(Z)*(z + 0.5)};
 
                 const int id = gridId(center);
+                const vector<int> nId = {x, y, z};
                 m_gridpoints[id] = new GridPoint(id, center, false);
+                m_gridpoints.at(id)->setnGridId(nId);
             }
         }
     }
@@ -195,20 +195,20 @@ void Grid::setNeighbours()
             {
                 if(m_periodicBoundaries[d])
                 {
-                    if(gridId_neigh(d) == m_nGrid(d)-1)
+                    if(gridId_neigh(d) == m_nGrid[d]-1)
                     {
                         gridId_neigh[d] = 0;
                         outOfBounds[d] = false;
                     }
                     else if(gridId_neigh[d] == 0)
                     {
-                        gridId_neigh[d] = m_nGrid(d)-1;
+                        gridId_neigh[d] = m_nGrid[d]-1;
                         outOfBounds[d] = false;
                     }
                 }
                 else
                 {
-                    if(gridId_neigh(d) >= m_nGrid(d) || gridId_neigh[d] < 0)
+                    if(gridId_neigh(d) >= m_nGrid[d] || gridId_neigh[d] < 0)
                         outOfBounds[d] = true;
                 }
             }
@@ -231,35 +231,34 @@ void Grid::setNeighbours()
 //------------------------------------------------------------------------------
 int Grid::gridId(const vec3 &r) const
 {
-    ivec3 i;
+    int i[DIM];
 
     for(int d=0; d<DIM; d++)
     {
-        i(d) = int((r(d) - m_boundary[d].first)/m_gridSpacing(d));
+        i[d] = int((r(d) - m_boundary[d].first)/m_gridSpacing(d));
 
         // Handling the boundary extremals
-        if(i(d) >= m_nGrid(d))
+        if(i[d] >= m_nGrid[d])
         {
-            i(d) = m_nGrid(d) - 1;
+            i[d]  = m_nGrid[d] - 1;
         }
-        else if(i(d) < 0)
+        else if(i[d]  < 0)
         {
-            i(d) = 0;
+            i[d]  = 0;
         }
     }
 
 #if DIM == 2
-    return i(X) + m_nGrid(X)*i(Y);
+    return i[X] + m_nGrid[X]*i[Y];
 #else
-    return i(X) + m_nGrid(X)*i(Y) + m_nGrid(X)*m_nGrid(Y)*i(Z);
+    return i[X] + m_nGrid[X]*i[Y] + m_nGrid[X]*m_nGrid[Y]*i[Z];
 #endif
 }
 //------------------------------------------------------------------------------
 int Grid::particlesBelongsTo(const vec3 &r) const
 {
     const int gId = gridId(r);
-//    return m_gridpoints.at(gId)->ownedBy();
-    return belongsTo(gId);
+    return m_gridpoints.at(gId)->ownedBy();
 }
 //------------------------------------------------------------------------------
 void Grid::update()
@@ -381,16 +380,39 @@ void Grid::setMyGridpoints()
 //------------------------------------------------------------------------------
 int Grid::belongsTo(const int gId) const
 {
-    const double nPoints = m_gridpoints.size();
-    return (m_nCores*(gId + 1.) - 1.)/nPoints;
+    return m_gridpoints.at(gId)->ownedBy();
+//    const double nPoints = m_gridpoints.size();
+//    return (m_nCores*(gId + 1.) - 1.)/nPoints;
 }
 //------------------------------------------------------------------------------
 void Grid::setOwnership()
 {
+    const vector<int> nCpuGrid = optimalConfigurationCores(m_nCores, m_boundaryLength, m_dim);
+    int rank;
+
     for(const auto &gridPoint:m_gridpoints)
     {
         const int id = gridPoint.first;
-        gridPoint.second->ownedBy(belongsTo(id));
+        vector<int> n = gridPoint.second->nGridId();
+#if USE_MPI
+        int i[DIM];
+
+        for(int d=0; d<DIM; d++)
+        {
+            i[d] = int(((n[d])/float(m_nGrid[d]))*(nCpuGrid[d]));
+        }
+
+#if DIM == 2
+        rank = i[X] + nCpuGrid[X]*i[Y];
+#else
+        rank = i[X] + nCpuGrid[X]*i[Y] + nCpuGrid[X]*nCpuGrid[Y]*i[Z];
+#endif
+//        const double nPoints = m_gridpoints.size();
+//        rank = (m_nCores*(id + 1.) - 1.)/nPoints;
+        gridPoint.second->ownedBy(rank);
+#else
+        gridPoint.second->ownedBy(0);
+#endif
     }
 }
 //------------------------------------------------------------------------------
@@ -411,7 +433,7 @@ double Grid::initialPositionScaling()
 //------------------------------------------------------------------------------
 const arma::ivec3 &Grid::nGrid()
 {
-    return m_nGrid;
+    return m_nGridArma;
 }
 //------------------------------------------------------------------------------
 const vector<pair<double, double> > &Grid::boundary()
@@ -437,6 +459,16 @@ GridPoint::GridPoint()
 GridPoint::GridPoint(int id, vec3 center, bool ghost):
     m_id(id), m_center(center), m_ghost(ghost)
 {
+}
+//------------------------------------------------------------------------------
+void GridPoint::setnGridId(const vector<int> &ids)
+{
+    m_nGridId = ids;
+}
+//------------------------------------------------------------------------------
+const vector<int> &GridPoint::nGridId()
+{
+    return m_nGridId;
 }
 //------------------------------------------------------------------------------
 // Other grid dependent functions
