@@ -3,6 +3,7 @@
 
 #include "particles.h"
 
+#include <map>
 namespace PDtools
 {
 //------------------------------------------------------------------------------
@@ -25,8 +26,8 @@ protected:
     unordered_map<int, vector<pair<int, vector<double>>>> m_PdConnections;
     unordered_map<string, int> m_PdParameters;
 
-    unordered_map<int, vector<int>> m_sendtParticles;
-    unordered_map<int, vector<int>> m_receivedParticles;
+    map<int, vector<int>> m_sendtParticles;
+    map<int, vector<int>> m_receivedParticles;
     vector<vector<int>>  m_sendtParticles2;
     vector<vector<int>>  m_receivedParticles2;
 public:
@@ -74,12 +75,12 @@ public:
                        const double t0, const double rho0);
 
     void
-    sendtParticles(unordered_map<int, vector<int>> sp);
-    const unordered_map<int, vector<int> > &
+    sendtParticles(map<int, vector<int> > sp);
+    const map<int, vector<int> > &
     sendtParticles() const;
     void
-    receivedParticles(unordered_map<int, vector<int>> sp);
-    const unordered_map<int, vector<int> > &
+    receivedParticles(map<int, vector<int>> sp);
+    const map<int, vector<int> > &
     receivedParticles() const;
     void
     clearGhostParameters();
@@ -140,24 +141,24 @@ PD_Particles::b()
 }
 
 inline void
-PD_Particles::sendtParticles(unordered_map<int, vector<int> > sp)
+PD_Particles::sendtParticles(map<int, vector<int> > sp)
 {
     m_sendtParticles = sp;
 }
 
-inline const unordered_map<int, vector<int>> &
+inline const map<int, vector<int>> &
 PD_Particles::sendtParticles() const
 {
     return m_sendtParticles;
 }
 
 inline void
-PD_Particles::receivedParticles(unordered_map<int, vector<int> > sp)
+PD_Particles::receivedParticles(map<int, vector<int> > sp)
 {
     m_receivedParticles = sp;
 }
 
-inline const unordered_map<int, vector<int>> &
+inline const map<int, vector<int>> &
 PD_Particles::receivedParticles() const
 {
     return m_receivedParticles;

@@ -16,13 +16,13 @@ namespace PDtools
 {
 #ifndef USE_BOOST_MPI
 //------------------------------------------------------------------------------
-void exchangeGhostParticles(Grid &grid, PD_Particles &particles)
+void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
 {
 #ifdef USE_MPI
     const int myRank = MPI::COMM_WORLD.Get_rank( );
 
     // Collecting the boundary particles
-    unordered_map<int, vector<pair<int, int>>> toNeighbours;
+    map<int, vector<pair<int, int>>> toNeighbours;
     const vector<int> boundaryGridPoints = grid.boundaryGridPoints();
     unordered_map<int, GridPoint*> & gridpoints = grid.gridpoints();
 
@@ -38,19 +38,17 @@ void exchangeGhostParticles(Grid &grid, PD_Particles &particles)
             l_p.insert(l_p.end(), l_particles.begin(), l_particles.end());
         }
     }
-
-
     const vector<int> & ghostParameters = particles.ghostParameters();
     unordered_map<int, int>  & idToCol = particles.idToCol();
     ivec & colToId = particles.colToId();
     mat & r = particles.r();
-    mat & r0 = particles.r0();
+    //    mat & r0 = particles.r0();
     mat & data = particles.data();
 
     // Sending the ghost particles to the other cpus
     const int nParticles = particles.nParticles();
-    const int nGhostparams = 1 + 2*DIM + ghostParameters.size();
-    int nGhostParticles = 0;
+    const int nGhostparams = 1 + DIM + ghostParameters.size();
+    int nGhostParticles = particles.nGhostParticles();
 
     for(const auto& id_toNeighbours:toNeighbours)
     {
@@ -68,16 +66,16 @@ void exchangeGhostParticles(Grid &grid, PD_Particles &particles)
             {
                 ghostSend.push_back(r(col, d));
             }
-            for(int d=0; d<DIM; d++)
-            {
-                ghostSend.push_back(r0(col, d));
-            }
+            //            for(int d=0; d<DIM; d++)
+            //            {
+            //                ghostSend.push_back(r0(col, d));
+            //            }
             for(const int j:ghostParameters)
             {
                 ghostSend.push_back(data(col, j));
             }
         }
-
+        //        cout << myRank << " sending to " << toNode << endl;
         // Sending and receiving data
         int nSendElements = ghostSend.size();
         int nRecieveElements;
@@ -91,11 +89,12 @@ void exchangeGhostParticles(Grid &grid, PD_Particles &particles)
         double ghostRecieve[nRecieveElements];
 
         MPI_Sendrecv(&ghostSend[0], nSendElements, MPI_DOUBLE,
-                     toNode, myRank*12000,
-                     &ghostRecieve, nRecieveElements, MPI_DOUBLE,
-                     toNode, 12000*toNode,
-                     MPI_COMM_WORLD, &status);
+                toNode, myRank*12000,
+                &ghostRecieve, nRecieveElements, MPI_DOUBLE,
+                toNode, 12000*toNode,
+                MPI_COMM_WORLD, &status);
 
+        //        cout << myRank << " received from " << toNode << endl;
         const int nReceiveParticles = nRecieveElements/nGhostparams;
 
         // Storing the received ghost data
@@ -111,10 +110,10 @@ void exchangeGhostParticles(Grid &grid, PD_Particles &particles)
             {
                 r(col, d) = ghostRecieve[j++];
             }
-            for(int d=0;d<DIM;d++)
-            {
-                r0(col, d) = ghostRecieve[j++];
-            }
+            //            for(int d=0;d<DIM;d++)
+            //            {
+            //                r0(col, d) = ghostRecieve[j++];
+            //            }
             for(const int g:ghostParameters)
             {
                 data(col, g) = ghostRecieve[j++];
@@ -133,13 +132,13 @@ void exchangeGhostParticles(Grid &grid, PD_Particles &particles)
 #endif
 }
 //------------------------------------------------------------------------------
-void exchangeInitialGhostParticles(Grid &grid, PD_Particles &particles)
+void exchangeInitialGhostParticles_boundary(Grid &grid, PD_Particles &particles)
 {
 #ifdef USE_MPI
     const int myRank = MPI::COMM_WORLD.Get_rank( );
 
     // Collecting the boundary particles
-    unordered_map<int, vector<pair<int, int>>> toNeighbours;
+    map<int, vector<pair<int, int>>> toNeighbours;
     const vector<int> boundaryGridPoints = grid.boundaryGridPoints();
     unordered_map<int, GridPoint*> & gridpoints = grid.gridpoints();
 
@@ -166,7 +165,7 @@ void exchangeInitialGhostParticles(Grid &grid, PD_Particles &particles)
 
     // Sending the ghost particles to the other cpus
     const int nParticles = particles.nParticles();
-    int nGhostParticles = 0;
+    int nGhostParticles = particles.nGhostParticles();
 
     for(const auto& id_toNeighbours:toNeighbours)
     {
@@ -222,10 +221,10 @@ void exchangeInitialGhostParticles(Grid &grid, PD_Particles &particles)
 
 
         MPI_Sendrecv(&sendData[0], nSendElements, MPI_DOUBLE,
-                     toNode, myRank,
-                     &recieveData, nRecieveElements, MPI_DOUBLE,
-                     toNode, toNode,
-                     MPI_COMM_WORLD, &status);
+                toNode, myRank,
+                &recieveData, nRecieveElements, MPI_DOUBLE,
+                toNode, toNode,
+                MPI_COMM_WORLD, &status);
 
 
         // Storing the received ghost data
@@ -286,8 +285,8 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
 
     const vector<int> &neighbouringCores = grid.neighbouringCores();
 
-    std::unordered_map<int, vector<int>> particlesTo;
-    std::unordered_map<int, vector<int>> particlesFrom;
+    std::map<int, vector<int>> particlesTo;
+    std::map<int, vector<int>> particlesFrom;
 
     for(int core:neighbouringCores)
     {
@@ -303,21 +302,52 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
 
     for(unsigned int i=0; i<particles.nParticles(); i++)
     {
-        const int id = colToId.at(i);
+        const int id_i = colToId.at(i);
         const vec3 &r_i = r.row(i).t();
         const int gId = grid.gridId(r_i);
 #ifdef USE_MPI
         const int belongsTo = grid.belongsTo(gId);
         if(belongsTo != me)
         {
-            particlesTo.at(belongsTo).push_back(id);
+            particlesTo.at(belongsTo).push_back(id_i);
+        }
+
+        // Adding to periodic boundary points for later removal
+        const GridPoint * gridPoint = gridpoints.at(gId);
+        if(gridPoint->isGhost() && belongsTo == me)
+        {
+            gridpoints[gId]->addParticle(pair<int,int>(id_i, i));
         }
 #else
-        const pair<int, int> id_pos(id, i);
+        const pair<int, int> id_pos(id_i, i);
         gridpoints[gId]->addParticle(id_pos);
 #endif
     }
 #ifdef USE_MPI
+
+    // Checking periodic boundaries
+    const int dim = grid.dim();
+    const vector<int> boundaryGridPoints = grid.periodicReceiveGridIds();
+
+    for(int gId:boundaryGridPoints)
+    {
+        const GridPoint * gridPoint = gridpoints.at(gId);
+        const int belongsTo = gridPoint->periodicNeighbourRank();
+        const vector<pair<int,int>> l_particles = gridPoint->particles();
+        const vector<double> &shift = gridPoint->periodicShift();
+
+        for(const auto &idCol:l_particles)
+        {
+            const int id_i = idCol.first;
+            const int i = idCol.second;
+            for(int d=0; d<dim; d++)
+            {
+                r(i, d) += shift[d];
+            }
+            particlesTo.at(belongsTo).push_back(id_i);
+        }
+    }
+
     // Sending and receving data
     vector<int> parameterIds;
     const int nPdParameters = particles.PdParameters().size();
@@ -337,7 +367,6 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
 
     vector<int> gotParticles;
 
-    //        for(int toCore=0; toCore<nCores; toCore++)
     for(const pair<int, vector<int>> &coreParticles:particlesTo)
     {
         const int toCore = coreParticles.first;
@@ -419,25 +448,10 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
         double recieveData[nRecieveElements];
 
         MPI_Sendrecv(&sendData[0], nSendElements, MPI_DOUBLE,
-                     toCore, 1,
-                     &recieveData, nRecieveElements, MPI_DOUBLE,
-                     toCore, 1,
-                     MPI_COMM_WORLD, &status);
-
-//        MPI_Status status;
-//        MPI_Sendrecv(&nSendElements, 1, MPI_INT,
-//                     toCore, me*1000000,
-//                     &nRecieveElements, 1,MPI_INT,
-//                     toCore, 1000000*toCore,
-//                     MPI_COMM_WORLD, &status);
-
-//        double recieveData[nRecieveElements];
-
-//        MPI_Sendrecv(&sendData[0], nSendElements, MPI_DOUBLE,
-//                     toCore, me*1200000,
-//                     &recieveData, nRecieveElements, MPI_DOUBLE,
-//                     toCore, 1200000*toCore,
-//                     MPI_COMM_WORLD, &status);
+                toCore, 1,
+                &recieveData, nRecieveElements, MPI_DOUBLE,
+                toCore, 1,
+                MPI_COMM_WORLD, &status);
 
         // Storing the received particle data
         unsigned int j = 0;
@@ -540,7 +554,8 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
         }
         else
         {
-            cerr << me <<" DOES NOTE BELONG TO ME: " << id << endl;
+            cerr << me <<" DOES NOT BELONG TO ME: " << id << endl;
+            cerr << r_i << endl;
             exit(1);
         }
     }
@@ -552,7 +567,7 @@ void updateModifierLists(Modifier &modifier, PD_Particles &particles, int counte
 #ifdef USE_MPI
     const int me = MPI::COMM_WORLD.Get_rank();
 
-    const unordered_map<int, vector<int> > &sendtParticles = particles.sendtParticles();
+    const map<int, vector<int> > &sendtParticles = particles.sendtParticles();
 
     for(const pair<int, vector<int>> &coreParticles:sendtParticles)
     {
@@ -582,10 +597,10 @@ void updateModifierLists(Modifier &modifier, PD_Particles &particles, int counte
         int toBeAdded[nRecieveElements];
 
         MPI_Sendrecv(&sendData[0], nSendElements, MPI_INT,
-                     core, me*1200 + counter,
-                     &toBeAdded, nRecieveElements, MPI_INT,
-                     core, 1200*core + counter,
-                     MPI_COMM_WORLD, &status);
+                core, me*1200 + counter,
+                &toBeAdded, nRecieveElements, MPI_INT,
+                core, 1200*core + counter,
+                MPI_COMM_WORLD, &status);
 
         if(nRecieveElements > 0)
         {
@@ -597,6 +612,276 @@ void updateModifierLists(Modifier &modifier, PD_Particles &particles, int counte
     }
 #endif
 }
+//------------------------------------------------------------------------------
+void exchangeInitialPeriodicBoundaryParticles(Grid &grid, PD_Particles &particles)
+{
+#ifdef USE_MPI
+    const int myRank = MPI::COMM_WORLD.Get_rank( );
+
+    // Collecting the boundary particles
+    map<int, vector<pair<int, int>>> toRanks;
+    const vector<int> boundaryGridPoints = grid.periodicSendGridIds();
+    unordered_map<int, GridPoint*> & gridpoints = grid.gridpoints();
+
+    for(int gId:boundaryGridPoints)
+    {
+        const GridPoint * gridPoint = gridpoints.at(gId);
+        const int nRank = gridPoint->periodicNeighbourRank();
+        const vector<pair<int,int>> l_particles = gridPoint->particles();
+        vector<pair<int,int>> & l_p = toRanks[nRank];
+        l_p.insert(l_p.end(), l_particles.begin(), l_particles.end());
+    }
+
+    const vector<int> & ghostParameters = particles.ghostParameters();
+    const int nPdParameters = particles.PdParameters().size();
+    unordered_map<int, int>  & idToCol = particles.idToCol();
+    ivec & colToId = particles.colToId();
+    mat & r = particles.r();
+    mat & r0 = particles.r0();
+    mat & data = particles.data();
+
+    // Sending the ghost particles to the other cpus
+    const int nParticles = particles.nParticles();
+    int nGhostParticles = particles.nGhostParticles();
+
+    for(const auto& id_toRank:toRanks)
+    {
+        const int toRank = id_toRank.first;
+        const vector<pair<int,int>> & l_p = id_toRank.second;
+        vector<double> sendData;
+
+        for(const auto &id_col:l_p)
+        {
+            const int id_i = id_col.first;
+            const int i = id_col.second;
+
+            // Getting the shift
+            const vec3 &r_i = r.row(i).t();
+            const int gId = grid.gridId(r_i);
+            const GridPoint * gridPoint = gridpoints.at(gId);
+            const vector<double> &shift = gridPoint->periodicShift();
+            const auto & pd_connections = particles.pdConnections(id_i);
+
+            // Collecting send data
+            sendData.push_back(id_i);
+            for(int d=0; d<DIM; d++)
+            {
+                sendData.push_back(r(i, d) + shift[d]);
+            }
+            for(int d=0; d<DIM; d++)
+            {
+                sendData.push_back(r0(i, d) + shift[d]);
+            }
+            for(const int j:ghostParameters)
+            {
+                sendData.push_back(data(i, j));
+            }
+
+            sendData.push_back(pd_connections.size());
+            for(const auto & con:pd_connections)
+            {
+                sendData.push_back(con.first);
+
+                for(const double &param:con.second)
+                {
+                    sendData.push_back(param);
+                }
+            }
+        }
+
+        // Sending and receiving data
+        int nSendElements = sendData.size();
+        int nRecieveElements;
+        MPI_Status status;
+
+        MPI_Sendrecv(&nSendElements, 1, MPI_INT,
+                     toRank , myRank*100,
+                     &nRecieveElements, 1,MPI_INT,
+                     toRank , toRank *100,
+                     MPI_COMM_WORLD, &status);
+
+        double recieveData[nRecieveElements];
+
+        MPI_Sendrecv(&sendData[0], nSendElements, MPI_DOUBLE,
+                toRank , myRank,
+                &recieveData, nRecieveElements, MPI_DOUBLE,
+                toRank , toRank ,
+                MPI_COMM_WORLD, &status);
+
+        // Storing the received ghost data
+        unsigned int j = 0;
+        while(j < nRecieveElements)
+        {
+            const int col = nParticles + nGhostParticles;
+            const int id = recieveData[j++];
+
+            idToCol[id] = col;
+            colToId[col] = id;
+            for(int d=0;d<DIM;d++)
+            {
+                r(col, d) = recieveData[j++];
+            }
+            for(int d=0;d<DIM;d++)
+            {
+                r0(col, d) = recieveData[j++];
+            }
+            for(const int g:ghostParameters)
+            {
+                data(col, g) = recieveData[j++];
+            }
+
+            const int nPdConnections = recieveData[j++];
+            vector<pair<int, vector<double>>> connectionsVector;
+
+            for(int i=0;i<nPdConnections; i++)
+            {
+                const int con_id = (int) recieveData[j++];
+                vector<double> connectionData;
+
+                for(int k=0; k<nPdParameters; k++)
+                {
+                    connectionData.push_back(recieveData[j++]);
+                }
+
+                connectionsVector.push_back(pair<int, vector<double>>(con_id, connectionData));
+            }
+            particles.setPdConnections(id, connectionsVector);
+            nGhostParticles++;
+
+            // Adding to the ghost particles to the correct grid point
+            const vec3 &l_r = r.row(col).t();
+            const int gId = grid.gridId(l_r);
+            const pair<int, int> id_pos(id, col);
+            gridpoints[gId]->addParticle(id_pos);
+        }
+    }
+    particles.nGhostParticles(nGhostParticles);
+#endif
+}
+//------------------------------------------------------------------------------
+void exchangePeriodicBoundaryParticles(Grid &grid, PD_Particles &particles)
+{
+#ifdef USE_MPI
+    const int myRank = MPI::COMM_WORLD.Get_rank( );
+
+    // Collecting the boundary particles
+    map<int, vector<pair<int, int>>> toRanks;
+    const vector<int> boundaryGridPoints = grid.periodicSendGridIds();
+    unordered_map<int, GridPoint*> & gridpoints = grid.gridpoints();
+
+    for(int gId:boundaryGridPoints)
+    {
+        const GridPoint * gridPoint = gridpoints.at(gId);
+        const int nRank = gridPoint->periodicNeighbourRank();
+        const vector<pair<int,int>> l_particles = gridPoint->particles();
+        vector<pair<int,int>> & l_p = toRanks[nRank];
+        l_p.insert(l_p.end(), l_particles.begin(), l_particles.end());
+    }
+
+    const vector<int> & ghostParameters = particles.ghostParameters();
+    const int nPdParameters = particles.PdParameters().size();
+    unordered_map<int, int>  & idToCol = particles.idToCol();
+    ivec & colToId = particles.colToId();
+    mat & r = particles.r();
+    mat & data = particles.data();
+
+    // Sending the ghost particles to the other cpus
+    const int nParticles = particles.nParticles();
+    int nGhostParticles = particles.nGhostParticles();
+
+    for(const auto& id_toRank:toRanks)
+    {
+        const int toRank = id_toRank.first;
+        const vector<pair<int,int>> & l_p = id_toRank.second;
+        vector<double> sendData;
+
+        for(const auto &id_col:l_p)
+        {
+            const int id_i = id_col.first;
+            const int i = id_col.second;
+
+            // Getting the shift
+            const vec3 &r_i = r.row(i).t();
+            const int gId = grid.gridId(r_i);
+            const GridPoint * gridPoint = gridpoints.at(gId);
+            const vector<double> &shift = gridPoint->periodicShift();
+
+            // Collecting send data
+            sendData.push_back(id_i);
+            for(int d=0; d<DIM; d++)
+            {
+                sendData.push_back(r(i, d) + shift[d]);
+            }
+            for(const int j:ghostParameters)
+            {
+                sendData.push_back(data(i, j));
+            }
+        }
+
+        // Sending and receiving data
+        int nSendElements = sendData.size();
+        int nRecieveElements;
+        MPI_Status status;
+
+        MPI_Sendrecv(&nSendElements, 1, MPI_INT,
+                     toRank , myRank*100,
+                     &nRecieveElements, 1,MPI_INT,
+                     toRank , toRank *100,
+                     MPI_COMM_WORLD, &status);
+
+        double recieveData[nRecieveElements];
+
+        MPI_Sendrecv(&sendData[0], nSendElements, MPI_DOUBLE,
+                toRank , myRank,
+                &recieveData, nRecieveElements, MPI_DOUBLE,
+                toRank , toRank ,
+                MPI_COMM_WORLD, &status);
+
+        // Storing the received ghost data
+        unsigned int j = 0;
+        while(j < nRecieveElements)
+        {
+            const int col = nParticles + nGhostParticles;
+            const int id = recieveData[j++];
+
+            idToCol[id] = col;
+            colToId[col] = id;
+            for(int d=0;d<DIM;d++)
+            {
+                r(col, d) = recieveData[j++];
+            }
+            for(const int g:ghostParameters)
+            {
+                data(col, g) = recieveData[j++];
+            }
+
+            nGhostParticles++;
+
+            // Adding to the ghost particles to the correct grid point
+            const vec3 &l_r = r.row(col).t();
+            const int gId = grid.gridId(l_r);
+            const pair<int, int> id_pos(id, col);
+            gridpoints[gId]->addParticle(id_pos);
+        }
+    }
+    particles.nGhostParticles(nGhostParticles);
+#endif
+}
+//------------------------------------------------------------------------------
+void exchangeInitialGhostParticles(Grid &grid, PD_Particles &particles)
+{
+    particles.nGhostParticles(0);
+    exchangeInitialPeriodicBoundaryParticles(grid, particles);
+    exchangeInitialGhostParticles_boundary(grid, particles);
+}
+//------------------------------------------------------------------------------
+void exchangeGhostParticles(Grid &grid, PD_Particles &particles)
+{
+    particles.nGhostParticles(0);
+    exchangePeriodicBoundaryParticles(grid, particles);
+    exchangeGhostParticles_boundary(grid, particles);
+}
+//------------------------------------------------------------------------------
 #else
 //------------------------------------------------------------------------------
 void exchangeGhostParticles(Grid &grid, PD_Particles &particles)
@@ -1021,7 +1306,7 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
         // Sending data
         for(const int id:particlesTo[toCore])
         {
-//            cout << me << " ";
+            //            cout << me << " ";
             particles.deleteParticleById(id);
         }
     }
@@ -1043,7 +1328,7 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
         }
         else
         {
-            cerr << me <<" DOES NOTE BELONG TO ME: " << id << endl;
+            cerr << me <<" DOES NOT BELONG TO ME: " << id << endl;
             exit(1);
         }
     }

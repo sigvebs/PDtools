@@ -208,8 +208,10 @@ int Particles::registerParameter(string paramId, double value)
     // It the parameter exists return the original position.
     if(m_parameters.count(paramId) > 0)
     {
+#ifdef DEBUG
         cerr << "WARNING: Parameter '" << paramId
              << "' already registered. Using that." << endl;
+#endif
         return m_parameters.at(paramId);
     }
 

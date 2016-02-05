@@ -12,18 +12,14 @@ ViscousDamper::ViscousDamper(PDtools::PD_Particles &particles,
     m_v(m_particles.v()),
     m_isStatic(m_particles.isStatic())
 {
-}
-//------------------------------------------------------------------------------
-ViscousDamper::~ViscousDamper()
-{
 
 }
 //------------------------------------------------------------------------------
-void ViscousDamper::calculateForces(const int id, const int i)
+void ViscousDamper::calculateForces(const int id_i, const int i)
 {
-    (void) id;
+    (void) id_i;
 
-    if(m_isStatic(id))
+    if(m_isStatic(id_i))
         return;
 
     for(int d=0; d<m_dim; d++)

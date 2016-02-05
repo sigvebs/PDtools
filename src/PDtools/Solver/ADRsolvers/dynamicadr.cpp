@@ -18,6 +18,9 @@ void dynamicADR::solve()
 {
     initialize();
     checkInitialization();
+    calculateForces(0);
+    updateProperties(0);
+    save(0);
 
     // Looping over all time, particles and components.
     for (int i = 0; i < m_steps; i++)
@@ -28,20 +31,25 @@ void dynamicADR::solve()
 //------------------------------------------------------------------------------
 void dynamicADR::stepForward(int timeStep)
 {
-    save(timeStep);
-    modifiersStepOne();
     integrateStepOne();
-    zeroForces();
-
     updateGridAndCommunication();
 
-    calculateForces(timeStep);
+    modifiersStepOne();
+    updateGridAndCommunication();
+
+    updateProperties(timeStep + 1);
+    updateGridAndCommunication();
+
+    save(timeStep + 1);
+    //----------------------------------------------------------------------
+    zeroForces();
+    calculateForces(timeStep+1);
+    //----------------------------------------------------------------------
 
     modifiersStepTwo();
     integrateStepTwo();
 
     m_t += m_dt;
-    cout << timeStep << " dt = " << m_t << endl;
 }
 //------------------------------------------------------------------------------
 }

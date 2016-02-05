@@ -166,9 +166,9 @@ void SavePdData::initialize()
             computeProperty->init(id, i);
         }
     }
-
     saveParticles = new SaveParticles("lmp", m_saveparam_scale, m_writeBinary);
     saveParticles->setRankAndCores(m_myRank, m_nCores);
+    saveParticles->setGrid(m_mainGrid);
 }
 //------------------------------------------------------------------------------
 void SavePdData::evaluate(double t, int i)

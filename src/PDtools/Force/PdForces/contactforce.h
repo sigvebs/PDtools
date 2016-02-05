@@ -18,7 +18,7 @@ private:
     double m_verletRadius;
     double m_forceScaling;
     int m_indexVolume;
-    int m_verletUpdateFrq = 25;
+    int m_verletUpdateFrq = 10;
     int m_verletListId;
     int m_indexMicromodulus;
     int m_indexRadius;
@@ -26,7 +26,7 @@ private:
     int m_dim;
     std::unordered_map<int, int> *m_idToCol ;
 public:
-    ContactForce(PD_Particles &particles, Grid &grid, double spacing);
+    ContactForce(PD_Particles &particles, Grid &grid, double spacing, int verletUpdateFrq);
     ~ContactForce();
 
     virtual void

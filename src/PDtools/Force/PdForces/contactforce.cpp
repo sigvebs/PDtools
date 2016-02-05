@@ -33,11 +33,12 @@ void ContactForce::applySurfaceCorrectionStep2()
 
 }
 //------------------------------------------------------------------------------
-ContactForce::ContactForce(PD_Particles &particles, Grid & grid, double spacing):
+ContactForce::ContactForce(PD_Particles &particles, Grid & grid, double spacing, int verletUpdateFrq):
     Force(particles),
     m_grid(grid),
     m_steps(0),
-    m_spacing(spacing)
+    m_spacing(spacing),
+    m_verletUpdateFrq(verletUpdateFrq)
 {
     m_verletRadius = 2.0*spacing;
     m_forceScaling = 10.0;
@@ -46,7 +47,7 @@ ContactForce::ContactForce(PD_Particles &particles, Grid & grid, double spacing)
 
     m_idToCol = &m_particles.idToCol();
     m_verletListId = particles.registerVerletList("contectForce");
-    particles.setVerletUpdateFreq(50);
+    particles.setVerletUpdateFreq(10);
     m_indexMicromodulus = m_particles.getParamId("micromodulus");
     m_indexRadius = m_particles.getParamId("radius");
     m_indexVolume = m_particles.getParamId("volume");

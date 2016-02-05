@@ -95,6 +95,7 @@ int PdSolver::initialize()
         m_cfg.lookupValue("t0", t0);
         m_cfg.lookupValue("rho0", rho0);
     }
+
     //--------------------------------------------------------------------------
     // Setting the domain
     //--------------------------------------------------------------------------
@@ -162,14 +163,21 @@ int PdSolver::initialize()
     lc /= L0;
     delta /= L0;
 
-    double gridspacing = 1.15*(delta + 0.5*lc);
+    double gridspacing = 1.25*(delta + 0.5*lc);
     m_grid = Grid(domain, gridspacing, periodicBoundaries);
     m_grid.setIdAndCores(m_myRank, m_nCores);
     m_grid.dim(dim);
     m_grid.initialize();
     m_grid.setMyGridpoints();
     m_grid.setInitialPositionScaling(L0);
-
+    if(m_myRank == 0)
+    {
+        vector<int> cpuConfig = m_grid.nCpuGrid();
+        cout << "Running core configuration: ";
+        for(int n:cpuConfig)
+            cout << n << " ";
+        cout << endl;
+    }
     //--------------------------------------------------------------------------
     // Loading the particles
     //--------------------------------------------------------------------------
@@ -196,8 +204,6 @@ int PdSolver::initialize()
             r0(i, d) = r(i, d);
         }
     }
-
-
     //--------------------------------------------------------------------------
     // Setting particles parameters
     //--------------------------------------------------------------------------
@@ -234,7 +240,8 @@ int PdSolver::initialize()
     }
     exchangeGhostParticles(m_grid, m_particles);
 #endif
-    bool performVolumeCorrection = true;
+    int performVolumeCorrection = 1;
+    m_cfg.lookupValue("performVolumeCorrection", performVolumeCorrection);
     setPdConnections(m_particles, m_grid, delta, lc);
     m_grid.clearGhostParticles();
     exchangeInitialGhostParticles(m_grid, m_particles);
@@ -246,168 +253,7 @@ int PdSolver::initialize()
     {
         applyVolumeCorrection(m_particles, delta, lc);
     }
-
     setPD_N3L(m_particles);
-    //--------------------------------------------------------------------------
-    // Setting the Forces
-    //--------------------------------------------------------------------------
-    if(isRoot)
-        cout << "Setting the Forces" << endl;
-    vector<string> forcesSet;
-    vector<Force*> forces;
-    Setting &cfg_forces = m_cfg.lookup("forces");
-
-    for(int i=0; i<cfg_forces.getLength(); i++)
-    {
-        const char * tmpType;
-        cfg_forces[i].lookupValue("type", tmpType);
-        string type = tmpType;
-
-        if(boost::iequals(type, "bond force"))
-        {
-            forces.push_back(new PD_bondForce(m_particles));
-        }
-        else if(boost::iequals(type, "LPS"))
-        {
-            forces.push_back(new PD_LPS(m_particles));
-        }
-        else if(boost::iequals(type, "OSP"))
-        {
-            forces.push_back(new PD_OSP(m_particles));
-        }
-        else if(boost::iequals(type, "PMB"))
-        {
-            double alpha;
-
-            if (!cfg_forces[i].lookupValue("alpha", alpha))
-            {
-                cerr << "Error reading the parameters for force '"
-                     << type << "'" << endl;
-                exit(EXIT_FAILURE);
-            }
-
-            forces.push_back(new PD_PMB(m_particles, lc, delta, alpha));
-        }
-        else if(boost::iequals(type, "gaussian bond force"))
-        {
-            forces.push_back(new PD_bondforceGaussian(m_particles));
-        }
-        else if(boost::iequals(type, "weighted bond"))
-        {
-            string weightType;
-            cfg_forces[i].lookupValue("weightType", weightType);
-            forces.push_back(new PD_bondforceGaussian(m_particles, weightType));
-        }
-        else if(boost::iequals(type, "DEM"))
-        {
-            double T, C;
-            cfg_forces[i].lookupValue("T", T);
-            cfg_forces[i].lookupValue("C", C);
-            forces.push_back(new DemForce(m_particles, T, C));
-        }
-        else if(boost::iequals(type, "contact force"))
-        {
-            forces.push_back(new ContactForce(m_particles, m_grid, lc));
-        }
-        else if(boost::iequals(type, "viscous damper"))
-        {
-            double c;
-            cfg_forces[i].lookupValue("c", c);
-            forces.push_back(new ViscousDamper(m_particles, c));
-        }
-        else
-        {
-            cerr << "Force: " << type << " has not been implemented." << endl;
-            exit(1);
-        }
-
-        forcesSet.push_back(type);
-    }
-
-    for(Force* force:forces)
-    {
-        vector<string> gParameters = force->initalGhostDependencies();
-        for(const string &param:gParameters)
-        {
-            m_particles.addGhostParameter(param);
-        }
-    }
-
-    if(isRoot)
-        cout << "Initializing forces" << endl;
-
-    // Initializing forces
-    for(Force* force:forces)
-    {
-        force->numericalInitialization(calculateMicromodulus);
-        force->initialize(E/E0, nu, delta, dim, h, lc);
-    }
-
-
-    if(isRoot)
-    {
-        cout << "Forces set: ";
-        for(string f:forcesSet)
-            cout << f << ", ";
-        cout << endl;
-    }
-    //--------------------------------------------------------------------------
-    // Recalcuating particle properties
-    //--------------------------------------------------------------------------
-    if(isRoot)
-        cout << "Recalcuating particle properties" << endl;
-    int applySurfaceCorrection = 0;
-    m_cfg.lookupValue("applySurfaceCorrection", applySurfaceCorrection);
-    if(applySurfaceCorrection)
-    {
-        for(Force* force:forces)
-        {
-            const int nSurfaceCorrections = 20;
-            bool hasSurfaceCorrection = force->initializeSurfaceCorrection();
-
-            if(!hasSurfaceCorrection)
-                continue;
-#if USE_MPI
-            vector<string> additionGhostParameters = force->getSurfaceCorrectionGhostParameters();
-            for(const string &param:additionGhostParameters)
-            {
-                m_particles.addGhostParameter(param);
-            }
-
-            m_grid.clearParticles();
-            updateGrid(m_grid, m_particles);
-            exchangeGhostParticles(m_grid, m_particles);
-#endif
-            for(int i=0; i<nSurfaceCorrections; i++)
-            {
-                force->applySurfaceCorrectionStep1(0.001);
-#if USE_MPI
-                m_grid.clearParticles();
-                updateGrid(m_grid, m_particles);
-                exchangeGhostParticles(m_grid, m_particles);
-#endif
-                force->applySurfaceCorrectionStep2();
-            }
-        }
-    }
-
-    if(!useS0fromCfg)
-    {
-        switch(dim)
-        {
-        case 3:
-            reCalculatePdFractureCriterion(m_particles, G0, delta);
-            break;
-        case 2:
-            reCalculatePdFractureCriterion(m_particles, G0, delta, h);
-            break;
-        default:
-            cerr << "ERROR: dimension " << dim << " not supported for numerical 's0'" << endl;
-            cerr << "use 2 or 3." << endl;
-            exit(EXIT_FAILURE);
-            break;
-        }
-    }
 
     //--------------------------------------------------------------------------
     // Setting the solver
@@ -471,6 +317,7 @@ int PdSolver::initialize()
         cerr << "Error: solver not set" << endl;
         exit(EXIT_FAILURE);
     }
+
     dt /= t0;
     solver->setDim(dim);
     solver->setRankAndCores(m_myRank, m_nCores);
@@ -478,13 +325,191 @@ int PdSolver::initialize()
     if(isRoot)
         cout << "Solver set: " << solverType << endl;
     //--------------------------------------------------------------------------
+    // Setting the Forces
+    //--------------------------------------------------------------------------
+    if(isRoot)
+        cout << "Setting the Forces" << endl;
+    vector<string> forcesSet;
+    vector<Force*> forces;
+    Setting &cfg_forces = m_cfg.lookup("forces");
+
+    for(int i=0; i<cfg_forces.getLength(); i++)
+    {
+        const char * tmpType;
+        cfg_forces[i].lookupValue("type", tmpType);
+        string type = tmpType;
+
+        if(boost::iequals(type, "bond force"))
+        {
+            forces.push_back(new PD_bondForce(m_particles));
+        }
+        else if(boost::iequals(type, "dampened bond force"))
+        {
+            double c;
+            if(!cfg_forces[i].lookupValue("c", c))
+            {
+                cerr << "The dampening parameter 'c' must be set for "
+                     << type << endl;
+                exit(EXIT_FAILURE);
+            }
+            forces.push_back(new PD_dampenedBondForce(m_particles, dt, c));
+        }
+        else if(boost::iequals(type, "LPS"))
+        {
+            forces.push_back(new PD_LPS(m_particles));
+        }
+        else if(boost::iequals(type, "OSP"))
+        {
+            forces.push_back(new PD_OSP(m_particles));
+        }
+        else if(boost::iequals(type, "PMB"))
+        {
+            double alpha;
+
+            if (!cfg_forces[i].lookupValue("alpha", alpha))
+            {
+                cerr << "Error reading the parameters for force '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+
+            forces.push_back(new PD_PMB(m_particles, lc, delta, alpha));
+        }
+        else if(boost::iequals(type, "gaussian bond force"))
+        {
+            forces.push_back(new PD_bondforceGaussian(m_particles));
+        }
+        else if(boost::iequals(type, "weighted bond"))
+        {
+            string weightType;
+            cfg_forces[i].lookupValue("weightType", weightType);
+            forces.push_back(new PD_bondforceGaussian(m_particles, weightType));
+        }
+        else if(boost::iequals(type, "DEM"))
+        {
+            double T, C;
+            cfg_forces[i].lookupValue("T", T);
+            cfg_forces[i].lookupValue("C", C);
+            forces.push_back(new DemForce(m_particles, T, C));
+        }
+        else if(boost::iequals(type, "contact force"))
+        {
+            int updateFrquency = 10;
+            cfg_forces[i].lookupValue("verletUpdateFrq", updateFrquency);
+            forces.push_back(new ContactForce(m_particles, m_grid, lc, updateFrquency));
+        }
+        else if(boost::iequals(type, "viscous damper"))
+        {
+            double c;
+            cfg_forces[i].lookupValue("c", c);
+            forces.push_back(new ViscousDamper(m_particles, c));
+        }
+        else
+        {
+            cerr << "Force: " << type << " has not been implemented." << endl;
+            exit(1);
+        }
+
+        forcesSet.push_back(type);
+    }
+
+    for(Force* force:forces)
+    {
+        vector<string> gParameters = force->initalGhostDependencies();
+        for(const string &param:gParameters)
+        {
+            m_particles.addGhostParameter(param);
+        }
+    }
+
+    if(isRoot)
+        cout << "Initializing forces" << endl;
+
+    // Initializing forces
+    for(Force* force:forces)
+    {
+        force->numericalInitialization(calculateMicromodulus);
+        force->initialize(E/E0, nu, delta, dim, h, lc);
+        const auto & needed = force->getNeededProperties();
+        for(auto prop:needed)
+        {
+            neededProperties.push_back(prop);
+        }
+    }
+
+    if(isRoot)
+    {
+        cout << "Forces set: ";
+        for(string f:forcesSet)
+            cout << f << ", ";
+        cout << endl;
+    }
+
+    //--------------------------------------------------------------------------
+    // Recalcuating particle properties
+    //--------------------------------------------------------------------------
+    if(isRoot)
+        cout << "Recalcuating particle properties" << endl;
+    int applySurfaceCorrection = 0;
+    m_cfg.lookupValue("applySurfaceCorrection", applySurfaceCorrection);
+    if(applySurfaceCorrection)
+    {
+        for(Force* force:forces)
+        {
+            const int nSurfaceCorrections = 20;
+            bool hasSurfaceCorrection = force->initializeSurfaceCorrection();
+
+            if(!hasSurfaceCorrection)
+                continue;
+#if USE_MPI
+            vector<string> additionGhostParameters = force->getSurfaceCorrectionGhostParameters();
+            for(const string &param:additionGhostParameters)
+            {
+                m_particles.addGhostParameter(param);
+            }
+
+            m_grid.clearParticles();
+            updateGrid(m_grid, m_particles);
+            exchangeGhostParticles(m_grid, m_particles);
+#endif
+            for(int i=0; i<nSurfaceCorrections; i++)
+            {
+                force->applySurfaceCorrectionStep1(0.001);
+#if USE_MPI
+                m_grid.clearParticles();
+                updateGrid(m_grid, m_particles);
+                exchangeGhostParticles(m_grid, m_particles);
+#endif
+                force->applySurfaceCorrectionStep2();
+            }
+        }
+    }
+
+    if(!useS0fromCfg)
+    {
+        switch(dim)
+        {
+        case 3:
+            reCalculatePdFractureCriterion(m_particles, G0, delta);
+            break;
+        case 2:
+            reCalculatePdFractureCriterion(m_particles, G0, delta, h);
+            break;
+        default:
+            cerr << "ERROR: dimension " << dim << " not supported for numerical 's0'" << endl;
+            cerr << "use 2 or 3." << endl;
+            exit(EXIT_FAILURE);
+            break;
+        }
+    }
+
+    //--------------------------------------------------------------------------
     // Setting the modifiers
     //--------------------------------------------------------------------------
     vector<Modifier *> modifiers;
     vector<Modifier *> spModifiers;
     vector<Modifier *> qsModifiers;
     vector<string> modifiersSet;
-
 
     Setting &cfg_modifiers = m_cfg.lookup("modifiers");
     for(int i=0; i<cfg_modifiers.getLength(); i++)
@@ -689,6 +714,81 @@ int PdSolver::initialize()
                 spModifiers.push_back(failureCriterion);
             }
         }
+        else if(boost::iequals(type, "Mohr-Coulomb weighted average"))
+        {
+            double mu, C, T;
+
+            if (!cfg_modifiers[i].lookupValue("mu", mu)||
+                    !cfg_modifiers[i].lookupValue("C", C) ||
+                    !cfg_modifiers[i].lookupValue("T", T) )
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            C /= E0;
+            T /= E0;
+            if(boost::iequals(solverType, "ADR"))
+            {
+//                ADRmohrCoulombFracture * failureCriterion = new ADRmohrCoulombFracture(mu, C, T, dim);
+//                qsModifiers.push_back(failureCriterion);
+            }
+            else
+            {
+                MohrCoulombWeightedAverage * failureCriterion = new MohrCoulombWeightedAverage(mu, C, T, dim);
+                spModifiers.push_back(failureCriterion);
+            }
+        }
+        else if(boost::iequals(type, "Mohr-Coulomb max"))
+        {
+            double mu, C, T;
+
+            if (!cfg_modifiers[i].lookupValue("mu", mu)||
+                    !cfg_modifiers[i].lookupValue("C", C) ||
+                    !cfg_modifiers[i].lookupValue("T", T) )
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            C /= E0;
+            T /= E0;
+            MohrCoulombMax * failureCriterion = new MohrCoulombMax(mu, C, T, dim);
+
+            if(boost::iequals(solverType, "ADR"))
+            {
+                qsModifiers.push_back(failureCriterion);
+            }
+            else
+            {
+                spModifiers.push_back(failureCriterion);
+            }
+        }
+        else if(boost::iequals(type, "Mohr-Coulomb max fracture"))
+        {
+            double mu, C, T;
+
+            if (!cfg_modifiers[i].lookupValue("mu", mu)||
+                    !cfg_modifiers[i].lookupValue("C", C) ||
+                    !cfg_modifiers[i].lookupValue("T", T) )
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            C /= E0;
+            T /= E0;
+            MohrCoulombMaxFracture * failureCriterion = new MohrCoulombMaxFracture(mu, C, T, dim);
+
+            if(boost::iequals(solverType, "ADR"))
+            {
+                qsModifiers.push_back(failureCriterion);
+            }
+            else
+            {
+                spModifiers.push_back(failureCriterion);
+            }
+        }
         else if(boost::iequals(type, "simple fracture"))
         {
             double alpha;
@@ -766,7 +866,6 @@ int PdSolver::initialize()
         }
 #endif
     }
-
     for(Modifier* mod: spModifiers)
     {
         mod->setDim(dim);
@@ -832,7 +931,6 @@ int PdSolver::initialize()
             cout << mod << ", ";
         cout << endl;
     }
-
     //--------------------------------------------------------------------------
     // Setting additional initial conditions
     //--------------------------------------------------------------------------
@@ -880,6 +978,7 @@ int PdSolver::initialize()
             cout << f << ", ";
         cout << endl;
     }
+
     //--------------------------------------------------------------------------
     // Setting the final ghost parameters
     //--------------------------------------------------------------------------
@@ -1002,6 +1101,7 @@ int PdSolver::initialize()
     {
         neededProperties.push_back(property);
     }
+
     //--------------------------------------------------------------------------
     // Setting the properties needs to be calculated
     //--------------------------------------------------------------------------

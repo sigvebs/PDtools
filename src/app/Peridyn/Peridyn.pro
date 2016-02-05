@@ -1,5 +1,5 @@
 TEMPLATE  = app
-TARGET 	  = peridyn
+TARGET 	  = ../../../peridyn
 CONFIG   += console
 CONFIG   -= app_bundle
 CONFIG   -= qt
@@ -12,7 +12,7 @@ include(../../../defaults.pri)
 #LIBS +=  -L$$TOP_OUT_PWD/src/PDtools -lPDtools
 #QMAKE_LFLAGS += -Wl,--rpath=$$TOP_OUT_PWD/src/PDtools
 
-#message(from peridyn.pro $$LIBS)
+message(from peridyn.pro $$INCLUDEPATH)
 
 SOURCES += \
     main.cpp \

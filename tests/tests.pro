@@ -5,6 +5,7 @@ CONFIG   -= app_bundle
 CONFIG   -= qt
 CONFIG   += thread
 
+CONFIG(!abel) {
 include(../defaults.pri)
 #DEFINES *= ARMA_NO_DEBUG
 
@@ -49,3 +50,4 @@ message($$DEFINES)
 #sudo cmake .
 #sudo make
 #sudo mv libg* /usr/lib/
+}

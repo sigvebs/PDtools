@@ -1,7 +1,8 @@
 cache()
 
 TEMPLATE = subdirs
-SUBDIRS = src tests benchmarks
+SUBDIRS = src
+#tests benchmarks
 #tests.depends = src
 CONFIG += ordered
 

@@ -1,4 +1,5 @@
 #include "saveparticles.h"
+#include "PDtools/Grid/grid.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -11,6 +12,11 @@ namespace PDtools
 {
 //------------------------------------------------------------------------------
 // SaveParticles functions
+//------------------------------------------------------------------------------
+void SaveParticles::setGrid(Grid *mainGrid)
+{
+    m_mainGrid = mainGrid;
+}
 //------------------------------------------------------------------------------
 void SaveParticles::writeToFile(Particles &particles, string savePath)
 {
@@ -36,7 +42,9 @@ void SaveParticles::writeToFile(Particles &particles, string savePath)
         }
         else
         {
+#if !USE_MPI
             savePath = savePath + to_string(m_myRank);
+#endif
         }
         writeBinaryBody(particles, savePath);
     }
@@ -211,67 +219,107 @@ void SaveParticles::writeBody(Particles &particles,
 void SaveParticles::writeBinaryBody(Particles &particles,
                                     const string &savePath)
 {
+    int nParticles = particles.nParticles();
+#if USE_MPI
+    string sPath = savePath;
+    MPI_File binaryData;
+    MPI_Status status;
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_File_open(MPI_COMM_WORLD, &sPath[0], MPI_MODE_WRONLY|MPI_MODE_APPEND, MPI_INFO_NULL, &binaryData);
+    int nParticlesOnCPUs[m_nCores];
+    MPI_Allgather(&nParticles, 1, MPI_INT, nParticlesOnCPUs, 1, MPI_INT, MPI_COMM_WORLD);
+#else
     FILE* binaryData = fopen(savePath.c_str(), "a+");
+#endif
+    int headerOffset = 2*sizeof(long long int) + 7*sizeof(int) + 6*sizeof(double) + 3*sizeof(int);
+    headerOffset /= sizeof(double);
+    int bodyOffset = 0;
+#if USE_MPI
+    for(int i=0; i<m_myRank; i++)
+    {
+        bodyOffset += nParticlesOnCPUs[i];
+    }
+#endif
+
+    const ivec &colToId = particles.colToId();
     const arma::mat & r = particles.r();
     const arma::mat & v = particles.v();
     const arma::mat & data = particles.data();
-
-    for(auto id_pos:particles.idToCol())
+    int nColumns = 0;
+    if(m_saveId)
     {
-        const double id  = id_pos.first;
-        int j = id_pos.second;
+        nColumns++;
+    }
+    nColumns += m_header.size();
+    int offset = headerOffset + bodyOffset*nColumns;
 
+
+    for(int j=0; j<nParticles; j++)
+    {
+        const int id  = colToId(j);
+        double buffer[nColumns];
+        int i = 0;
         if(m_saveId)
         {
-            fwrite((char*)(&id), sizeof(double), 1, binaryData);
+            buffer[i++] = id;
         }
         if(m_saveCoreId)
         {
-            fwrite((char*)(&m_myRank), sizeof(double), 1, binaryData);
+            buffer[i++] = m_myRank;
         }
 
         for(const auto & coord:m_saveCoordinates)
         {
-            const double r_i = r(j, coord.first)*coord.second;
-            fwrite((char*)(&r_i), sizeof(double), 1, binaryData);
+            const double r_i = r(j, coord.first);
+//            const double r_i = r(j, coord.first)*coord.second;
+            buffer[i++] = r_i;
         }
 
         for(const auto & coord:m_saveVelocities)
         {
             const double v_i = v(j, coord.first)*coord.second;
-            fwrite((char*)(&v_i), sizeof(double), 1, binaryData);
+            buffer[i++] = v_i;
         }
 
         for(const auto & parameter:m_dataParameters)
         {
             const double dp = data(j, parameter.first)*parameter.second;
-            fwrite((char*)(&dp), sizeof(double), 1, binaryData);
+            buffer[i++] = dp;
         }
+
+#if USE_MPI
+        MPI_File_write_at(binaryData, offset*sizeof(double), &buffer, nColumns, MPI_DOUBLE, &status);
+        offset += nColumns;
+#else
+        fwrite((char*)(&buffer), sizeof(double), nColumns, binaryData);
+#endif
     }
     //--------------------------------------------------------------------------
+
+#if USE_MPI
+    MPI_File_close(&binaryData);
+#else
     fclose(binaryData);
-    /*
-#ifdef USE_MPI
-    MPI_Barrier(MPI_COMM_WORLD);
 
-    if(m_myRank <= 0)
-    {
-        // Writing the header
-        ofstream of_fileConcatenated(savePath.c_str(), ios::out | ios::app );
+//    MPI_Barrier(MPI_COMM_WORLD);
 
-        // Concatingating the files
-        for(int node=1; node < m_nCores; node++)
-        {
-            string fName = savePath + to_string(node);
-            std::ifstream if_node(fName, std::ios_base::binary);
-            of_fileConcatenated << if_node.rdbuf();
-            if_node.close();
-            remove( fName.c_str() );
-        }
-        of_fileConcatenated.close();
-    }
+//    if(m_myRank <= 0)
+//    {
+//        // Writing the header
+//        ofstream of_fileConcatenated(savePath.c_str(), ios::out | ios::app );
+
+//        // Concatingating the files
+//        for(int node=1; node < m_nCores; node++)
+//        {
+//            string fName = savePath + to_string(node);
+//            std::ifstream if_node(fName, std::ios_base::binary);
+//            of_fileConcatenated << if_node.rdbuf();
+//            if_node.close();
+//            remove( fName.c_str() );
+//        }
+//        of_fileConcatenated.close();
+//    }
 #endif
-*/
 }
 //------------------------------------------------------------------------------
 void SaveParticles::write_xyzHeader(const Particles &particles, const string &savePath)
@@ -346,10 +394,25 @@ void SaveParticles::write_lmpHeader(const Particles &particles,
     {
         outStream.open(savePath.c_str());
     }
+
+    const vector<pair<double, double>> & boundary = m_mainGrid->originalBoundary();
+    const double scaling = m_saveCoordinates[0].second;
+    const double xMin = scaling*boundary[0].first;
+    const double xMax = scaling*boundary[0].second;
+    const double yMin = scaling*boundary[1].first;
+    const double yMax = scaling*boundary[1].second;
+    const double zMin = scaling*boundary[2].first;
+    const double zMax = scaling*boundary[2].second;
+
+
     outStream << "ITEM: TIMESTEP" << endl;
     outStream << m_timestep << endl;
     outStream << "ITEM: NUMBER OF ATOMS" << endl;
     outStream << particles.totParticles() << endl;
+    outStream << "ITEM: BOX BOUNDS pp pp pp" << endl;
+    outStream << xMin << ' ' << xMax << "\n";
+    outStream << yMin << ' ' << yMax << "\n";
+    outStream << zMin << ' ' << zMax << "\n";
 
     outStream << "ITEM: ATOMS";
 
@@ -412,16 +475,14 @@ void SaveParticles::write_lmpBinaryHeader(Particles &particles,
     int b_zMin = 2;
     int b_zMax = 2;
 
-    for(auto id_pos:particles.idToCol())
-    {
-        const int j = id_pos.second;
-        xMin = xMin < particles.r()(j, 0) ? xMin : particles.r()(j, 0);
-        xMax = xMax > particles.r()(j, 0) ? xMax : particles.r()(j, 0);
-        yMin = yMin < particles.r()(j, 1) ? yMin : particles.r()(j, 1);
-        yMax = yMax > particles.r()(j, 1) ? yMax : particles.r()(j, 1);
-        zMin = zMin < particles.r()(j, 2) ? zMin : particles.r()(j, 2);
-        zMax = zMax > particles.r()(j, 2) ? zMax : particles.r()(j, 2);
-    }
+    const vector<pair<double, double>> & boundary = m_mainGrid->originalBoundary();
+    const double scaling = m_saveCoordinates[0].second;
+    xMin = scaling*boundary[0].first;
+    xMax = scaling*boundary[0].second;
+    yMin = scaling*boundary[1].first;
+    yMax = scaling*boundary[1].second;
+    zMin = scaling*boundary[2].first;
+    zMax = scaling*boundary[2].second;
 
     // Writing the header
     long long int currentTimeStep = m_timestep;

@@ -9,13 +9,16 @@ namespace PDtools
 MohrCoulombFracture::MohrCoulombFracture(double mu, double C, double T, int dim):
     m_C(C), m_T(T), m_dim(dim)
 {
-    m_d = pow(sqrt(1 + mu*mu) + mu, 2);
-    m_neededProperties= {pair<string, int>("stress",1)};
-}
-//------------------------------------------------------------------------------
-MohrCoulombFracture::~MohrCoulombFracture()
-{
+    m_phi = mu*M_PI/180.;
+//    m_d = pow(sqrt(1 + mu*mu) + mu, 2);
 
+    m_d = tan(m_phi);
+//    m_d *= m_d;
+//    m_d =  (sqrt(1 + mu*mu) - mu)/(sqrt(1 + mu*mu) + mu);
+    m_neededProperties= {pair<string, int>("stress",1)};
+
+    m_C = 0.5*C*(1./(sqrt(m_d*m_d + 1.) + m_d));
+//    m_C = C;
 }
 //------------------------------------------------------------------------------
 void MohrCoulombFracture::registerParticleParameters()
@@ -69,7 +72,10 @@ void MohrCoulombFracture::evaluateStepOne(const int id_i, const int i)
     arma::vec eigval(m_dim);
 #endif
     vector<pair<int, vector<double>>> & PDconnections = m_particles->pdConnections(id_i);
-
+    double cos_theta = cos(M_PI/2. + m_phi);
+    double sin_theta = sin(M_PI/2. + m_phi);
+    double tan_theta = tan(0.5*(M_PI + m_phi));
+    tan_theta *= tan_theta;
 
     if(m_dim == 2)
     {
@@ -84,29 +90,29 @@ void MohrCoulombFracture::evaluateStepOne(const int id_i, const int i)
             if(con.second[m_indexConnected] <= 0.5)
                 continue;
 
-            double sx = 0.5*(data(i, m_indexStress[0]) + data(j, m_indexStress[0]));
-            double sy = 0.5*(data(i, m_indexStress[1]) + data(j, m_indexStress[1]));
-            double sxy = 0.5*(data(i, m_indexStress[2]) + data(j, m_indexStress[2]));
-//            double sx = max(fabs(data(i, m_indexStress[0])), fabs(data(j, m_indexStress[0])));
-//            double sy = max(fabs(data(i, m_indexStress[1])), fabs(data(j, m_indexStress[1])));
-//            double sxy = max(fabs(data(i, m_indexStress[2])), fabs(data(j, m_indexStress[2])));
+            const double sx = 0.5*(data(i, m_indexStress[0]) + data(j, m_indexStress[0]));
+            const double sy = 0.5*(data(i, m_indexStress[1]) + data(j, m_indexStress[1]));
+            const double sxy = 0.5*(data(i, m_indexStress[2]) + data(j, m_indexStress[2]));
+
             const double first = 0.5*(sx + sy);
             const double second = sqrt(0.25*(sx - sy)*(sx - sy) + sxy*sxy);
 
             const double s1 = first + second;
             const double s2 = first - second;
-            const double p_1 = max(s1, s2);
-            const double p_2 = min(s1, s2);
+            const double p_1 = min(s1, s2);
+            const double p_2 = max(s1, s2);
 
-//            if(p_1 >= m_d*p_2 - m_C)
-//            {
-//                con.second[m_indexConnected] = 0;
-//            }
-//            else
-            if(p_1 >= m_T)
+            const double shear = fabs(0.5*(p_1 - p_2)*sin_theta);
+            const double normal = 0.5*(p_1 + p_2) + 0.5*(p_1 - p_2)*cos_theta;
+
+            if(shear >= fabs(m_C - m_d*normal) && normal < 0)
+//            if(p_1 <= - m_C + tan_theta*p_2 && p_1 < 0)
             {
                 con.second[m_indexConnected] = 0;
-
+            }
+            else if(p_2 >= m_T && normal > 0)
+            {
+                con.second[m_indexConnected] = 0;
                 //--------------------------------------------------------------
 //                const mat & R = m_particles->r();
 //                double dr_ij[m_dim];

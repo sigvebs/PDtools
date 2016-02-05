@@ -62,7 +62,11 @@ HEADERS += \
     CalculateProperties/Implementation/calculatestress.h \
     Modfiers/Implementation/mohrcoulombbondfracture.h \
     Modfiers/Implementation/rigidwall.h \
-    Modfiers/Implementation/adrmohrcoulombbondfracture.h
+    Modfiers/Implementation/adrmohrcoulombbondfracture.h \
+    Modfiers/Implementation/mohrcoulombmax.h \
+    Modfiers/Implementation/mohrcoulombmaxfracture.h \
+    Modfiers/Implementation/mohrcoulombweightedaverage.h \
+    Force/PdForces/pd_dampenedbondforce.h
 
 SOURCES += \
     Grid/grid.cpp \
@@ -115,7 +119,11 @@ SOURCES += \
     CalculateProperties/Implementation/calculatestress.cpp \
     Modfiers/Implementation/mohrcoulombbondfracture.cpp \
     Modfiers/Implementation/rigidwall.cpp \
-    Modfiers/Implementation/adrmohrcoulombbondfracture.cpp
+    Modfiers/Implementation/adrmohrcoulombbondfracture.cpp \
+    Modfiers/Implementation/mohrcoulombmax.cpp \
+    Modfiers/Implementation/mohrcoulombmaxfracture.cpp \
+    Modfiers/Implementation/mohrcoulombweightedaverage.cpp \
+    Force/PdForces/pd_dampenedbondforce.cpp
 
 #headers.path    = $$OUT_PWD
 #headers.files   += $$HEADERS

@@ -101,8 +101,10 @@ int PD_Particles::registerPdParameter(string paramId, double value)
 {
     if(m_PdParameters.count(paramId) == 1)
     {
+#ifdef DEBUG
         cerr << "WARNING: PD-parameter already registered: "
              << paramId << endl;
+#endif
         return m_PdParameters.at(paramId);
     }
     int pos = m_PdParameters.size();

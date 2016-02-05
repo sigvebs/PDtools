@@ -23,10 +23,6 @@ PD_bondForce::PD_bondForce(PD_Particles &particles):
     m_initialGhostParameters = {"volume", "micromodulus"};
 }
 //------------------------------------------------------------------------------
-PD_bondForce::~PD_bondForce()
-{
-}
-//------------------------------------------------------------------------------
 void PD_bondForce::calculateForces(const int id_i, const int i)
 {
     const double c_i = m_data(i, m_indexMicromodulus);

@@ -2,7 +2,7 @@
 #define CALCULATESTRESS_H
 
 #include "PDtools/CalculateProperties/calculateproperty.h"
-#include <vector>>
+#include <vector>
 
 namespace PDtools
 {
@@ -13,7 +13,6 @@ class CalculateStress : public CalculateProperty
 {
 public:
     CalculateStress(vector<Force *> &forces);
-    ~CalculateStress();
 
     virtual void
     initialize();

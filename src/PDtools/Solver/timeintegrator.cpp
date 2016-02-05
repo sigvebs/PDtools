@@ -19,8 +19,6 @@ void TimeIntegrator::solve()
     // Looping over all time, particles and components.
     for (int i = 0; i < m_steps; i++)
     {
-//        if(m_myRank == 0)
-//            cout << "i: " << i << endl;
         stepForward(i);
     }
 }

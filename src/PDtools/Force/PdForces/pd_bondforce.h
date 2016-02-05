@@ -10,7 +10,7 @@ namespace PDtools
 //------------------------------------------------------------------------------
 class PD_bondForce : public Force
 {
-private:
+protected:
     int m_indexMicromodulus;
     int m_indexVolume;
     int m_indexDr0;
@@ -28,8 +28,6 @@ private:
 
 public:
     PD_bondForce(PD_Particles &particles);
-
-    ~PD_bondForce();
 
     virtual void
     calculateForces(const int id_i, const int i);

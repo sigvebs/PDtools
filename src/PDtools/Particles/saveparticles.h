@@ -9,6 +9,7 @@ namespace PDtools
 {
 // Forward declerations
 class Particles;
+class Grid;
 
 //------------------------------------------------------------------------------
 class SaveParticles
@@ -25,6 +26,7 @@ private:
     vector<string> m_header;
     bool m_append = false;
     int m_timestep = 0;
+    Grid *m_mainGrid;
 
     int m_myRank = 0;
     int m_nCores = 1;
@@ -71,6 +73,9 @@ public:
 
     void
     setRankAndCores(int rank, int cores);
+    void
+    setGrid(Grid *mainGrid);
+
 private:
     void
     initialize(Particles &particles);

@@ -13,6 +13,7 @@ namespace PDtools
 template class T_LoadParticles<Particles>;
 template class T_LoadParticles<PD_Particles>;
 
+
 //------------------------------------------------------------------------------
 template <class T_particles>T_LoadParticles<T_particles>::T_LoadParticles()
 {
@@ -113,6 +114,7 @@ unordered_map <std::string, int> T_LoadParticles<T_particles>::read_xyzHeader(fs
 //    std::sregex_iterator end;
 
     unordered_map <std::string, int> parameters;
+
     int position = 0;
     while(next != end)
     {

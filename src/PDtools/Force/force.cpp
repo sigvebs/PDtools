@@ -6,6 +6,11 @@
 namespace PDtools
 {
 //------------------------------------------------------------------------------
+vector<pair<string, int> > Force::getNeededProperties() const
+{
+    return neededProperties;
+}
+//------------------------------------------------------------------------------
 Force::Force(PD_Particles &particles, string _type):
     m_particles(particles),
     m_r(m_particles.r()),

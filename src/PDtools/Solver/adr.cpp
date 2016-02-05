@@ -41,8 +41,6 @@ void ADR::solve()
 //------------------------------------------------------------------------------
 void ADR::stepForward(int i)
 {
-//    cerr << "void ADR::stepForward(int i): must be update with calc properties" << endl;
-//    exit(1);
     modifiersStepOne();
 
     m_globalError = 2*m_errorThreshold;
@@ -60,17 +58,18 @@ void ADR::iterate(int maxNumberOfSteps)
 {
     int counter = 0;
     int minSteps = 5;
-    int nFractureRelaxationSteps = m_maxStepsFracture;
+//    int nFractureRelaxationSteps = m_maxStepsFracture;
+    int nFractureRelaxationSteps = 2*minSteps;
     const ivec &colToId = m_particles->colToId();
 
     do
     {
         integrateStepOne();
-        zeroForces();
         updateGridAndCommunication();
+        zeroForces();
         calculateForces(0);
-        staticModifiers();
         integrateStepTwo();
+        staticModifiers();
 
         counter++;
         if(counter > maxNumberOfSteps)
@@ -86,6 +85,8 @@ void ADR::iterate(int maxNumberOfSteps)
     //--------------------------------------------------
     if(!m_qsModifiers.empty())
     {
+        updateProperties(0);
+        updateGridAndCommunication();
         nParticles = m_particles->nParticles();
 #ifdef USE_OPENMP
 # pragma omp parallel for
@@ -98,8 +99,6 @@ void ADR::iterate(int maxNumberOfSteps)
                 modifier->evaluateStepOne(id, i);
             }
         }
-        updateGridAndCommunication();
-        updateProperties(0);
         updateGridAndCommunication();
         nParticles = m_particles->nParticles();
 #ifdef USE_OPENMP
@@ -255,6 +254,10 @@ void ADR::initialize()
 //------------------------------------------------------------------------------
 void ADR::calculateStableMass()
 {
+#if USE_MPI
+    m_mainGrid->clearGhostParticles();
+    exchangeInitialGhostParticles(*m_mainGrid, *m_particles);
+#endif
     const ivec &colToId = m_particles->colToId();
     arma::vec &stableMass = m_particles->stableMass();
     const int nParticles = m_particles->nParticles();
@@ -379,10 +382,9 @@ void ADR::staticModifiers()
 void ADR::updateGridAndCommunication()
 {
     m_mainGrid->clearParticles();
-    updateGrid(*m_mainGrid, *m_particles, true);
+    updateGrid(*m_mainGrid, *m_particles);
 
 #if USE_MPI
-    m_mainGrid->clearGhostParticles();
     exchangeGhostParticles(*m_mainGrid, *m_particles);
 
     // Updating lists in modifiers

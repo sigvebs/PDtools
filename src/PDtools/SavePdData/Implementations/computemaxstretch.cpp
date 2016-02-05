@@ -24,7 +24,8 @@ void ComputeMaxStretch::update(const int id_i, const int i)
     for(auto &con:PDconnections)
     {
         double s = con.second[m_indexStretch];
-        sMax = max(fabs(s), sMax);
+        sMax = max(s, sMax);
+//        sMax = max(fabs(s), sMax);
     }
     (*m_data)(i, m_indexMaxStretch) = sMax;
 }

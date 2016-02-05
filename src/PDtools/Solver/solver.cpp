@@ -47,8 +47,7 @@ Solver::Solver()
 }
 //------------------------------------------------------------------------------
 Solver::~Solver()
-{ 
-    
+{     
     for(Force *force:m_oneBodyForces)
     {
       delete force;

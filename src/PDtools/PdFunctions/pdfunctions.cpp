@@ -778,6 +778,7 @@ vector<int> optimalConfigurationCores(const int nCores,
                                       const vector<double> &domain,
                                       const int dim)
 {
+
     vector<int> optimal = {1, 1, 1}; // default
     vector<double> nOptimal= {0, 0, 0};
     double totalLength = 0.;
@@ -806,7 +807,9 @@ vector<int> optimalConfigurationCores(const int nCores,
     {
         double sigma = 0;
         for(int d=0; d<dim; d++)
+        {
             sigma += pow(n[d] - nOptimal[d], 2);
+        }
         sigma = sqrt(sigma);
         if(sigma < lowSigma)
         {
@@ -821,6 +824,25 @@ vector<int> optimalConfigurationCores(const int nCores,
         optimal[d] = coreConfigurations[optimalConfiguration][d];
     }
 
+#if 0
+    for(int d=0; d<dim; d++)
+    {
+        cout << nOptimal[d] << " ";
+    }
+    cout << endl;
+
+    for(auto n:coreConfigurations)
+    {
+        double sigma = 0;
+        for(int d=0; d<dim; d++)
+        {
+            sigma += pow(n[d] - nOptimal[d], 2);
+            cout << n[d] << "\t";
+        }
+        sigma = sqrt(sigma);
+        cout << " \t s:" << sigma << endl;
+    }
+#endif
     return optimal;
 }
 //------------------------------------------------------------------------------

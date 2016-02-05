@@ -3,6 +3,7 @@
 
 #include "force.h"
 #include "PdForces/pd_bondforce.h"
+#include "PdForces/pd_dampenedbondforce.h"
 #include "PdForces/pd_pmb.h"
 #include "PdForces/pd_osp.h"
 #include "PdForces/pd_lps.h"

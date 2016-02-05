@@ -15,12 +15,6 @@ CalculateStress::CalculateStress(vector<Force *> &forces):
     }
 }
 //------------------------------------------------------------------------------
-
-CalculateStress::~CalculateStress()
-{
-
-}
-//------------------------------------------------------------------------------
 void CalculateStress::initialize()
 {
     switch(m_dim)
@@ -49,17 +43,15 @@ void CalculateStress::initialize()
 //------------------------------------------------------------------------------
 void CalculateStress::clean()
 {
-    const ivec &colToId = m_particles->colToId();
     const int nParticles = m_particles->nParticles();// + m_particles->nGhostParticles();
     arma::mat & data = m_particles->data();
 
-    // Zeroing out the stress
+    // Zeroing the stress
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
     for(int i=0; i<nParticles; i++)
     {
-        const int id_i = colToId(i);
         for(int s=0; s<m_nStressElements; s++)
         {
             data(i, m_indexStress[s]) = 0;
@@ -71,7 +63,6 @@ void CalculateStress::update()
 {
     const ivec &colToId = m_particles->colToId();
     const int nParticles = m_particles->nParticles();
-//    arma::mat & data = m_particles->data();
 
     // Updating single particle states
 #ifdef USE_OPENMP

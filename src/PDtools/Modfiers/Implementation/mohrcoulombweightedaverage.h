@@ -1,5 +1,6 @@
-#ifndef MOHRCOULOMBFRACTURE_H
-#define MOHRCOULOMBFRACTURE_H
+#ifndef MOHRCOULOMBWEIGHTEDAVERAGE_H
+#define MOHRCOULOMBWEIGHTEDAVERAGE_H
+
 
 #include <unordered_map>
 #include "PDtools/Modfiers/modifier.h"
@@ -7,10 +8,11 @@
 namespace PDtools
 {
 //------------------------------------------------------------------------------
-class MohrCoulombFracture : public Modifier
+class MohrCoulombWeightedAverage : public Modifier
 {
 public:
-    MohrCoulombFracture(double mu, double C, double T, int dim);
+    MohrCoulombWeightedAverage(double mu, double C, double T, int dim);
+
     virtual void registerParticleParameters();
     virtual void initialize();
     virtual void evaluateStepOne(const int id_i, const int i);
@@ -22,13 +24,13 @@ private:
     double m_phi;
     arma::mat *m_data;
     std::unordered_map<int, int> * m_idToCol;
+    double m_weights[2];
 
     int m_indexStress[6];
     int m_dim;
     int m_indexUnbreakable;
     int m_indexConnected;
-    int m_indexCompute;
 };
 //------------------------------------------------------------------------------
 }
-#endif // MOHRCOULOMBFRACTURE_H
+#endif // MOHRCOULOMBWEIGHTEDAVERAGE_H

@@ -108,6 +108,9 @@ public:
 
     virtual std::vector<string>
     getSurfaceCorrectionGhostParameters();
+
+    vector<pair<string, int> >
+    getNeededProperties() const;
 };
 //------------------------------------------------------------------------------
 }

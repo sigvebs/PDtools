@@ -1,5 +1,5 @@
-#ifndef MOHRCOULOMBFRACTURE_H
-#define MOHRCOULOMBFRACTURE_H
+#ifndef MOHRCOULOMBAVERAGE_H
+#define MOHRCOULOMBAVERAGE_H
 
 #include <unordered_map>
 #include "PDtools/Modfiers/modifier.h"
@@ -7,13 +7,16 @@
 namespace PDtools
 {
 //------------------------------------------------------------------------------
-class MohrCoulombFracture : public Modifier
+class MohrCoulombMax : public Modifier
 {
 public:
-    MohrCoulombFracture(double mu, double C, double T, int dim);
+    MohrCoulombMax(double mu, double C, double T, int dim);
+
     virtual void registerParticleParameters();
     virtual void initialize();
     virtual void evaluateStepOne(const int id_i, const int i);
+    virtual void evaluateStepTwo(const int id_i, const int i);
+    virtual void evaluateStepTwo();
 
 private:
     double m_C;
@@ -28,7 +31,10 @@ private:
     int m_indexUnbreakable;
     int m_indexConnected;
     int m_indexCompute;
+    int m_indexStressCenter;
+    int m_indexBroken;
+    bool m_broken;
 };
 //------------------------------------------------------------------------------
 }
-#endif // MOHRCOULOMBFRACTURE_H
+#endif // MOHRCOULOMBAVERAGE_H

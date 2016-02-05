@@ -18,7 +18,7 @@ MoveParticles::MoveParticles(double velAmplitude,
     m_boundaryOrientation = boundaryOrientation;
     m_dt = dt;
     m_isStatic = isStatic;
-    m_time = 1;
+    m_time = dt;
     m_usingUnbreakableBorder = true;
 }
 //------------------------------------------------------------------------------
@@ -37,20 +37,31 @@ void MoveParticles::evaluateStepOne()
 {
     const unordered_map<int, int> &idToCol = m_particles->idToCol();
     mat & r = m_particles->r();
-    const mat & r0 = m_particles->r0();
+//    const mat & r0 = m_particles->r0();
     const double dr = m_time*m_velAmplitude;
+    arma::mat & v = m_particles->v();
+    arma::mat & F = m_particles->F();
+    arma::mat & Fold = m_particles->Fold();
 
     for(const int &id:m_localParticleIds)
     {
         const int i =  idToCol.at(id);
+//        for(int d=0;d<DIM; d++)
+//        {
+//            r(i, d) = r0(i, d);
+//        }
+//        r(i, m_boundaryOrientation) = r0(i, m_boundaryOrientation) + dr;
+        r(i, m_boundaryOrientation) += dr;
+
         for(int d=0;d<DIM; d++)
         {
-            r(i, d) = r0(i, d);
+            v(i, d) = 0.0;
+            F(i, d) = 0.0;
+            Fold(i, d) = 0.0;
         }
-        r(i, m_boundaryOrientation) = r0(i, m_boundaryOrientation) + dr;
     }
-
-    m_time += m_dt;
+//    cout << dr << " " << m_time << " " << m_velAmplitude << " " << m_dt <<  endl;
+//    m_time += m_dt;
 }
 //------------------------------------------------------------------------------
 void MoveParticles::initialize()

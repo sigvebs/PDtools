@@ -12,7 +12,6 @@ using namespace std;
 using namespace arma;
 
 // Forward declerations
-class Domain;
 class Particles;
 class PD_Particles;
 
@@ -102,6 +101,17 @@ public:
     const vector<int> &
     nGridId();
 
+    vector<double>
+    periodicShift() const;
+    void
+    setPeriodicShift(double shift, int d);
+
+    int
+    periodicNeighbourRank() const;
+
+    void
+    setPeriodicNeighbourRank(const int periodicNeighbourRank);
+
 protected:
     int m_id;
     vector<int> m_nGridId;
@@ -111,6 +121,8 @@ protected:
     vector<pair<int,int>> m_particles;
     vector<GridPoint*> m_neighbours;
     vector<int> m_neighbourRanks;
+    int m_periodicNeighbourRank;
+    vector<double> m_periodicShift = {0, 0, 0};
 };
 //------------------------------------------------------------------------------
 class Grid
@@ -129,11 +141,15 @@ protected:
     std::unordered_map<int, GridPoint*> m_gridpoints;
     std::vector<int> m_myGridPoints;
     std::vector<int> m_ghostGridIds;
+    std::vector<int> m_periodicSendGridIds;
+    std::vector<int> m_periodicReceiveGridIds;
     std::vector<int> m_neighbouringCores;
     std::vector<double> m_boundaryLength;
     std::vector<pair<double, double>> m_boundary;
+    std::vector<pair<double, double>> m_originalBoundary;
     arma::ivec3 m_periodicBoundaries = {0, 0, 0};
     int m_counter = 0;
+    vector<int> m_nCpuGrid;
 
     vector<int> m_boundaryGridPoints;
     enum m_enumCoordinates{X, Y, Z};
@@ -155,6 +171,7 @@ public:
     setNeighbours();
     int
     gridId(const vec3 & r) const;
+    int gridIdN(const vector<int> &nId) const;
     int
     particlesBelongsTo(const vec3 & r) const;
     void
@@ -228,6 +245,21 @@ public:
 
     const vector<pair<double, double>> &
     boundary();
+
+    vector<int>
+    nCpuGrid() const;
+
+    void
+    setBoundaryGrid();
+
+    std::vector<int>
+    periodicSendGridIds() const;
+
+    std::vector<int>
+    periodicReceiveGridIds() const;
+
+    std::vector<pair<double, double> >
+    originalBoundary() const;
 };
 //------------------------------------------------------------------------------
 // Inline functions
