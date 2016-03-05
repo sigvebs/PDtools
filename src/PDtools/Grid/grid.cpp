@@ -172,7 +172,7 @@ void Grid::createGrid()
     m_nGridArma = {0, 0, 0};
     for(int d=0;d<DIM; d++)
     {
-        m_nGridArma = m_nGrid[d];
+        m_nGridArma(d) = m_nGrid[d];
     }
 }
 //------------------------------------------------------------------------------

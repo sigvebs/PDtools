@@ -10,15 +10,11 @@ MohrCoulombWeightedAverage::MohrCoulombWeightedAverage(double mu, double C, doub
     m_C(C), m_T(T), m_dim(dim)
 {
     m_phi = mu*M_PI/180.;
-    //    m_d = pow(sqrt(1 + mu*mu) + mu, 2);
 
     m_d = tan(m_phi);
-    //    m_d *= m_d;
-    //    m_d =  (sqrt(1 + mu*mu) - mu)/(sqrt(1 + mu*mu) + mu);
     m_neededProperties= {pair<string, int>("stress",1)};
 
     m_C = 0.5*C*(1./(sqrt(m_d*m_d + 1.) + m_d));
-    //    m_C = C;
 
     m_weights[0] = 1.;
     m_weights[1] = 50.;
@@ -124,11 +120,11 @@ void MohrCoulombWeightedAverage::evaluateStepOne(const int id_i, const int i)
             const double shear = fabs(0.5*(p_1 - p_2)*sin_theta);
             const double normal = 0.5*(p_1 + p_2) + 0.5*(p_1 - p_2)*cos_theta;
 
-//            if(shear >= fabs(m_C - m_d*normal) && normal < 0)
-//            {
-//                con.second[m_indexConnected] = 0;
-//            }
-//            else
+            if(shear >= fabs(m_C - m_d*normal) && normal < 0)
+            {
+                con.second[m_indexConnected] = 0;
+            }
+            else
             if(p_2 >= m_T && normal > 0)
             {
                 con.second[m_indexConnected] = 0;

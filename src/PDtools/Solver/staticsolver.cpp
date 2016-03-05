@@ -214,7 +214,7 @@ void StaticSolver::createStiffnessMatrix()
 
             const double c_j = m_data(b, m_indexMicromodulus);
             const double vol_j = m_data(b, m_indexVolume);
-            const double dr0         = con.second[m_indexDr0];
+            const double dr0 = con.second[m_indexDr0];
             const double volumeScaling   = con.second[m_indexVolumeScaling];
             const double c_ab = 0.5*(c_i + c_j);
 

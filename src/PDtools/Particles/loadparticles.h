@@ -23,7 +23,7 @@ protected:
     string m_format;
     bool m_binary;
     const vector<string> basicParameters = {"id", "x", "y", "z"};
-    bool m_useLegacyFormat;
+    bool m_useLegacyFormat = false;
     vector<pair<int, int>> data_config_mapping;
     int m_timeStep = 0;
     int m_nColumns;
@@ -31,6 +31,9 @@ protected:
 
     virtual unordered_map <string, int>
     read_xyzHeader(fstream &data);
+
+    virtual unordered_map <string, int>
+    read_lmpHeader(fstream &data);
 
     virtual unordered_map <string, int>
     read_lmpBinaryHeader(FILE *data, unordered_map<string, int> parameters);

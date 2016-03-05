@@ -142,7 +142,7 @@ void PD_bondForce::calculatePotentialEnergy(const int id_i, const int i, int ind
 }
 //------------------------------------------------------------------------------
 void PD_bondForce::calculateStress(const int id_i, const int i, const int (&indexStress)[6])
-{
+{    
     const double c_i = m_data(i, m_indexMicromodulus);
 #if USE_N3L
     const double vol_i = m_data(i, m_indexVolume);
@@ -290,7 +290,7 @@ double PD_bondForce::calculateStableMass(const int id_a, const int a, double dt)
         }
     }
 
-    return 4*0.25*pow(dt, 2)*stiffness;
+    return 4.*0.25*pow(dt, 2)*stiffness;
 }
 //------------------------------------------------------------------------------
 void PD_bondForce::initialize(double E, double nu, double delta, int dim, double h, double lc)

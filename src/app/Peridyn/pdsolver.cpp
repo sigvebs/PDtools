@@ -51,7 +51,6 @@ PdSolver::PdSolver(string cfgPath, int myRank, int nMpiNodes):
     {
         isRoot = true;
     }
-
 }
 //------------------------------------------------------------------------------
 PdSolver::~PdSolver()
@@ -204,6 +203,7 @@ int PdSolver::initialize()
             r0(i, d) = r(i, d);
         }
     }
+
     //--------------------------------------------------------------------------
     // Setting particles parameters
     //--------------------------------------------------------------------------
@@ -290,6 +290,7 @@ int PdSolver::initialize()
         adrSolver->setErrorThreshold(errorThreshold);
         solver = adrSolver;
     }
+
     else if(boost::iequals(solverType, "dynamic ADR"))
     {
         solver = new dynamicADR();
@@ -352,7 +353,7 @@ int PdSolver::initialize()
                      << type << endl;
                 exit(EXIT_FAILURE);
             }
-            forces.push_back(new PD_dampenedBondForce(m_particles, dt, c));
+            forces.push_back(new PD_dampenedBondForce(m_particles, c));
         }
         else if(boost::iequals(type, "LPS"))
         {
@@ -444,7 +445,6 @@ int PdSolver::initialize()
             cout << f << ", ";
         cout << endl;
     }
-
     //--------------------------------------------------------------------------
     // Recalcuating particle properties
     //--------------------------------------------------------------------------
@@ -714,6 +714,59 @@ int PdSolver::initialize()
                 spModifiers.push_back(failureCriterion);
             }
         }
+        else if(boost::iequals(type, "Mohr-Coulomb node split"))
+        {
+            double mu, C, T;
+
+            if (!cfg_modifiers[i].lookupValue("mu", mu)||
+                    !cfg_modifiers[i].lookupValue("C", C) ||
+                    !cfg_modifiers[i].lookupValue("T", T) )
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            C /= E0;
+            T /= E0;
+            if(boost::iequals(solverType, "ADR"))
+            {
+                cerr << "ADR not implemented '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            else
+            {
+                MohrCoulombNodeSplit * failureCriterion = new MohrCoulombNodeSplit(mu, C, T, dim);
+                spModifiers.push_back(failureCriterion);
+            }
+        }
+        else if(boost::iequals(type, "Mohr-Coulomb max connected"))
+        {
+            double mu, C, T;
+
+            if (!cfg_modifiers[i].lookupValue("mu", mu)||
+                    !cfg_modifiers[i].lookupValue("C", C) ||
+                    !cfg_modifiers[i].lookupValue("T", T) )
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            C /= E0;
+            T /= E0;
+            if(boost::iequals(solverType, "ADR"))
+            {
+                cerr << "ADR not implemented '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            else
+            {
+                MohrCoulomMaxConnected * failureCriterion = new MohrCoulomMaxConnected(mu, C, T, dim);
+                spModifiers.push_back(failureCriterion);
+            }
+
+        }
         else if(boost::iequals(type, "Mohr-Coulomb weighted average"))
         {
             double mu, C, T;
@@ -728,6 +781,7 @@ int PdSolver::initialize()
             }
             C /= E0;
             T /= E0;
+
             if(boost::iequals(solverType, "ADR"))
             {
 //                ADRmohrCoulombFracture * failureCriterion = new ADRmohrCoulombFracture(mu, C, T, dim);
@@ -850,6 +904,7 @@ int PdSolver::initialize()
     for(Modifier* mod: modifiers)
     {
         mod->setDim(dim);
+        mod->setGrid(&m_grid);
         mod->setParticles(m_particles);
         mod->registerParticleParameters();
         const auto & modNeededPorperties = mod->neededProperties();
@@ -857,7 +912,6 @@ int PdSolver::initialize()
         {
             neededProperties.push_back(property);
         }
-
 #if USE_MPI
         vector<string> additionGhostParameters = mod->initalGhostDependencies();
         for(const string &param:additionGhostParameters)
@@ -869,6 +923,7 @@ int PdSolver::initialize()
     for(Modifier* mod: spModifiers)
     {
         mod->setDim(dim);
+        mod->setGrid(&m_grid);
         mod->setParticles(m_particles);
         mod->registerParticleParameters();
         const auto & modNeededPorperties = mod->neededProperties();
@@ -888,6 +943,7 @@ int PdSolver::initialize()
     for(Modifier* mod: qsModifiers)
     {
         mod->setDim(dim);
+        mod->setGrid(&m_grid);
         mod->setParticles(m_particles);
         mod->registerParticleParameters();
         const auto & modNeededPorperties = mod->neededProperties();
@@ -931,6 +987,7 @@ int PdSolver::initialize()
             cout << mod << ", ";
         cout << endl;
     }
+
     //--------------------------------------------------------------------------
     // Setting additional initial conditions
     //--------------------------------------------------------------------------
@@ -1096,8 +1153,8 @@ int PdSolver::initialize()
     solver->setSaveInterval(saveFrequency);
     solver->setSaveParticles(saveParticles);
 
-    const auto & saveNeededPorperties = saveParticles->neededProperties();
-    for(const auto & property:saveNeededPorperties)
+    const auto & saveNeededProperties = saveParticles->neededProperties();
+    for(const auto & property:saveNeededProperties)
     {
         neededProperties.push_back(property);
     }
@@ -1133,9 +1190,21 @@ int PdSolver::initialize()
             property->setUpdateFrquency(updateFrquency);
             calcProperties.push_back(property);
         }
-        if(boost::iequals(type, "stress"))
+        else if(boost::iequals(type, "stress"))
         {
             CalculateProperty *property = new CalculateStress(forces);
+            property->setUpdateFrquency(updateFrquency);
+            calcProperties.push_back(property);
+        }
+        else if(boost::iequals(type, "strain"))
+        {
+            CalculateProperty *property = new CalculateStrain(delta, domain);
+            property->setUpdateFrquency(updateFrquency);
+            calcProperties.push_back(property);
+        }
+        else if(boost::iequals(type, "damage"))
+        {
+            CalculateProperty *property = new CalculateDamage();
             property->setUpdateFrquency(updateFrquency);
             calcProperties.push_back(property);
         }
@@ -1147,6 +1216,7 @@ int PdSolver::initialize()
         }
         computeProperties.push_back(type);
     }
+
 
     for(auto prop:calcProperties)
     {
@@ -1164,8 +1234,6 @@ int PdSolver::initialize()
             cout << f << ", ";
         cout << endl;
     }
-
-
     //--------------------------------------------------------------------------
 #if USE_MPI
     if(isRoot)
@@ -1183,8 +1251,6 @@ int PdSolver::initialize()
     double nSec = timer.toc();
     if(isRoot)
         cout << "Time: " << nSec << "s" << endl;
-
-
 
     return 0;
 }

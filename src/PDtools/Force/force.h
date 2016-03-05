@@ -26,6 +26,7 @@ protected:
     int m_counter = 0;
 
     arma::mat & m_r;
+    arma::mat & m_v;
     arma::mat & m_r0;
     arma::mat & m_F;
     arma::mat & m_data;

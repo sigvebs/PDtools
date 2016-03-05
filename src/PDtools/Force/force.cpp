@@ -14,6 +14,7 @@ vector<pair<string, int> > Force::getNeededProperties() const
 Force::Force(PD_Particles &particles, string _type):
     m_particles(particles),
     m_r(m_particles.r()),
+    m_v(m_particles.v()),
     m_r0(m_particles.r0()),
     m_F(m_particles.F()),
     m_data(m_particles.data()),

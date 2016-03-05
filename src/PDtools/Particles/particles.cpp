@@ -39,6 +39,21 @@ const vector<string> &Particles::ghostParametersString()
     return m_ghostParametersString;
 }
 //------------------------------------------------------------------------------
+int Particles::newId()
+{
+    return m_newId++;
+}
+//------------------------------------------------------------------------------
+int Particles::needGhostVelocity() const
+{
+    return m_needGhostVelocity;
+}
+//------------------------------------------------------------------------------
+void Particles::setNeedGhostVelocity(int needGhostVelocity)
+{
+    m_needGhostVelocity = needGhostVelocity;
+}
+//------------------------------------------------------------------------------
 Particles::Particles()
 {
 
@@ -61,6 +76,7 @@ void Particles::initializeMatrices()
     m_data = mat(PARTICLE_BUFFER*m_maxParticles, PARAMETER_BUFFER);
     m_colToId = ivec(PARTICLE_BUFFER*m_maxParticles);
     m_isStatic = zeros<ivec>(PARTICLE_BUFFER*m_maxParticles);
+    m_newId = m_maxParticles;
 }
 //------------------------------------------------------------------------------
 const string &Particles::type() const
@@ -118,7 +134,10 @@ void Particles::deleteParticleById(const int deleteId)
 
     m_colToId[deleteCol] = moveId;
     m_idToCol[moveId] = deleteCol;
+    m_idToCol.erase(deleteId);
     m_nParticles--;
+//    cout << "delete: " << deleteId << " col:" << deleteCol;
+//    cout << "move: " << moveId << " col:" << moveCol;
 }
 //------------------------------------------------------------------------------
 unordered_map<string, int> &Particles::parameters()

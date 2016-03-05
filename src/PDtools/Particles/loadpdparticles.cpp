@@ -114,15 +114,15 @@ void LoadPdParticles::loadBody(PD_Particles &particles,
         boost::split(lineSplit, line, boost::is_any_of("\t "), boost::token_compress_on);
 
         // Collecting the data
+        int id;
+
         if(idIsset)
         {
-            idToCol[stoi(lineSplit[idPos])] = j;
-            get_id[j] = stoi(lineSplit[idPos]);
+            id = stoi(lineSplit[idPos]);
         }
         else
         {
-            idToCol[j] = j;
-            get_id[j] = j;
+            id = j;
         }
 
         if(useGrid)
@@ -135,8 +135,12 @@ void LoadPdParticles::loadBody(PD_Particles &particles,
 
             const int cpuId = m_grid->particlesBelongsTo(r_local/L0);
             if(myRank != cpuId)
+            {
                 continue;
+            }
         }
+        idToCol[id] = j;
+        get_id[j] = id;
 
         for(const pair<int, int> & pc:position_config)
         {
@@ -282,7 +286,7 @@ PD_Particles load_pd(string loadPath)
     PD_Particles particles = loadParticles.load(loadPath, type);
 
     particles.type(type);
-    return particles;
+    return move(particles);
 }
 //------------------------------------------------------------------------------
 PD_Particles load_pd(string loadPath, unordered_map<string, double> particleParameters)
@@ -309,9 +313,10 @@ PD_Particles load_pd(string loadPath, Grid &grid)
     const string type = lineSplit.back();
 
     PD_Particles particles = loadParticles.load(loadPath, type);
-
+    double test = sizeof(particles);
+    cout << test << endl;
     particles.type(type);
-    return particles;
+    return move(particles);
 }
 //------------------------------------------------------------------------------
 }

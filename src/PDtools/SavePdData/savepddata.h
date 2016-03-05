@@ -4,9 +4,8 @@
 #include <vector>
 #include <iostream>
 #include <armadillo>
-#include "PDtools/Particles/pd_particles.h"
-#include "PDtools/Particles/saveparticles.h"
-//#include <boost/filesystem.hpp>
+#include "Particles/pd_particles.h"
+#include "Particles/saveparticles.h"
 #ifdef USE_MPI
 #include <mpi.h>
 #endif

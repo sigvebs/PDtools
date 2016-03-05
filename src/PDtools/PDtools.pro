@@ -66,7 +66,12 @@ HEADERS += \
     Modfiers/Implementation/mohrcoulombmax.h \
     Modfiers/Implementation/mohrcoulombmaxfracture.h \
     Modfiers/Implementation/mohrcoulombweightedaverage.h \
-    Force/PdForces/pd_dampenedbondforce.h
+    Force/PdForces/pd_dampenedbondforce.h \
+    Modfiers/Implementation/dumpstate.h \
+    Modfiers/Implementation/mohrcoulombnodesplit.h \
+    Modfiers/Implementation/mohrcoulommaxconnected.h \
+    CalculateProperties/Implementation/calculatestrain.h \
+    CalculateProperties/Implementation/calculatedamage.h
 
 SOURCES += \
     Grid/grid.cpp \
@@ -123,17 +128,22 @@ SOURCES += \
     Modfiers/Implementation/mohrcoulombmax.cpp \
     Modfiers/Implementation/mohrcoulombmaxfracture.cpp \
     Modfiers/Implementation/mohrcoulombweightedaverage.cpp \
-    Force/PdForces/pd_dampenedbondforce.cpp
+    Force/PdForces/pd_dampenedbondforce.cpp \
+    Modfiers/Implementation/dumpstate.cpp \
+    Modfiers/Implementation/mohrcoulombnodesplit.cpp \
+    Modfiers/Implementation/mohrcoulommaxconnected.cpp \
+    CalculateProperties/Implementation/calculatestrain.cpp \
+    CalculateProperties/Implementation/calculatedamage.cpp
 
-#headers.path    = $$OUT_PWD
-#headers.files   += $$HEADERS
-#INSTALLS       += headers
+#eval(headers.path    = $$OUT_PWD)
+#eval(headers.files   += $$HEADERS)
+#eval(INSTALLS       += headers)
 
 INSTALL_PREFIX = $$OUT_PWD
 
 for(header, HEADERS) {
-  path = $${INSTALL_PREFIX}/$${dirname(header)}
-  eval(headers_$${path}.files += $$header)
-  eval(headers_$${path}.path = $$path)
-  eval(INSTALLS *= headers_$${path})
+    path = $${INSTALL_PREFIX}/$${dirname(header)}
+    eval(headers_$${path}.files += $$header)
+    eval(headers_$${path}.path = $$path)
+    eval(INSTALLS *= headers_$${path})
 }

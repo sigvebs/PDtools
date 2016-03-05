@@ -1,5 +1,6 @@
-#ifndef MOHRCOULOMBAVERAGE_H
-#define MOHRCOULOMBAVERAGE_H
+#ifndef MOHRCOULOMBNODESPLIT_H
+#define MOHRCOULOMBNODESPLIT_H
+
 
 #include <unordered_map>
 #include "PDtools/Modfiers/modifier.h"
@@ -7,13 +8,14 @@
 namespace PDtools
 {
 //------------------------------------------------------------------------------
-class MohrCoulombMax : public Modifier
+class MohrCoulombNodeSplit : public Modifier
 {
 public:
-    MohrCoulombMax(double mu, double C, double T, int dim);
+    MohrCoulombNodeSplit(double mu, double C, double T, int dim);
 
     virtual void registerParticleParameters();
     virtual void initialize();
+    virtual void evaluateStepOne();
     virtual void evaluateStepOne(const int id_i, const int i);
     virtual void evaluateStepTwo(const int id_i, const int i);
     virtual void evaluateStepTwo();
@@ -33,10 +35,18 @@ private:
     int m_indexUnbreakable;
     int m_indexConnected;
     int m_indexCompute;
-//    int m_indexStressCenter;
+    int m_indexNewConnectionId_1;
+    int m_indexNewConnectionId_2;
+    int m_indexNormal[3];
     int m_indexBroken;
+    int m_indexRadius;
+    int m_indexVolume;
+    int m_indexDr0;
     bool m_broken;
+    vector<int> m_toBeDeleted;
+
+    void copyParticleTo(int id_to, int old_col, int new_col);
 };
 //------------------------------------------------------------------------------
 }
-#endif // MOHRCOULOMBAVERAGE_H
+#endif // MOHRCOULOMBNODESPLIT_H

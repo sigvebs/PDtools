@@ -76,8 +76,7 @@ T_particles T_LoadParticles<T_particles>::load(string loadPath,
         }
         else if(m_format == "lmp")
         {
-            cerr << "lmp not implemented" << endl;
-            throw 10;
+            parameters = read_lmpHeader(data);
         }
         else
         {
@@ -109,9 +108,6 @@ unordered_map <std::string, int> T_LoadParticles<T_particles>::read_xyzHeader(fs
     boost::regex rr("([A-Za-z_]+)");
     boost::sregex_iterator next(line.begin(), line.end(), rr);
     boost::sregex_iterator end;
-//    std::regex rr("([A-Za-z_]+)");
-//    std::sregex_iterator next(line.begin(), line.end(), rr);
-//    std::sregex_iterator end;
 
     unordered_map <std::string, int> parameters;
 
@@ -123,6 +119,60 @@ unordered_map <std::string, int> T_LoadParticles<T_particles>::read_xyzHeader(fs
         parameters[match.str()] = position;
         position++;
         next++;
+    }
+
+    return parameters;
+}
+//------------------------------------------------------------------------------
+template <class T_particles>
+unordered_map <std::string, int> T_LoadParticles<T_particles>::read_lmpHeader(fstream &data)
+{
+    string line;
+
+    // Skipping the timestep
+    getline(data, line);
+    getline(data, line);
+
+    // Reading the number of particles
+    getline(data, line);
+    getline(data, line);
+    m_nParticles = stoi(line);
+
+    // Ignoring all other data exepct data parameters
+    const int maxHeadersteps = 100;
+    unordered_map <std::string, int> parameters;
+    bool notFound = true;
+
+    for(int n=0; n<maxHeadersteps; n++)
+    {
+        getline(data, line);
+        string start = line.substr(0, 12);
+        if(boost::iequals(start, "ITEM: ATOMS "))
+        {
+            line = line.substr(12, -1); // Removing 'ITEM: ATOMS '
+
+            // Reading the variables
+            boost::regex rr("([A-Za-z_]+)");
+            boost::sregex_iterator next(line.begin(), line.end(), rr);
+            boost::sregex_iterator end;
+
+            int position = 0;
+            while(next != end)
+            {
+                boost::smatch match = *next;
+                parameters[match.str()] = position;
+                position++;
+                next++;
+            }
+            notFound = false;
+            break;
+        }
+    }
+
+    if(notFound)
+    {
+        cerr << "Error reading LAMMPS header file" << endl;
+        exit(EXIT_FAILURE);
     }
 
     return parameters;
@@ -184,6 +234,7 @@ unordered_map<string, int> T_LoadParticles<T_particles>::read_lmpBinaryHeader(
     m_chunkLength = chunkLength;
 
     unordered_map<string, int> empty;
+
     return empty;
 }
 //------------------------------------------------------------------------------

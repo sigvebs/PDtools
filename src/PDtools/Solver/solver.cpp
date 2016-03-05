@@ -104,6 +104,10 @@ void Solver::modifiersStepOne()
         modifier->evaluateStepOne();
     }
 
+    for(Modifier *modifier:m_spModifiers)
+    {
+        modifier->evaluateStepOne();
+    }
     const ivec &colToId = m_particles->colToId();
     const int nParticles =  m_particles->nParticles();
     if(!m_spModifiers.empty())
@@ -131,6 +135,11 @@ void Solver::modifiersStepOne()
                 modifier->updateStepOne(id, i);
             }
         }
+    }
+
+    for(Modifier *modifier:m_spModifiers)
+    {
+        modifier->evaluateStepOnePost();
     }
 }
 //------------------------------------------------------------------------------

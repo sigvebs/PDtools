@@ -2,6 +2,7 @@
 #define MODIFIER_H
 
 #include <armadillo>
+#include "PDtools/Grid/grid.h"
 
 using namespace std;
 
@@ -15,6 +16,7 @@ class Modifier
 {
 protected:
     PD_Particles *m_particles;
+    Grid *m_grid;
     bool m_state = false;
     vector<int> m_localParticleIds;
     std::vector<std::string> m_initialGhostParameters;
@@ -37,6 +39,8 @@ public:
     evaluateStepTwo(const int id, const int i);
     virtual void
     evaluateStepOne();
+    virtual void
+    evaluateStepOnePost();
     virtual void
     evaluateStepTwo();
     virtual void
@@ -66,6 +70,8 @@ public:
     void
     setDim(int dim);
 
+    void
+    setGrid(Grid *grid);
 };
 //------------------------------------------------------------------------------
 }

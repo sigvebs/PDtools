@@ -38,6 +38,8 @@ protected:
     vector<string> m_ghostParametersString;
     vector<int> m_ghostParameters;
     int m_nGhostParticles = 0;
+    int m_newId;
+    int m_needGhostVelocity = 0;
 
     enum ErrorCodes
     {
@@ -137,6 +139,10 @@ public:
     ghostParameters();
     const vector<string> &
     ghostParametersString();
+
+    int newId();
+    int needGhostVelocity() const;
+    void setNeedGhostVelocity(int needGhostVelocity);
 };
 //------------------------------------------------------------------------------
 // Inline functions

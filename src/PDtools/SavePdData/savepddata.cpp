@@ -1,7 +1,7 @@
 #include "savepddata.h"
 
 #include <boost/filesystem.hpp>
-#include "PDtools/SavePdData/Implementations/computedamage.h"
+//#include "PDtools/SavePdData/Implementations/computedamage.h"
 #include "PDtools/SavePdData/Implementations/computekineticenergy.h"
 #include "PDtools/SavePdData/Implementations/computepotentialenergy.h"
 #include "PDtools/SavePdData/Implementations/computemaxstretch.h"
@@ -47,7 +47,7 @@ void SavePdData::initialize()
     {
         if(param == "damage")
         {
-            m_computeProperties.push_back(new ComputeDamage(*m_particles));
+            m_neededProperties.push_back(pair<string, int>("damage", m_updateFrquency));
             m_saveparam_scale.push_back(std::pair<std::string, double>("damage", 1.));
         }
         if(param == "max_stretch")
@@ -115,6 +115,12 @@ void SavePdData::initialize()
             m_saveparam_scale.push_back(std::pair<std::string, double>(param, m_E0));
             m_neededProperties.push_back(pair<string, int>("stress", m_updateFrquency));
         }
+        else if(   param == "e_xx" || param == "e_yy" || param == "e_zz"
+                || param == "e_xy" || param == "e_xz" || param == "e_yz")
+        {
+            m_saveparam_scale.push_back(std::pair<std::string, double>(param, 1));
+            m_neededProperties.push_back(pair<string, int>("strain", m_updateFrquency));
+        }
         else
         {
             if(!m_particles->hasParameter(param))
@@ -130,13 +136,14 @@ void SavePdData::initialize()
     // Adding the stress parameters
     if(computeStress)
     {
-        if(m_dim >= 1)
+        if(m_dim == 1)
         {
             m_saveParameters.push_back("s_xx");
             m_saveparam_scale.push_back(std::pair<std::string, double>("s_xx", m_E0));
         }
-        if(m_dim >= 2)
+        if(m_dim == 2)
         {
+            m_saveParameters.push_back("s_xx");
             m_saveParameters.push_back("s_yy");
             m_saveParameters.push_back("s_xy");
             m_saveparam_scale.push_back(std::pair<std::string, double>("s_xx", m_E0));
@@ -145,14 +152,21 @@ void SavePdData::initialize()
         }
         if(m_dim == 3)
         {
+            m_saveParameters.push_back("s_xx");
+            m_saveParameters.push_back("s_yy");
+            m_saveParameters.push_back("s_xy");
             m_saveParameters.push_back("s_zz");
             m_saveParameters.push_back("s_xz");
             m_saveParameters.push_back("s_yz");
+            m_saveparam_scale.push_back(std::pair<std::string, double>("s_xx", m_E0));
+            m_saveparam_scale.push_back(std::pair<std::string, double>("s_yy", m_E0));
+            m_saveparam_scale.push_back(std::pair<std::string, double>("s_xy", m_E0));
             m_saveparam_scale.push_back(std::pair<std::string, double>("s_zz", m_E0));
             m_saveparam_scale.push_back(std::pair<std::string, double>("s_xz", m_E0));
             m_saveparam_scale.push_back(std::pair<std::string, double>("s_yz", m_E0));
         }
     }
+
 
     const ivec &colToId = m_particles->colToId();
 #ifdef USE_OPENMP

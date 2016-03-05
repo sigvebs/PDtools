@@ -122,7 +122,6 @@ LIBS *= -lboost_system -lboost_filesystem -lboost_serialization
 LIBS *= -lboost_regex
 
 linux-icc-64 {
-#    LIBS *= -lmkl_intel_lp64
     LIBS *= -lpthread
     LIBS *= -lm
 }
@@ -130,7 +129,8 @@ linux-icc-64 {
 #-------------------------------------------------------------------------------
 # Custom defines
 #-------------------------------------------------------------------------------
-DEFINES *= PARTICLE_BUFFER=1.3
+DEFINES *= PARTICLE_BUFFER=1.5
+#DEFINES *= PARTICLE_BUFFER=1.3
 DEFINES *= PARAMETER_BUFFER=30
 DEFINES *= DIM=3
 #DEFINES *= ARMA_DONT_USE_WRAPPER

@@ -20,15 +20,16 @@ ComputeDamage::~ComputeDamage()
 //------------------------------------------------------------------------------
 void ComputeDamage::update(const int id_i, const int i)
 {
-    const double maxConnections = (*m_data)(i, m_indexMaxPdConnections);
+    const vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
+    const int jnum = PDconnections.size();
+    const double maxConnections = jnum;
+//    const double maxConnections = (*m_data)(i, m_indexMaxPdConnections);
     if(maxConnections <= 0)
     {
         (*m_data)(i, m_indexDamage) = 0;
         return;
     }
 
-    const vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
-    const int jnum = PDconnections.size();
 
     double tot = 0;
     for (int jj = 0; jj < jnum; jj++)

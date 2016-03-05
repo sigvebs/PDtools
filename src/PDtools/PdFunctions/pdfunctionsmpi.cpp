@@ -39,15 +39,19 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
         }
     }
     const vector<int> & ghostParameters = particles.ghostParameters();
+    const int needVelocity = particles.needGhostVelocity();
     unordered_map<int, int>  & idToCol = particles.idToCol();
     ivec & colToId = particles.colToId();
     mat & r = particles.r();
-    //    mat & r0 = particles.r0();
+    mat & v = particles.v();
     mat & data = particles.data();
 
     // Sending the ghost particles to the other cpus
     const int nParticles = particles.nParticles();
-    const int nGhostparams = 1 + DIM + ghostParameters.size();
+    int nGhostparams = 1 + DIM + ghostParameters.size();
+    if(needVelocity)
+        nGhostparams += DIM;
+
     int nGhostParticles = particles.nGhostParticles();
 
     for(const auto& id_toNeighbours:toNeighbours)
@@ -59,17 +63,20 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
 
         for(const auto &id_col:l_p)
         {
-            const int id = id_col.first;
+            const int id_i = id_col.first;
             const int col = id_col.second;
-            ghostSend.push_back(id);
+            ghostSend.push_back(id_i);
             for(int d=0; d<DIM; d++)
             {
                 ghostSend.push_back(r(col, d));
             }
-            //            for(int d=0; d<DIM; d++)
-            //            {
-            //                ghostSend.push_back(r0(col, d));
-            //            }
+            if(needVelocity)
+            {
+                for(int d=0; d<DIM; d++)
+                {
+                    ghostSend.push_back(v(col, d));
+                }
+            }
             for(const int j:ghostParameters)
             {
                 ghostSend.push_back(data(col, j));
@@ -98,9 +105,11 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
         const int nReceiveParticles = nRecieveElements/nGhostparams;
 
         // Storing the received ghost data
-        for(int i=0; i<nReceiveParticles; i++)
+//        for(int i=0; i<nReceiveParticles; i++)
+        unsigned int j = 0;
+        while(j < nRecieveElements)
         {
-            int j = i*nGhostparams;
+//            int j = i*nGhostparams;
             const int col = nParticles + nGhostParticles;
             const int id = ghostRecieve[j++];
             idToCol[id] = col;
@@ -110,10 +119,13 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
             {
                 r(col, d) = ghostRecieve[j++];
             }
-            //            for(int d=0;d<DIM;d++)
-            //            {
-            //                r0(col, d) = ghostRecieve[j++];
-            //            }
+            if(needVelocity)
+            {
+                for(int d=0;d<DIM;d++)
+                {
+                    v(col, d) = ghostRecieve[j++];
+                }
+            }
             for(const int g:ghostParameters)
             {
                 data(col, g) = ghostRecieve[j++];
@@ -121,7 +133,7 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
 
             nGhostParticles++;
 
-            // Adding to the ghost particles to the correct grid point
+            // Adding to the ghost particle to the correct grid point
             const vec3 &l_r = r.row(col).t();
             const int gId = grid.gridId(l_r);
             const pair<int, int> id_pos(id, col);
@@ -779,10 +791,12 @@ void exchangePeriodicBoundaryParticles(Grid &grid, PD_Particles &particles)
     }
 
     const vector<int> & ghostParameters = particles.ghostParameters();
+    const int needVelocity = particles.needGhostVelocity();
     const int nPdParameters = particles.PdParameters().size();
     unordered_map<int, int>  & idToCol = particles.idToCol();
     ivec & colToId = particles.colToId();
     mat & r = particles.r();
+    mat & v = particles.v();
     mat & data = particles.data();
 
     // Sending the ghost particles to the other cpus
@@ -811,6 +825,13 @@ void exchangePeriodicBoundaryParticles(Grid &grid, PD_Particles &particles)
             for(int d=0; d<DIM; d++)
             {
                 sendData.push_back(r(i, d) + shift[d]);
+            }
+            if(needVelocity)
+            {
+                for(int d=0; d<DIM; d++)
+                {
+                    sendData.push_back(v(i, d));
+                }
             }
             for(const int j:ghostParameters)
             {
@@ -849,6 +870,13 @@ void exchangePeriodicBoundaryParticles(Grid &grid, PD_Particles &particles)
             for(int d=0;d<DIM;d++)
             {
                 r(col, d) = recieveData[j++];
+            }
+            if(needVelocity)
+            {
+                for(int d=0;d<DIM;d++)
+                {
+                    v(col, d) = recieveData[j++];
+                }
             }
             for(const int g:ghostParameters)
             {

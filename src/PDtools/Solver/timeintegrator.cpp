@@ -20,6 +20,7 @@ void TimeIntegrator::solve()
     for (int i = 0; i < m_steps; i++)
     {
         stepForward(i);
+//        cout << i << endl;
     }
 }
 //------------------------------------------------------------------------------
