@@ -40,23 +40,23 @@ ContactForce::ContactForce(PD_Particles &particles, Grid & grid, double spacing,
     m_spacing(spacing),
     m_verletUpdateFrq(verletUpdateFrq)
 {
+    m_calulateStress = true;
     m_verletRadius = 2.0*spacing;
     m_forceScaling = 10.0;
     m_forceScaling = 15.0;
     m_scaling = 0.8;
 
+    m_forceScaling = 7.0;
+    m_scaling = 0.95;
+
     m_idToCol = &m_particles.idToCol();
     m_verletListId = particles.registerVerletList("contectForce");
     particles.setVerletUpdateFreq(10);
-    m_indexMicromodulus = m_particles.getParamId("micromodulus");
+    m_indexMicromodulus = m_particles.registerParameter("micromodulus");
     m_indexRadius = m_particles.getParamId("radius");
     m_indexVolume = m_particles.getParamId("volume");
     m_indexConnected = m_particles.getPdParamId("connected");
     m_ghostParameters = {"volume", "micromodulus", "radius"};
-}
-//------------------------------------------------------------------------------
-ContactForce::~ContactForce()
-{
 }
 //------------------------------------------------------------------------------
 void ContactForce::calculateForces(const int id_i, const int i)
@@ -177,7 +177,6 @@ void ContactForce::updateState()
 {
     if (m_steps % m_verletUpdateFrq == 0)
     {
-//        cout << "steps = " << m_steps << " " << m_verletUpdateFrq << endl;
         updateVerletList("contectForce", m_particles, m_grid, m_verletRadius);
     }
     m_steps++;

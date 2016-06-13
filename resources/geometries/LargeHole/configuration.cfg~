@@ -1,5 +1,0 @@
-nParticles = 4000
-spacing = 2.43333e-02
-latticePoints = [41, 41, 1]
-boundaries = [0.00000e+00, 1.00000e+00, 0.00000e+00, 1.00000e+00, -1.21667e-02, 1.21667e-02]
-periodic = [false, false, false]

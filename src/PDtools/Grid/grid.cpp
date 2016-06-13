@@ -93,7 +93,7 @@ void Grid::createGrid()
     vector<ivec> inner_points;
     vector<ivec> boundary_points;
 
-    for(int d=0;d<DIM; d++)
+    for(int d=0;d<M_DIM; d++)
     {
         if(m_periodicBoundaries[d])
         {
@@ -134,7 +134,7 @@ void Grid::createGrid()
     }
 
     // Boundary conditions
-    for(int d=0; d<DIM; d++)
+    for(int d=0; d<M_DIM; d++)
     {
         Col<int> xyz = {0, 0, 0};
 
@@ -170,7 +170,7 @@ void Grid::createGrid()
     }
 
     m_nGridArma = {0, 0, 0};
-    for(int d=0;d<DIM; d++)
+    for(int d=0;d<M_DIM; d++)
     {
         m_nGridArma(d) = m_nGrid[d];
     }
@@ -255,9 +255,9 @@ void Grid::setNeighbours()
 //------------------------------------------------------------------------------
 int Grid::gridId(const vec3 &r) const
 {
-    int i[DIM];
+    int i[M_DIM];
 
-    for(int d=0; d<DIM; d++)
+    for(int d=0; d<M_DIM; d++)
     {
         i[d] = int((r(d) - m_boundary[d].first)/m_gridSpacing(d));
 
@@ -272,7 +272,7 @@ int Grid::gridId(const vec3 &r) const
         }
     }
 
-#if DIM == 2
+#if M_DIM == 2
     return i[X] + m_nGrid[X]*i[Y];
 #else
     return i[X] + m_nGrid[X]*i[Y] + m_nGrid[X]*m_nGrid[Y]*i[Z];
@@ -406,6 +406,7 @@ void Grid::setMyGridpoints()
         }
     }
     sort( neighbouringCores.begin(), neighbouringCores.end() );
+    sort(m_myGridPoints.begin(), m_myGridPoints.end());
     m_boundaryGridPoints = boundaryGridPoints;
     m_ghostGridIds = ghostGridIds;
     m_neighbouringCores = neighbouringCores;
@@ -436,14 +437,14 @@ void Grid::setOwnership()
         const int id = gridPoint.first;
         vector<int> n = gridPoint.second->nGridId();
 #if USE_MPI
-        int i[DIM];
+        int i[M_DIM];
 
-        for(int d=0; d<DIM; d++)
+        for(int d=0; d<M_DIM; d++)
         {
             i[d] = int(((n[d])/float(m_nGrid[d]))*(m_nCpuGrid[d]));
         }
 
-#if DIM == 2
+#if M_DIM == 2
         rank = i[X] + m_nCpuGrid[X]*i[Y];
 #else
         rank = i[X] + m_nCpuGrid[X]*i[Y] + m_nCpuGrid[X]*m_nCpuGrid[Y]*i[Z];

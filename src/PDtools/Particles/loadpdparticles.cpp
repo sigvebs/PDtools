@@ -10,6 +10,77 @@ LoadPdParticles::LoadPdParticles()
 {
 }
 //------------------------------------------------------------------------------
+PD_Particles LoadPdParticles::load(string loadPath,
+                               string format,
+                               bool bin,
+                               unordered_map<string, int> loadParameters)
+{
+    m_format = format;
+    m_binary = bin;
+    PD_Particles particles;
+
+    if(m_binary)
+    {
+        FILE* binaryData = fopen(loadPath.c_str(), "rb");
+
+        if (!binaryData)
+        {
+          cerr << "ERROR: Could not open " << loadPath << endl;
+        }
+
+        if(m_format == "xyz")
+        {
+            cerr << "Binary xyz not implemented" << endl;
+            throw 10;
+        }
+        else if(m_format == "ply")
+        {
+            loadParameters = read_plyBinaryHeader(binaryData, loadParameters);
+        }
+        else if(m_format == "lmp")
+        {
+            read_lmpBinaryHeader(binaryData, loadParameters);
+        }
+        else
+        {
+            cerr << "Format: '" << m_format << "' not supported" << endl;
+            throw 10;
+        }
+
+        loadBinaryBody(particles, binaryData, loadParameters);
+        fclose(binaryData);
+    }
+    else
+    {
+        fstream data(loadPath, ios::in);
+        unordered_map <std::string, int> parameters;
+
+        if(m_format == "xyz")
+        {
+            parameters = read_xyzHeader(data);
+        }
+        else if(m_format == "ply")
+        {
+            cerr << "ply not implemented" << endl;
+            throw 10;
+        }
+        else if(m_format == "lmp")
+        {
+            parameters = read_lmpHeader(data);
+        }
+        else
+        {
+            cerr << "Format: '" << m_format << "' not supported" << endl;
+            throw 10;
+        }
+
+        loadBody(particles, data, parameters);
+        data.close();
+    }
+
+    return particles;
+}
+//------------------------------------------------------------------------------
 void LoadPdParticles::loadBody(PD_Particles &particles,
                              fstream &rawData,
                              unordered_map<string, int> parameters)
@@ -314,7 +385,7 @@ PD_Particles load_pd(string loadPath, Grid &grid)
 
     PD_Particles particles = loadParticles.load(loadPath, type);
     double test = sizeof(particles);
-    cout << test << endl;
+
     particles.type(type);
     return move(particles);
 }

@@ -31,7 +31,7 @@ protected:
     Modifier* m_ADR_fracture = nullptr;
     vector<Force *> m_oneBodyForces;
     vector<Modifier *> m_spModifiers;
-    vector<Modifier *> m_modifiers;
+    vector<Modifier *> m_boundaryModifiers;
     vector<Modifier*> m_qsModifiers;
     vector<CalculateProperty*> m_properties;
 
@@ -63,6 +63,9 @@ public:
     stepForward(int i) = 0;
 
     void
+    applyBoundaryConditions();
+
+    void
     setParticles(PD_Particles &_particles);
     void
     setDomain(Domain &_domain);
@@ -85,7 +88,7 @@ public:
     void
     addSpModifier(Modifier * modifier);
     void
-    addModifier(Modifier * modifier);
+    addBoundaryModifier(Modifier * modifier);
     void
     addQsModifiers(Modifier * modifier);
 

@@ -23,6 +23,8 @@ PD_OSP::PD_OSP(PD_Particles &particles):
 
     m_indexForceScalingDilation = m_particles.registerPdParameter("forceScalingDilation", 1.);
     m_indexForceScalingBond = m_particles.registerPdParameter("forceScalingBond", 1.);
+
+    m_hasUpdateState = true;
 }
 //------------------------------------------------------------------------------
 PD_OSP::~PD_OSP()

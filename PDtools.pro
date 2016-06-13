@@ -12,3 +12,4 @@ test.depends = pd_lib
 
 OTHER_FILES += \
     defaults.pri
+

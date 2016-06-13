@@ -6,7 +6,7 @@
 #include "Particles/saveparticles.h"
 #include "Particles/loadparticles.h"
 #include "Particles/loadpdparticles.h"
-#include "Domain/domain.h"
+//#include "Domain/domain.h"
 #include "Grid/grid.h"
 #include "data/pdshareddata.h"
 #include "Solver/solver.h"

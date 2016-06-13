@@ -14,8 +14,7 @@ class Particles;
 class Grid;
 
 //------------------------------------------------------------------------------
-template <class T_particles>
-class T_LoadParticles
+class LoadParticles
 {
 protected:
     Grid * m_grid = nullptr;
@@ -42,15 +41,16 @@ protected:
     read_plyBinaryHeader(FILE *data, unordered_map<string, int> parameters);
 
     virtual void
-    loadBody(T_particles &particles, fstream &data, unordered_map <string, int> parameters);
+    loadBody(Particles &particles, fstream &data, unordered_map <string, int> parameters);
 
     virtual void
-    loadBinaryBody(T_particles &particles, FILE *data, unordered_map <string, int> parameters);
+    loadBinaryBody(Particles &particles, FILE *data, unordered_map <string, int> parameters);
 
 public:
-    T_LoadParticles();
+    LoadParticles();
+    ~LoadParticles();
 
-    virtual T_particles
+    Particles
     load(string loadPath,
          string format,
          bool bin=false,
@@ -69,7 +69,6 @@ public:
     }
 };
 
-using LoadParticles = T_LoadParticles<Particles>;
 //------------------------------------------------------------------------------
 inline string readBinaryLine(FILE *data)
 {

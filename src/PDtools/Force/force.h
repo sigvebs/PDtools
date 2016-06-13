@@ -32,6 +32,7 @@ protected:
     arma::mat & m_data;
     unordered_map<int, int> & m_idToCol;
     arma::ivec & m_colToId;
+    int m_calulateStress = false;
 
     enum enum_coordinates{X, Y, Z};
     static constexpr double THRESHOLD = 2.2204e-016;
@@ -46,6 +47,12 @@ protected:
 
     vector<pair<string, int>> neededProperties; // name and updatefrquency
 
+    // Modifiers
+    bool m_continueState = false;
+    bool m_hasStaticModifier = false;
+    bool m_hasStepOneModifier = false;
+    bool m_hasStepTwoModifier = false;
+    bool m_hasUpdateState = false;
 public:
     const string name;
     Force(PD_Particles &particles, string _type="none");
@@ -112,6 +119,23 @@ public:
 
     vector<pair<string, int> >
     getNeededProperties() const;
+    int getCalulateStress() const;
+
+    // Modifiers
+    virtual void
+    evaluateStepOne(int id, int i);
+
+    virtual void
+    evaluateStepTwo(int id, int i);
+
+    virtual void
+    evaluateStatic(int id, int i);
+
+    bool getHasStepOneModifier() const;
+    bool getHasStepTwoModifier() const;
+    bool getContinueState() const;
+    bool getHasStaticModifier() const;
+    bool getHasUpdateState() const;
 };
 //------------------------------------------------------------------------------
 }

@@ -10,24 +10,24 @@
 
 namespace PDtools
 {
-template class T_LoadParticles<Particles>;
-template class T_LoadParticles<PD_Particles>;
-
-
 //------------------------------------------------------------------------------
-template <class T_particles>T_LoadParticles<T_particles>::T_LoadParticles()
+LoadParticles::LoadParticles()
 {
 }
 //------------------------------------------------------------------------------
-template <class T_particles>
-T_particles T_LoadParticles<T_particles>::load(string loadPath,
+LoadParticles::~LoadParticles()
+{
+
+}
+//------------------------------------------------------------------------------
+Particles LoadParticles::load(string loadPath,
                                string format,
                                bool bin,
                                unordered_map<string, int> loadParameters)
 {
     m_format = format;
     m_binary = bin;
-    T_particles particles;
+    Particles particles;
 
     if(m_binary)
     {
@@ -91,8 +91,8 @@ T_particles T_LoadParticles<T_particles>::load(string loadPath,
     return particles;
 }
 //------------------------------------------------------------------------------
-template <class T_particles>
-unordered_map <std::string, int> T_LoadParticles<T_particles>::read_xyzHeader(fstream &data)
+
+unordered_map <std::string, int> LoadParticles::read_xyzHeader(fstream &data)
 {
     string line;
 
@@ -124,8 +124,8 @@ unordered_map <std::string, int> T_LoadParticles<T_particles>::read_xyzHeader(fs
     return parameters;
 }
 //------------------------------------------------------------------------------
-template <class T_particles>
-unordered_map <std::string, int> T_LoadParticles<T_particles>::read_lmpHeader(fstream &data)
+
+unordered_map <std::string, int> LoadParticles::read_lmpHeader(fstream &data)
 {
     string line;
 
@@ -178,8 +178,8 @@ unordered_map <std::string, int> T_LoadParticles<T_particles>::read_lmpHeader(fs
     return parameters;
 }
 //------------------------------------------------------------------------------
-template <class T_particles>
-unordered_map<string, int> T_LoadParticles<T_particles>::read_lmpBinaryHeader(
+
+unordered_map<string, int> LoadParticles::read_lmpBinaryHeader(
         FILE *data,
         unordered_map<string, int> parameters)
 {
@@ -238,8 +238,8 @@ unordered_map<string, int> T_LoadParticles<T_particles>::read_lmpBinaryHeader(
     return empty;
 }
 //------------------------------------------------------------------------------
-template <class T_particles>
-unordered_map<string, int> T_LoadParticles<T_particles>::read_plyBinaryHeader(
+
+unordered_map<string, int> LoadParticles::read_plyBinaryHeader(
         FILE *data,
         unordered_map<string, int> parameters)
 {
@@ -309,8 +309,8 @@ unordered_map<string, int> T_LoadParticles<T_particles>::read_plyBinaryHeader(
     return parameters;
 }
 //------------------------------------------------------------------------------
-template <class T_particles>
-void T_LoadParticles<T_particles>::loadBody(T_particles &particles, fstream &rawData,
+
+void LoadParticles::loadBody(Particles &particles, fstream &rawData,
                              unordered_map<string, int> parameters)
 {
     particles.maxParticles(m_nParticles);
@@ -407,8 +407,8 @@ void T_LoadParticles<T_particles>::loadBody(T_particles &particles, fstream &raw
     }
 }
 //------------------------------------------------------------------------------
-template <class T_particles>
-void T_LoadParticles<T_particles>::loadBinaryBody(T_particles &particles,
+
+void LoadParticles::loadBinaryBody(Particles &particles,
                                    FILE *rawData,
                                    unordered_map<string, int> parameters)
 {

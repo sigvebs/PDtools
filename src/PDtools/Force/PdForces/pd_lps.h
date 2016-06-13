@@ -10,8 +10,10 @@ namespace PDtools
 //------------------------------------------------------------------------------
 class PD_LPS : public Force
 {
-private:
+protected:
+    bool m_planeStress;
     int m_dim = 3;
+    int m_iMicromodulus;
     int m_iTheta;
     int m_iThetaNew;
     int m_iVolume;
@@ -23,15 +25,17 @@ private:
     int m_iConnected;
     int m_iMass;
     int m_iCompute;
+    int m_indexBrokenNow;
 
     double m_k;
     double m_mu;
     double m_delta;
     double m_nu;
+    double m_alpha;
+    double m_c;
+    double m_t;
 public:
-    PD_LPS(PD_Particles &particles);
-
-    ~PD_LPS();
+    PD_LPS(PD_Particles &particles, bool planeStress=false);
 
     virtual void
     calculateForces(const int id, const int i);
@@ -59,10 +63,7 @@ public:
     initialize(double E, double nu, double delta, int dim, double h, double lc);
 
     void
-    calculateMass();
-
-    virtual void
-    applySurfaceCorrectionStep1(double strain=0.01);
+    calculateWeightedVolume();
 };
 //------------------------------------------------------------------------------
 }

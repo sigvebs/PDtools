@@ -21,10 +21,10 @@ public:
     initialize();
 
     int
-    updateFrquency() const;
+    updateFrequency() const;
 
     void
-    setUpdateFrquency(int updateFrquency);
+    setUpdateFrquency(int updateFrequency);
 
     virtual void
     clean();
@@ -43,7 +43,7 @@ public:
 protected:
     PD_Particles *m_particles;
     int m_dim;
-    int m_updateFrquency = 1;
+    int m_updateFrequency = 1;
 };
 //------------------------------------------------------------------------------
 }

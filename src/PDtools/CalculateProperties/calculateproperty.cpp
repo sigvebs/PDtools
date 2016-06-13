@@ -20,14 +20,14 @@ void CalculateProperty::initialize()
 
 }
 //------------------------------------------------------------------------------
-int CalculateProperty::updateFrquency() const
+int CalculateProperty::updateFrequency() const
 {
-    return m_updateFrquency;
+    return m_updateFrequency;
 }
 //------------------------------------------------------------------------------
 void CalculateProperty::setUpdateFrquency(int updateFrquency)
 {
-    m_updateFrquency = updateFrquency;
+    m_updateFrequency = updateFrquency;
 }
 //------------------------------------------------------------------------------
 void CalculateProperty::clean()

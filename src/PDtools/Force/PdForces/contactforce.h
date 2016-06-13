@@ -27,7 +27,6 @@ private:
     std::unordered_map<int, int> *m_idToCol ;
 public:
     ContactForce(PD_Particles &particles, Grid &grid, double spacing, int verletUpdateFrq);
-    ~ContactForce();
 
     virtual void
     calculateForces(const int id_i, const int i);

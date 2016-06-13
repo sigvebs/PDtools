@@ -20,25 +20,25 @@ void TimeIntegrator::solve()
     for (int i = 0; i < m_steps; i++)
     {
         stepForward(i);
-//        cout << i << endl;
     }
 }
 //------------------------------------------------------------------------------
 void TimeIntegrator::stepForward(int timeStep)
 {
     integrateStepOne();
-    updateGridAndCommunication();
-
-    modifiersStepOne();
+    applyBoundaryConditions();
 
     updateGridAndCommunication();
     updateProperties(timeStep + 1);
-    updateGridAndCommunication();
+    updateGhosts();
+
+    modifiersStepOne();
     save(timeStep + 1);
     //----------------------------------------------------------------------
     zeroForces();
     calculateForces(timeStep+1);
     //----------------------------------------------------------------------
+    updateGhosts();
 
     modifiersStepTwo();
     integrateStepTwo();

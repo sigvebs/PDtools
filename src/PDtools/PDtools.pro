@@ -25,28 +25,28 @@ HEADERS += \
     Force/forces.h \
     Force/PdForces/pd_bondforce.h \
     Modfiers/modifier.h \
-    Modfiers/Implementation/velocityboundary.h \
-    Modfiers/Implementation/pmbfracture.h \
+    Modfiers/Implementation/BoundaryConditions/velocityboundary.h \
+    Modfiers/Implementation/FractureCriterion/pmbfracture.h \
     SavePdData/savepddata.h \
     SavePdData/Implementations/computedamage.h \
     SavePdData/Implementations/computekineticenergy.h \
     SavePdData/Implementations/computepotentialenergy.h \
     Force/PdForces/contactforce.h \
     Solver/adr.h \
-    Modfiers/Implementation/moveparticles.h \
+    Modfiers/Implementation/BoundaryConditions/moveparticles.h \
     Modfiers/modifiers.h \
-    Modfiers/Implementation/adrfracture.h \
+    Modfiers/Implementation/FractureCriterion/adrfracture.h \
     SavePdData/Implementations/computemaxstretch.h \
-    Modfiers/Implementation/mohrcoulombfracture.h \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombfracture.h \
     SavePdData/Implementations/computeaveragestretch.h \
-    Modfiers/Implementation/adrfractureaverage.h \
-    Modfiers/Implementation/adrmohrcoulombfracture.h \
+    Modfiers/Implementation/FractureCriterion/adrfractureaverage.h \
+    Modfiers/Implementation/FractureCriterion/adrmohrcoulombfracture.h \
     Force/PdForces/pd_bondforcegaussian.h \
     Force/PdForces/pd_pmb.h \
     Force/PdForces/pd_osp.h \
-    Modfiers/Implementation/boundaryforce.h \
-    Modfiers/Implementation/bondenergyfracture.h \
-    Modfiers/Implementation/simplefracture.h \
+    Modfiers/Implementation/BoundaryConditions/boundaryforce.h \
+    Modfiers/Implementation/FractureCriterion/bondenergyfracture.h \
+    Modfiers/Implementation/FractureCriterion/simplefracture.h \
     Force/PdForces/pd_lps.h \
     Solver/ADRsolvers/dynamicadr.h \
     Solver/staticsolver.h \
@@ -56,94 +56,109 @@ HEADERS += \
     Force/PdForces/viscousdamper.h \
     CalculateProperties/calculateproperty.h \
     CalculateProperties/Implementation/calculatepdangles.h \
-    Modfiers/Implementation/micropolarfracture.h \
     CalculateProperties/calculateproperties.h \
     Force/DemForces/demforce.h \
     CalculateProperties/Implementation/calculatestress.h \
-    Modfiers/Implementation/mohrcoulombbondfracture.h \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombbondfracture.h \
     Modfiers/Implementation/rigidwall.h \
-    Modfiers/Implementation/adrmohrcoulombbondfracture.h \
-    Modfiers/Implementation/mohrcoulombmax.h \
-    Modfiers/Implementation/mohrcoulombmaxfracture.h \
-    Modfiers/Implementation/mohrcoulombweightedaverage.h \
+    Modfiers/Implementation/FractureCriterion/adrmohrcoulombbondfracture.h \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombmax.h \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombmaxfracture.h \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombweightedaverage.h \
     Force/PdForces/pd_dampenedbondforce.h \
     Modfiers/Implementation/dumpstate.h \
-    Modfiers/Implementation/mohrcoulombnodesplit.h \
-    Modfiers/Implementation/mohrcoulommaxconnected.h \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombnodesplit.h \
+    Modfiers/Implementation/FractureCriterion/mohrcoulommaxconnected.h \
     CalculateProperties/Implementation/calculatestrain.h \
-    CalculateProperties/Implementation/calculatedamage.h
+    CalculateProperties/Implementation/calculatedamage.h \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombmaxfractureweighted.h \
+    Modfiers/Implementation/FractureCriterion/strainfracture.h \
+    Modfiers/Implementation/FractureCriterion/vonmisesfracture.h \
+    CalculateProperties/Implementation/calculatestressstrain.h \
+    Force/PdForces/pd_lpsdampenedcontact.h \
+    Modfiers/Implementation/BoundaryConditions/strainboundary.h \
+    Force/PdForces/lps_mc.h \
+    Force/PdForces/pd_lps_adrmc.h \
+    Force/PdForces/pd_nopd.h \
+    Modfiers/Implementation/BoundaryConditions/moveparticleszone.h \
+    Modfiers/Implementation/savestate.h \
+    Modfiers/Implementation/BoundaryConditions/moveparticletype.h \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombmaxfractureweightedadr.h \
+    Force/PdForces/pd_pmb_linear_integrator.h
 
 SOURCES += \
     Grid/grid.cpp \
     Domain/domain.cpp \
     Solver/solver.cpp \
+    Solver/adr.cpp \
+    Solver/ADRsolvers/dynamicadr.cpp \
+    Solver/staticsolver.cpp \
+    Solver/timeintegrator.cpp \
+    Solver/TimeIntegrators/velocityverletintegrator.cpp \
     data/pdshareddata.cpp \
     Particles/saveparticles.cpp \
     Particles/loadparticles.cpp \
     Particles/loadpdparticles.cpp \
     PdFunctions/pdfunctions.cpp \
-    Solver/timeintegrator.cpp \
-    Solver/TimeIntegrators/velocityverletintegrator.cpp \
+    PdFunctions/pdfunctionsmpi.cpp \
     Force/force.cpp \
     Force/PdForces/pd_bondforce.cpp \
     Modfiers/modifier.cpp \
-    Modfiers/Implementation/velocityboundary.cpp \
-    Modfiers/Implementation/pmbfracture.cpp \
     SavePdData/savepddata.cpp \
     SavePdData/Implementations/computedamage.cpp \
     SavePdData/Implementations/computekineticenergy.cpp \
     SavePdData/Implementations/computepotentialenergy.cpp \
+    SavePdData/Implementations/computemaxstretch.cpp \
+    SavePdData/Implementations/computeaveragestretch.cpp \
     Force/PdForces/contactforce.cpp \
     Particles/particles.cpp \
-    Solver/adr.cpp \
-    Modfiers/Implementation/moveparticles.cpp \
-    Modfiers/Implementation/adrfracture.cpp \
     Particles/pd_particles.cpp \
-    SavePdData/Implementations/computemaxstretch.cpp \
-    Modfiers/Implementation/mohrcoulombfracture.cpp \
-    SavePdData/Implementations/computeaveragestretch.cpp \
-    Modfiers/Implementation/adrfractureaverage.cpp \
-    Modfiers/Implementation/adrmohrcoulombfracture.cpp \
+    Solver/TimeIntegrators/eulercromerintegrator.cpp \
     Force/PdForces/pd_bondforcegaussian.cpp \
     Force/PdForces/pd_pmb.cpp \
     Force/PdForces/pd_osp.cpp \
-    Modfiers/Implementation/boundaryforce.cpp \
-    Modfiers/Implementation/bondenergyfracture.cpp \
-    Modfiers/Implementation/simplefracture.cpp \
     Force/PdForces/pd_lps.cpp \
-    Solver/ADRsolvers/dynamicadr.cpp \
-    Solver/staticsolver.cpp \
-    Solver/TimeIntegrators/eulercromerintegrator.cpp \
-    PdFunctions/pdfunctionsmpi.cpp \
-    SavePdData/Implementations/computegridid.cpp \
+    Force/PdForces/pd_lpsdampenedcontact.cpp \
     Force/PdForces/viscousdamper.cpp \
+    Force/PdForces/pd_dampenedbondforce.cpp \
+    Force/DemForces/demforce.cpp \
+    SavePdData/Implementations/computegridid.cpp \
     CalculateProperties/calculateproperty.cpp \
     CalculateProperties/Implementation/calculatepdangles.cpp \
-    Modfiers/Implementation/micropolarfracture.cpp \
-    Force/DemForces/demforce.cpp \
     CalculateProperties/Implementation/calculatestress.cpp \
-    Modfiers/Implementation/mohrcoulombbondfracture.cpp \
-    Modfiers/Implementation/rigidwall.cpp \
-    Modfiers/Implementation/adrmohrcoulombbondfracture.cpp \
-    Modfiers/Implementation/mohrcoulombmax.cpp \
-    Modfiers/Implementation/mohrcoulombmaxfracture.cpp \
-    Modfiers/Implementation/mohrcoulombweightedaverage.cpp \
-    Force/PdForces/pd_dampenedbondforce.cpp \
-    Modfiers/Implementation/dumpstate.cpp \
-    Modfiers/Implementation/mohrcoulombnodesplit.cpp \
-    Modfiers/Implementation/mohrcoulommaxconnected.cpp \
     CalculateProperties/Implementation/calculatestrain.cpp \
-    CalculateProperties/Implementation/calculatedamage.cpp
+    CalculateProperties/Implementation/calculatedamage.cpp \
+    CalculateProperties/Implementation/calculatestressstrain.cpp \
+    Modfiers/Implementation/dumpstate.cpp \
+    Modfiers/Implementation/rigidwall.cpp \
+    Modfiers/Implementation/BoundaryConditions/boundaryforce.cpp \
+    Modfiers/Implementation/BoundaryConditions/velocityboundary.cpp \
+    Modfiers/Implementation/BoundaryConditions/moveparticles.cpp \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombfracture.cpp \
+    Modfiers/Implementation/FractureCriterion/adrfracture.cpp \
+    Modfiers/Implementation/FractureCriterion/pmbfracture.cpp \
+    Modfiers/Implementation/FractureCriterion/bondenergyfracture.cpp \
+    Modfiers/Implementation/FractureCriterion/simplefracture.cpp \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombbondfracture.cpp \
+    Modfiers/Implementation/FractureCriterion/adrmohrcoulombbondfracture.cpp \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombmax.cpp \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombmaxfracture.cpp \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombweightedaverage.cpp \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombnodesplit.cpp \
+    Modfiers/Implementation/FractureCriterion/mohrcoulommaxconnected.cpp \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombmaxfractureweighted.cpp \
+    Modfiers/Implementation/FractureCriterion/strainfracture.cpp \
+    Modfiers/Implementation/FractureCriterion/vonmisesfracture.cpp \
+    Modfiers/Implementation/FractureCriterion/adrfractureaverage.cpp \
+    Modfiers/Implementation/FractureCriterion/adrmohrcoulombfracture.cpp \
+    Modfiers/Implementation/BoundaryConditions/strainboundary.cpp \
+    Force/PdForces/lps_mc.cpp \
+    Force/PdForces/pd_lps_adrmc.cpp \
+    Force/PdForces/pd_nopd.cpp \
+    Modfiers/Implementation/BoundaryConditions/moveparticleszone.cpp \
+    Modfiers/Implementation/savestate.cpp \
+    Modfiers/Implementation/BoundaryConditions/moveparticletype.cpp \
+    Modfiers/Implementation/FractureCriterion/mohrcoulombmaxfractureweightedadr.cpp \
+    Force/PdForces/pd_pmb_linear_integrator.cpp
 
-#eval(headers.path    = $$OUT_PWD)
-#eval(headers.files   += $$HEADERS)
-#eval(INSTALLS       += headers)
-
-INSTALL_PREFIX = $$OUT_PWD
-
-for(header, HEADERS) {
-    path = $${INSTALL_PREFIX}/$${dirname(header)}
-    eval(headers_$${path}.files += $$header)
-    eval(headers_$${path}.path = $$path)
-    eval(INSTALLS *= headers_$${path})
-}
+include(deployment.pri)

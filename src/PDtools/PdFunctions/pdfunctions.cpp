@@ -8,8 +8,9 @@
 #include "Grid/grid.h"
 #include "PDtools/Force/force.h"
 
-#define USE_EXTENDED_RANGE_RADIUS 0
-#define USE_EXTENDED_RANGE_LC 1
+#define USE_EXTENDED_RANGE_RADIUS 1
+#define USE_EXTENDED_RANGE_LC 0
+//#define USE_EXTENDED_RANGE_LC 0
 
 namespace PDtools
 {
@@ -25,13 +26,14 @@ void setPdConnections(PD_Particles & particles,
     const unordered_map<int, GridPoint*> &gridpoints = grid.gridpoints();
     const vector<int> &mygridPoints = grid.myGridPoints();
     const mat & R = particles.r();
+    const mat &data  = particles.data();
 #if USE_EXTENDED_RANGE_RADIUS
     const int indexRadius = particles.getParamId("radius");
-    const mat &data  = particles.data();
 #endif
     // The order is important!
     particles.registerPdParameter("dr0");
     particles.registerPdParameter("connected");
+    const int iGroupId = particles.getParamId("groupId");
 
 //    int nBonds = 0;
 #ifdef USE_OPENMP
@@ -48,9 +50,15 @@ void setPdConnections(PD_Particles & particles,
             int id_i = idCol_i.first;
             int col_i = idCol_i.second;
             const vec & r_i = R.row(col_i).t();
+            const int group_i = data(col_i, iGroupId);
             unordered_map<int, vector<double>> connections;
             vector<pair<int, vector<double>>> connectionsVector;
 
+#if USE_EXTENDED_RANGE_RADIUS
+        const double radius_i = data(col_i, indexRadius);
+#elif USE_EXTENDED_RANGE_LC
+        const double radius_i = 0.5*lc;
+#endif
             for(const pair<int, int> & idCol_j:gridPoint.particles())
             {
                 const int id_j = idCol_j.first;
@@ -58,28 +66,34 @@ void setPdConnections(PD_Particles & particles,
                 if(id_i == id_j)
                     continue;
 
+                const int group_j = data(col_j, iGroupId);
+                if(group_i != group_j)
+                    continue;
+
 #if USE_EXTENDED_RANGE_RADIUS
-                const double radius_i = data(col_i, indexRadius);
                 const double radius_j = data(col_j, indexRadius);
-                const double l_delta = delta + 0.5*(radius_i + radius_j);
+//                const double l_delta = delta + 0.5*(radius_i + radius_j);
 #elif USE_EXTENDED_RANGE_LC
-                const double l_delta = delta + 0.5*lc;
+//                const double l_delta = delta + 0.5*lc;
+                const double radius_j = 0.5*lc;
 #else
                 const double l_delta = delta;
 #endif
-                const double deltaSquared = pow(l_delta, 2);
+//                const double deltaSquared = pow(l_delta, 2);
 
                 const vec & r_j = R.row(col_j).t();
                 dx = r_i(0) - r_j(0);
                 dy = r_i(1) - r_j(1);
                 dz = r_i(2) - r_j(2);
 
-                double drSquared = dx*dx + dy*dy + dz*dz;
+                const double drSquared = dx*dx + dy*dy + dz*dz;
+                const double dr = sqrt(drSquared);
 
-                if(drSquared <= deltaSquared)
+//                if(drSquared <= deltaSquared)
+                if(delta >= dr - radius_i && delta >= dr - radius_j)
                 {
                     vector<double> connectionData;
-                    const double dr = sqrt(drSquared);
+//                    const double dr = sqrt(drSquared);
 
                     connectionData.push_back(dr);
                     connectionData.push_back(1.0); // Connected
@@ -96,29 +110,35 @@ void setPdConnections(PD_Particles & particles,
                 for(const pair<int, int> & idCol_j:neighbour->particles())
                 {
                     const int col_j = idCol_j.second;
+                    const int group_j = data(col_j, iGroupId);
+                    if(group_i != group_j)
+                        continue;
 
 #if USE_EXTENDED_RANGE_RADIUS
-                const double radius_j = data(col_j, indexRadius);
-                const double l_delta = delta + 0.5*(radius_i + radius_j);
+                    const double radius_j = data(col_j, indexRadius);
+                    const double l_delta = delta + 0.5*(radius_i + radius_j);
 #elif USE_EXTENDED_RANGE_LC
-                const double l_delta = delta + 0.5*lc;
+                const double radius_j = 0.5*lc;
 #else
                 const double l_delta = delta;
 #endif
-                    const double deltaSquared = pow(l_delta, 2);
+//                    const double deltaSquared = pow(l_delta, 2);
 
                     const vec & r_j = R.row(col_j).t();
                     dx = r_i(0) - r_j(0);
                     dy = r_i(1) - r_j(1);
                     dz = r_i(2) - r_j(2);
 
-                    double drSquared = dx*dx + dy*dy + dz*dz;
+                    const double drSquared = dx*dx + dy*dy + dz*dz;
+                    const double dr = sqrt(drSquared);
 
-                    if(drSquared <= deltaSquared)
+//                    if(drSquared <= deltaSquared)
+                    if(delta >= dr - radius_i && delta >= dr - radius_j)
+//                    if(delta <= dr - radius_i && delta <= dr - radius_j)
                     {
                         int id_j = idCol_j.first;
                         vector<double> connectionData;
-                        const double dr = sqrt(drSquared);
+//                        const double dr = sqrt(drSquared);
                         connectionData.push_back(dr);
                         connectionData.push_back(1.0); // Connected
                         connections[id_j] = connectionData;
@@ -134,14 +154,12 @@ void setPdConnections(PD_Particles & particles,
             }
 #else
             particles.setPdConnections(id_i, connectionsVector);
-//            cout << myRank << " " << id_i << " " << connectionsVector.size() << endl;
-//            nBonds += connectionsVector.size();
 #endif
         }
     }
 }
 //------------------------------------------------------------------------------
-void applyVolumeCorrection(PD_Particles &particles, double delta, double lc)
+void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int dim)
 {
 #if USE_EXTENDED_RANGE_LC == 0
     (void) lc;
@@ -152,39 +170,121 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc)
     const int indexDr0 = particles.getPdParamId("dr0");
     const int indexRadius = particles.getParamId("radius");
     const int indexVolumeScaling = particles.getPdParamId("volumeScaling");
-    const int indexVolume= particles.getParamId("volume");
+    const int indexVolume = particles.getParamId("volume");
 
+    // http://mathworld.wolfram.com/Circle-CircleIntersection.html
+    if(dim == 2) {
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<particles.nParticles(); i++)
-    {
-        const int pId = colToId(i);
-        vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(pId);
-        double vol_delta = 0;
-
-        for(auto &con:PDconnections)
-        {
-            const double dr = con.second[indexDr0];
-            const int id_j = con.first;
-            const int col_j = idToCol.at(id_j);
+        for(unsigned int i=0; i<particles.nParticles(); i++) {
+            const int id_i = colToId(i);
 #if USE_EXTENDED_RANGE_RADIUS
-            const double radius_j = data(col_j, indexRadius);
+                const double r_i = data(i, indexRadius);
 #elif USE_EXTENDED_RANGE_LC
-            const double radius_j = 0.5*lc;
-#else
-            const double radius_j = data(col_j, indexRadius);
+                const double r_i = 0.5*lc;
 #endif
-            const double rc = delta - radius_j;
 
-            double volumeCorrection = 1.0;
-            if(dr > rc)
-            {
-                volumeCorrection = 0.5*(delta + radius_j - dr)/radius_j;
+            vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(id_i);
+            double vol_delta = 0;
+            const double rc_i = delta - r_i;
+
+            for(auto &con:PDconnections) {
+                const double dr = con.second[indexDr0];
+                const int id_j = con.first;
+                const int col_j = idToCol.at(id_j);
+#if USE_EXTENDED_RANGE_RADIUS
+                const double r_j = data(col_j, indexRadius);
+#elif USE_EXTENDED_RANGE_LC
+                const double r_j = 0.5*lc;
+//                const double radius_j = data(col_j, indexRadius);
+#else
+                const double r_j = data(col_j, indexRadius);
+#endif
+                const double rc_j = delta - r_j;
+
+                double v1 = 1.;
+                double v2 = 1.;
+                double b1 = 1.;
+                double b2 = 1.;
+
+                if(dr > rc_j)
+                {
+                    const double d = dr;
+                    const double R = delta;
+                    const double r = r_j;
+
+                    const double d1 = 0.5*(d*d - r*r + R*R)/d;
+                    const double d2 = 0.5*(d*d + r*r - R*R)/d;
+                    const double A1 = R*R * acos(d1/R) - d1*sqrt(R*R - d1*d1);
+                    const double A2 = r*r * acos(d2/r) - d2*sqrt(r*r - d2*d2);
+
+                    const double A = A1 + A2;
+                    const double A_a = M_PI*r*r;
+
+                    v1 = A/A_a;
+                    b2 = 0.5*(delta + r_i - dr)/r_i;
+                    b1 = 0.5*(delta + r_j - dr)/r_j;
+                }
+                if(dr > rc_i)
+                {
+                    const double d = dr;
+                    const double R = delta;
+                    const double r = r_i;
+
+                    const double d1 = 0.5*(d*d - r*r + R*R)/d;
+                    const double d2 = 0.5*(d*d + r*r - R*R)/d;
+                    const double A1 = R*R * acos(d1/R) - d1*sqrt(R*R - d1*d1);
+                    const double A2 = r*r * acos(d2/r) - d2*sqrt(r*r - d2*d2);
+
+                    const double A = A1 + A2;
+                    const double A_a = M_PI*r*r;
+                    v2 = A/A_a;
+                    b2 = 0.5*(delta + r_i - dr)/r_i;
+                }
+
+                double volumeCorrection = 1.0;
+                volumeCorrection = v1;
+//                volumeCorrection = 0.5*(v1 + v2);
+
+                con.second[indexVolumeScaling] = volumeCorrection;
+                const double vol_i = data(i, indexVolume);
+                vol_delta += vol_i*volumeCorrection;
+                //                volumeCorrection = 0.5*(v1 + v2);//b1*b2;
+                //                volumeCorrection = b1;
             }
-            con.second[indexVolumeScaling] = volumeCorrection;
-            const double vol_i = data(i, indexVolume);
-            vol_delta += vol_i*volumeCorrection;
+        }
+    } else if(dim == 3) {
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
+        for(unsigned int i=0; i<particles.nParticles(); i++) {
+            const int pId = colToId(i);
+            vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(pId);
+            double vol_delta = 0;
+
+            for(auto &con:PDconnections) {
+                const double dr = con.second[indexDr0];
+                const int id_j = con.first;
+                const int col_j = idToCol.at(id_j);
+#if USE_EXTENDED_RANGE_RADIUS
+                const double radius_j = data(col_j, indexRadius);
+#elif USE_EXTENDED_RANGE_LC
+                const double radius_j = 0.5*lc;
+#else
+                const double radius_j = data(col_j, indexRadius);
+#endif
+                const double rc = delta - radius_j;
+
+                double volumeCorrection = 1.0;
+                if(dr > rc)
+                {
+                    volumeCorrection = 0.5*(delta + radius_j - dr)/radius_j;
+                }
+                con.second[indexVolumeScaling] = volumeCorrection;
+                const double vol_i = data(i, indexVolume);
+                vol_delta += vol_i*volumeCorrection;
+            }
         }
     }
 }
@@ -287,10 +387,10 @@ void calculateRadius(PD_Particles &particles, int dim, double h)
     arma::mat & data = particles.data();
     const int indexVolume = particles.getParamId("volume");
     const int indexRadius = particles.getParamId("radius");
-    const double scale = 0.9;
 
     if(dim == 3)
     {
+        const double scale = 0.9; // Shoudl be 0.704? Optimal sphere packing
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
@@ -303,6 +403,7 @@ void calculateRadius(PD_Particles &particles, int dim, double h)
     }
     else if (dim == 2)
     {
+        const double scale = 0.9069;
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
@@ -315,6 +416,7 @@ void calculateRadius(PD_Particles &particles, int dim, double h)
     }
     else if (dim == 1)
     {
+        const double scale = 1.0;
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
@@ -562,7 +664,7 @@ void removeVoidConnections(PD_Particles &particles, Grid &grid,
         vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(pId);
         const vec & r_a = R0.row(i).t();
         ivec filled(m);
-        arma::mat filledCenters = arma::zeros(DIM, m);
+        arma::mat filledCenters = arma::zeros(M_DIM, m);
         const double radius_i = sf*data(i, indexRadius);
 
         for(auto &con:PDconnections)

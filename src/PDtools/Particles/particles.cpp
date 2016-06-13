@@ -54,6 +54,16 @@ void Particles::setNeedGhostVelocity(int needGhostVelocity)
     m_needGhostVelocity = needGhostVelocity;
 }
 //------------------------------------------------------------------------------
+int Particles::getNeedGhostR0() const
+{
+    return m_needGhostR0;
+}
+//------------------------------------------------------------------------------
+void Particles::setNeedGhostR0(int needGhostR0)
+{
+    m_needGhostR0 = needGhostR0;
+}
+//------------------------------------------------------------------------------
 Particles::Particles()
 {
 
@@ -71,8 +81,8 @@ void Particles::initializeMatrices()
         cerr << "nParticles can not be zero when initializeing particle matrices" << endl;
         throw ZeroParticles;
     }
-    m_r = mat(PARTICLE_BUFFER*m_maxParticles, DIM);
-    m_v  = mat(m_maxParticles*PARTICLE_BUFFER, DIM);
+    m_r = mat(PARTICLE_BUFFER*m_maxParticles, M_DIM);
+    m_v  = mat(m_maxParticles*PARTICLE_BUFFER, M_DIM);
     m_data = mat(PARTICLE_BUFFER*m_maxParticles, PARAMETER_BUFFER);
     m_colToId = ivec(PARTICLE_BUFFER*m_maxParticles);
     m_isStatic = zeros<ivec>(PARTICLE_BUFFER*m_maxParticles);
@@ -120,7 +130,7 @@ void Particles::deleteParticleById(const int deleteId)
     const int moveCol = m_nParticles - 1;
     const int moveId = m_colToId.at(moveCol);
 
-    for(int d=0;d<DIM; d++)
+    for(int d=0;d<M_DIM; d++)
     {
         m_r(deleteCol, d) = m_r(moveCol, d);
     }

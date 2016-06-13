@@ -7,7 +7,7 @@ namespace PDtools
 {
 //------------------------------------------------------------------------------
 CalculateStress::CalculateStress(vector<Force *> &forces):
-    CalculateProperty("stress")
+    CalculateProperty("stress2")
 {
     for(Force* force: forces)
     {

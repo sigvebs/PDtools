@@ -75,12 +75,14 @@ int PdSolver::initialize()
     double v0 = 1;
     double t0 = 1;
     double rho0 = 1;
+    int planeStress = 1;
 
     m_cfg.lookupValue("dim", dim);
     m_cfg.lookupValue("E", E);
     m_cfg.lookupValue("nu", nu);
     m_cfg.lookupValue("G0", G0);
     m_cfg.lookupValue("rho", rho);
+    m_cfg.lookupValue("planeStress", planeStress);
 
     // Checking for dimensional scaling
     int scaleparameters = 0;
@@ -93,6 +95,8 @@ int PdSolver::initialize()
         m_cfg.lookupValue("v0", v0);
         m_cfg.lookupValue("t0", t0);
         m_cfg.lookupValue("rho0", rho0);
+        E /= E0;
+        rho /= rho0;
     }
 
     //--------------------------------------------------------------------------
@@ -115,9 +119,9 @@ int PdSolver::initialize()
         exit(EXIT_FAILURE);
     }
 
-    double dxdydz[DIM];
+    double dxdydz[M_DIM];
     vector<pair<double,double>> domain;
-    for(int d=0; d<DIM; d++)
+    for(int d=0; d<M_DIM; d++)
     {
         pair<double, double> bound(cfg_domain[2*d], cfg_domain[2*d+1]);
         bound.first /= L0;
@@ -132,7 +136,7 @@ int PdSolver::initialize()
     try
     {
         Setting &cfg_periodic= m_cfg.lookup("periodic");
-        for(int d=0; d<DIM; d++)
+        for(int d=0; d<M_DIM; d++)
         {
             periodicBoundaries(d) = (int) cfg_periodic[d];
         }
@@ -162,7 +166,9 @@ int PdSolver::initialize()
     lc /= L0;
     delta /= L0;
 
+
     double gridspacing = 1.25*(delta + 0.5*lc);
+//    double gridspacing = 1.35*(delta + 0.5*lc);
     m_grid = Grid(domain, gridspacing, periodicBoundaries);
     m_grid.setIdAndCores(m_myRank, m_nCores);
     m_grid.dim(dim);
@@ -177,6 +183,7 @@ int PdSolver::initialize()
             cout << n << " ";
         cout << endl;
     }
+
     //--------------------------------------------------------------------------
     // Loading the particles
     //--------------------------------------------------------------------------
@@ -191,7 +198,7 @@ int PdSolver::initialize()
     m_particles = load_pd(particlesPath, m_grid);
     m_particles.dimensionalScaling(E0, L0, v0, t0, rho0);
     //--------------------------------------------------------------------------
-    // TODO: Setting the initial position, should not be done here
+    // TODO: Setting the initial position. Should not be done here
     //--------------------------------------------------------------------------
     mat &r0 = m_particles.r0();
     const mat &r = m_particles.r();
@@ -203,7 +210,6 @@ int PdSolver::initialize()
             r0(i, d) = r(i, d);
         }
     }
-
     //--------------------------------------------------------------------------
     // Setting particles parameters
     //--------------------------------------------------------------------------
@@ -216,9 +222,11 @@ int PdSolver::initialize()
     {
         useS0fromCfg = true;
     }
-    m_particles.registerParameter("rho", rho/rho0);
+    m_particles.registerParameter("rho", rho);
     m_particles.registerParameter("s0", s0);
     m_particles.registerParameter("radius");
+    m_particles.registerParameter("groupId");
+
     calculateRadius(m_particles, dim, dxdydz[2]);
 
     int calculateMicromodulus = 0;
@@ -233,7 +241,7 @@ int PdSolver::initialize()
     m_grid.placeParticlesInGrid(m_particles);
     //lc *= 1.05;
 #ifdef USE_MPI
-    vector<string> ghostParameters = {"volume", "radius"};
+    vector<string> ghostParameters = {"volume", "radius", "groupId"};
     for(const string &param:ghostParameters)
     {
         m_particles.addGhostParameter(param);
@@ -251,10 +259,9 @@ int PdSolver::initialize()
     m_particles.registerPdParameter("volumeScaling", 1);
     if(performVolumeCorrection)
     {
-        applyVolumeCorrection(m_particles, delta, lc);
+        applyVolumeCorrection(m_particles, delta, lc, dim);
     }
     setPD_N3L(m_particles);
-
     //--------------------------------------------------------------------------
     // Setting the solver
     //--------------------------------------------------------------------------
@@ -274,7 +281,7 @@ int PdSolver::initialize()
         ADR *adrSolver = new ADR();
         dt = 1.0;
         double errorThreshold;
-        int maxSteps = 2000;
+        int maxSteps = 5000;
         int maxStepsFracture = 1000;
         m_cfg.lookupValue("maxSteps", maxSteps);
         m_cfg.lookupValue("maxStepsFracture", maxStepsFracture);
@@ -353,11 +360,63 @@ int PdSolver::initialize()
                      << type << endl;
                 exit(EXIT_FAILURE);
             }
-            forces.push_back(new PD_dampenedBondForce(m_particles, c));
+            forces.push_back(new PD_dampenedBondForce(m_particles, c/t0));
         }
         else if(boost::iequals(type, "LPS"))
         {
-            forces.push_back(new PD_LPS(m_particles));
+            forces.push_back(new PD_LPS(m_particles, planeStress));
+        }
+        else if(boost::iequals(type, "dampened LPS"))
+        {
+            double c;
+            if(!cfg_forces[i].lookupValue("c", c))
+            {
+                cerr << "The dampening parameter 'c' must be set for "
+                     << type << endl;
+                exit(EXIT_FAILURE);
+            }
+            forces.push_back(new PD_lpsDampenedContact(m_particles, c/t0, planeStress));
+        }
+        else if(boost::iequals(type, "LPS model"))
+        {
+            double c, mu, C, T;
+
+            if ((!cfg_forces[i].lookupValue("c", c) && !boost::iequals(solverType, "ADR"))||
+                    !cfg_forces[i].lookupValue("mu", mu)||
+                    !cfg_forces[i].lookupValue("C", C) ||
+                    !cfg_forces[i].lookupValue("T", T) )
+            {
+                cerr << "The dampening parameter 'c' must be set for "
+                     << type << endl;
+                exit(EXIT_FAILURE);
+            }
+            C /= E0;
+            T /= E0;
+
+            if(boost::iequals(solverType, "ADR"))
+            {
+                forces.push_back(new PD_LPS_adrmc(m_particles, mu, C, T, planeStress));
+            }
+            else
+            {
+                forces.push_back(new LPS_mc(m_particles, c/t0, mu, C, T, planeStress));
+            }
+        }
+        else if(boost::iequals(type, "NOSBPD MC"))
+        {
+            double mu, C, T;
+            if (!cfg_forces[i].lookupValue("mu", mu)||
+                    !cfg_forces[i].lookupValue("C", C) ||
+                    !cfg_forces[i].lookupValue("T", T) )
+            {
+                cerr << "The dampening parameter 'c' must be set for "
+                     << type << endl;
+                exit(EXIT_FAILURE);
+            }
+            C /= E0;
+            T /= E0;
+
+            forces.push_back(new PD_NOPD(m_particles, mu, C, T, planeStress));
         }
         else if(boost::iequals(type, "OSP"))
         {
@@ -375,6 +434,19 @@ int PdSolver::initialize()
             }
 
             forces.push_back(new PD_PMB(m_particles, lc, delta, alpha));
+        }
+        else if(boost::iequals(type, "PMB LIN"))
+        {
+            double alpha;
+
+            if (!cfg_forces[i].lookupValue("alpha", alpha))
+            {
+                cerr << "Error reading the parameters for force '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+
+            forces.push_back(new PD_PMB_LINEAR_INTEGRATOR(m_particles, lc, delta, alpha));
         }
         else if(boost::iequals(type, "gaussian bond force"))
         {
@@ -395,6 +467,8 @@ int PdSolver::initialize()
         }
         else if(boost::iequals(type, "contact force"))
         {
+            double interactionRadius = 0.95;
+            double interactionScaling = 15;
             int updateFrquency = 10;
             cfg_forces[i].lookupValue("verletUpdateFrq", updateFrquency);
             forces.push_back(new ContactForce(m_particles, m_grid, lc, updateFrquency));
@@ -414,6 +488,7 @@ int PdSolver::initialize()
         forcesSet.push_back(type);
     }
 
+
     for(Force* force:forces)
     {
         vector<string> gParameters = force->initalGhostDependencies();
@@ -430,7 +505,7 @@ int PdSolver::initialize()
     for(Force* force:forces)
     {
         force->numericalInitialization(calculateMicromodulus);
-        force->initialize(E/E0, nu, delta, dim, h, lc);
+        force->initialize(E, nu, delta, dim, h, lc);
         const auto & needed = force->getNeededProperties();
         for(auto prop:needed)
         {
@@ -487,6 +562,7 @@ int PdSolver::initialize()
 
     if(!useS0fromCfg)
     {
+        /*
         switch(dim)
         {
         case 3:
@@ -501,12 +577,12 @@ int PdSolver::initialize()
             exit(EXIT_FAILURE);
             break;
         }
+            */
     }
-
     //--------------------------------------------------------------------------
     // Setting the modifiers
     //--------------------------------------------------------------------------
-    vector<Modifier *> modifiers;
+    vector<Modifier *> boundaryModifiers;
     vector<Modifier *> spModifiers;
     vector<Modifier *> qsModifiers;
     vector<string> modifiersSet;
@@ -542,7 +618,7 @@ int PdSolver::initialize()
                 exit(EXIT_FAILURE);
             }
             v /= v0;
-            modifiers.push_back(new VelocityBoundary(v, vAxis, area, axis,
+            boundaryModifiers.push_back(new VelocityBoundary(v, vAxis, area, axis,
                                                      dt, nSteps, isStatic));
         }
         else if(boost::iequals(type, "move particles"))
@@ -569,19 +645,93 @@ int PdSolver::initialize()
             }
             v /= v0;
 
-            modifiers.push_back(new MoveParticles(v, vAxis, area, axis, dt, isStatic));
+            boundaryModifiers.push_back(new MoveParticles(v, vAxis, area, axis, dt, isStatic));
+        }
+        else if(boost::iequals(type, "move particles zone"))
+        {
+            double v;
+            int isStatic = 0;
+            vector<double> area = {0, 0, 0, 0, 0, 0};
+            vec velocityDirection = {0, 0, 0};
+            for(int d=0; d<dim; d++)
+            {
+                area[2*d] = cfg_modifiers[i]["area"][2*d];
+                area[2*d + 1] = cfg_modifiers[i]["area"][2*d + 1];
+                area[2*d] /= L0;
+                area[2*d + 1] /= L0;
+                velocityDirection(d) = cfg_modifiers[i]["velocityDirection"][d];
+            }
+            cfg_modifiers[i].lookupValue("static", isStatic);
+
+            if (!cfg_modifiers[i].lookupValue("v", v))
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            v /= v0;
+
+            boundaryModifiers.push_back(new MoveParticlesZone(v, velocityDirection, area,  dt, isStatic, delta));
+        }
+        else if(boost::iequals(type, "move particle group"))
+        {
+            int groupId;
+            double v;
+            int isStatic = 0;
+            vec velocityDirection = {0, 0, 0};
+            for(int d=0; d<dim; d++)
+            {
+                velocityDirection(d) = cfg_modifiers[i]["velocityDirection"][d];
+            }
+            cfg_modifiers[i].lookupValue("static", isStatic);
+
+            if (!cfg_modifiers[i].lookupValue("v", v) || !cfg_modifiers[i].lookupValue("groupId", groupId))
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            v /= v0;
+
+            boundaryModifiers.push_back(new MoveParticleGroup(groupId, v, velocityDirection, dt, isStatic));
+        }
+        else if(boost::iequals(type, "strain particles"))
+        {
+            double strainrate;
+            int axis, strainAxis;
+            int isStatic = 0;
+
+            double a0 = cfg_modifiers[i]["area"][0];
+            double a1 = cfg_modifiers[i]["area"][1];
+            cfg_modifiers[i].lookupValue("static", isStatic);
+            a0 /= L0;
+            a1 /= L0;
+
+            pair<double, double> area(a0, a1);
+
+            if (!cfg_modifiers[i].lookupValue("strainrate", strainrate) ||
+                    !cfg_modifiers[i].lookupValue("axis", axis) ||
+                    !cfg_modifiers[i].lookupValue("strainAxis", strainAxis))
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+
+            boundaryModifiers.push_back(new StrainBoundary(strainrate, strainAxis, nu, area, axis, dt, isStatic));
         }
         else if(boost::iequals(type, "boundary force"))
         {
             double appliedForce;
             int axis, forceAxis;
-
+            int steps = -1;
             double a0 = cfg_modifiers[i]["area"][0];
             double a1 = cfg_modifiers[i]["area"][1];
             a0 /= L0;
             a1 /= L0;
 
             pair<double, double> area(a0, a1);
+            cfg_modifiers[i].lookupValue("steps", steps);
 
             if (!cfg_modifiers[i].lookupValue("appliedForce", appliedForce) ||
                     !cfg_modifiers[i].lookupValue("axis", axis) ||
@@ -595,11 +745,11 @@ int PdSolver::initialize()
 
             if(boost::iequals(solverType, "ADR"))
             {
-                modifiers.push_back(new boundaryForce(appliedForce, forceAxis, area, axis));
+                boundaryModifiers.push_back(new boundaryForce(appliedForce, forceAxis, area, axis, steps, delta));
             }
             else
             {
-                modifiers.push_back(new boundaryForce(appliedForce, forceAxis, area, axis));
+                boundaryModifiers.push_back(new boundaryForce(appliedForce, forceAxis, area, axis, steps, delta));
             }
         }
         else if(boost::iequals(type, "PMB fracture"))
@@ -622,27 +772,6 @@ int PdSolver::initialize()
                 spModifiers.push_back(new PmbFracture(alpha));
             }
         }
-        else if(boost::iequals(type, "micropolar fracture"))
-        {
-            double criticalAngle;
-
-            if (!cfg_modifiers[i].lookupValue("criticalAngle", criticalAngle))
-            {
-                cerr << "Error reading the parameters for modifier '"
-                     << type << "'" << endl;
-                exit(EXIT_FAILURE);
-            }
-
-            if(boost::iequals(solverType, "ADR"))
-            {
-                cerr << "Type: " << type << " not implemented for ADR" << endl;
-                exit(EXIT_FAILURE);
-            }
-            else
-            {
-                spModifiers.push_back(new MicropolarFracture(criticalAngle));
-            }
-        }
         else if(boost::iequals(type, "bond energy fracture"))
         {
             double G;
@@ -654,7 +783,7 @@ int PdSolver::initialize()
                 exit(EXIT_FAILURE);
             }
 
-            Modifier * fMod = new BondEnergyFracture(delta, G, dim, forces, h);            
+            Modifier * fMod = new BondEnergyFracture(delta, G, forces, h);
             if(boost::iequals(solverType, "ADR"))
             {
                 qsModifiers.push_back(fMod);
@@ -680,12 +809,12 @@ int PdSolver::initialize()
             T /= E0;
             if(boost::iequals(solverType, "ADR"))
             {
-                AdrMohrCoulombBondFracture * failureCriterion = new AdrMohrCoulombBondFracture(mu, C, T, dim);
+                AdrMohrCoulombBondFracture * failureCriterion = new AdrMohrCoulombBondFracture(mu, C, T);
                 qsModifiers.push_back(failureCriterion);
             }
             else
             {
-                MohrCoulombBondFracture * failureCriterion = new MohrCoulombBondFracture(mu, C, T, dim);
+                MohrCoulombBondFracture * failureCriterion = new MohrCoulombBondFracture(mu, C, T);
                 spModifiers.push_back(failureCriterion);
             }
         }
@@ -705,12 +834,12 @@ int PdSolver::initialize()
             T /= E0;
             if(boost::iequals(solverType, "ADR"))
             {
-                ADRmohrCoulombFracture * failureCriterion = new ADRmohrCoulombFracture(mu, C, T, dim);
+                ADRmohrCoulombFracture * failureCriterion = new ADRmohrCoulombFracture(mu, C, T);
                 qsModifiers.push_back(failureCriterion);
             }
             else
             {
-                MohrCoulombFracture * failureCriterion = new MohrCoulombFracture(mu, C, T, dim);
+                MohrCoulombFracture * failureCriterion = new MohrCoulombFracture(mu, C, T);
                 spModifiers.push_back(failureCriterion);
             }
         }
@@ -736,7 +865,7 @@ int PdSolver::initialize()
             }
             else
             {
-                MohrCoulombNodeSplit * failureCriterion = new MohrCoulombNodeSplit(mu, C, T, dim);
+                MohrCoulombNodeSplit * failureCriterion = new MohrCoulombNodeSplit(mu, C, T);
                 spModifiers.push_back(failureCriterion);
             }
         }
@@ -762,7 +891,7 @@ int PdSolver::initialize()
             }
             else
             {
-                MohrCoulomMaxConnected * failureCriterion = new MohrCoulomMaxConnected(mu, C, T, dim);
+                MohrCoulomMaxConnected * failureCriterion = new MohrCoulomMaxConnected(mu, C, T);
                 spModifiers.push_back(failureCriterion);
             }
 
@@ -789,7 +918,7 @@ int PdSolver::initialize()
             }
             else
             {
-                MohrCoulombWeightedAverage * failureCriterion = new MohrCoulombWeightedAverage(mu, C, T, dim);
+                MohrCoulombWeightedAverage * failureCriterion = new MohrCoulombWeightedAverage(mu, C, T);
                 spModifiers.push_back(failureCriterion);
             }
         }
@@ -807,7 +936,7 @@ int PdSolver::initialize()
             }
             C /= E0;
             T /= E0;
-            MohrCoulombMax * failureCriterion = new MohrCoulombMax(mu, C, T, dim);
+            MohrCoulombMax * failureCriterion = new MohrCoulombMax(mu, C, T);
 
             if(boost::iequals(solverType, "ADR"))
             {
@@ -832,7 +961,60 @@ int PdSolver::initialize()
             }
             C /= E0;
             T /= E0;
-            MohrCoulombMaxFracture * failureCriterion = new MohrCoulombMaxFracture(mu, C, T, dim);
+            MohrCoulombMaxFracture * failureCriterion = new MohrCoulombMaxFracture(mu, C, T);
+
+            if(boost::iequals(solverType, "ADR"))
+            {
+                qsModifiers.push_back(failureCriterion);
+            }
+            else
+            {
+                spModifiers.push_back(failureCriterion);
+            }
+        }
+        else if(boost::iequals(type, "Mohr-Coulomb max fracture weighted"))
+        {
+            double mu, C, T;
+            double Wc = 0.9;
+            double Bc = 0.9;
+            cfg_modifiers[i].lookupValue("W", Wc);
+            cfg_modifiers[i].lookupValue("B", Bc);
+
+            if (!cfg_modifiers[i].lookupValue("mu", mu)||
+                    !cfg_modifiers[i].lookupValue("C", C) ||
+                    !cfg_modifiers[i].lookupValue("T", T) )
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            C /= E0;
+            T /= E0;
+
+            if(boost::iequals(solverType, "ADR"))
+            {
+                MohrCoulombMaxFractureWeighted * failureCriterion = new MohrCoulombMaxFractureWeightedAdr(mu, C, T, Wc, Bc);
+                qsModifiers.push_back(failureCriterion);
+            }
+            else
+            {
+                MohrCoulombMaxFractureWeighted * failureCriterion = new MohrCoulombMaxFractureWeighted(mu, C, T, Wc, Bc);
+                spModifiers.push_back(failureCriterion);
+            }
+        }
+        else if(boost::iequals(type, "Strain fracture"))
+        {
+            double Eeq, Evol;
+
+            if (!cfg_modifiers[i].lookupValue("Eeq", Eeq)||
+                    !cfg_modifiers[i].lookupValue("Evol", Evol))
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+
+            StrainFracture* failureCriterion = new StrainFracture(Eeq, Evol, dim);
 
             if(boost::iequals(solverType, "ADR"))
             {
@@ -853,14 +1035,34 @@ int PdSolver::initialize()
                      << type << "'" << endl;
                 exit(EXIT_FAILURE);
             }
-            SimpleFracture * simpleFracture = new SimpleFracture(alpha);            
+            SimpleFracture * failureCriterion = new SimpleFracture(alpha);
             if(boost::iequals(solverType, "ADR"))
             {
-                qsModifiers.push_back(simpleFracture);
+                qsModifiers.push_back(failureCriterion);
             }
             else
             {
-                spModifiers.push_back(simpleFracture);
+                spModifiers.push_back(failureCriterion);
+            }
+        }
+        else if(boost::iequals(type, "von Mises fracture"))
+        {
+            double sigma_y;
+
+            if (!cfg_modifiers[i].lookupValue("sigma_y", sigma_y))
+            {
+                cerr << "Error reading the parameters for modifier '"
+                     << type << "'" << endl;
+                exit(EXIT_FAILURE);
+            }
+            VonMisesFracture * failureCriterion = new VonMisesFracture(sigma_y);
+            if(boost::iequals(solverType, "ADR"))
+            {
+                qsModifiers.push_back(failureCriterion);
+            }
+            else
+            {
+                spModifiers.push_back(failureCriterion);
             }
         }
         else if(boost::iequals(type, "ADR fracture average"))
@@ -901,7 +1103,7 @@ int PdSolver::initialize()
     }
 
     // Initializing modifiers
-    for(Modifier* mod: modifiers)
+    for(Modifier* mod: boundaryModifiers)
     {
         mod->setDim(dim);
         mod->setGrid(&m_grid);
@@ -965,7 +1167,7 @@ int PdSolver::initialize()
 #endif
 
     // Initializing modifiers
-    for(Modifier* mod: modifiers)
+    for(Modifier* mod: boundaryModifiers)
     {
         mod->initialize();
     }
@@ -1052,7 +1254,7 @@ int PdSolver::initialize()
     }
 
     // Initializing modifiers
-    for(Modifier* mod: modifiers)
+    for(Modifier* mod: boundaryModifiers)
     {
         vector<string> additionGhostParameters = mod->ghostDependencies();
         for(const string &param:additionGhostParameters)
@@ -1092,9 +1294,9 @@ int PdSolver::initialize()
     {
         solver->addForce(force);
     }
-    for(Modifier* mod: modifiers)
+    for(Modifier* mod: boundaryModifiers)
     {
-        solver->addModifier(mod);
+        solver->addBoundaryModifier(mod);
     }
     for(Modifier* mod: spModifiers)
     {
@@ -1166,15 +1368,21 @@ int PdSolver::initialize()
     vector<CalculateProperty*> calcProperties;
     for(const auto prop:neededProperties)
     {
-        const string type = prop.first;
+        string type = prop.first;
         const int updateFrquency = prop.second;
 
         bool alreadyAdded = false;
+
+        if(boost::iequals(type, "strain"))
+        {
+            type  = "stress";
+        }
+
         for(CalculateProperty* property:calcProperties)
         {
             if(boost::iequals(type, property->type))
             {
-                if(property->updateFrquency() > updateFrquency)
+                if(property->updateFrequency() > updateFrquency)
                     property->setUpdateFrquency(updateFrquency);
                 alreadyAdded = true;
                 break;
@@ -1190,16 +1398,10 @@ int PdSolver::initialize()
             property->setUpdateFrquency(updateFrquency);
             calcProperties.push_back(property);
         }
-        else if(boost::iequals(type, "stress"))
+        else if(boost::iequals(type, "stress") || boost::iequals(type, "strain"))
         {
-            CalculateProperty *property = new CalculateStress(forces);
-            property->setUpdateFrquency(updateFrquency);
-            calcProperties.push_back(property);
-        }
-        else if(boost::iequals(type, "strain"))
-        {
-            CalculateProperty *property = new CalculateStrain(delta, domain);
-            property->setUpdateFrquency(updateFrquency);
+            CalculateProperty *property = new CalculateStressStrain(forces, E, nu, delta, planeStress);
+           property->setUpdateFrquency(updateFrquency);
             calcProperties.push_back(property);
         }
         else if(boost::iequals(type, "damage"))
@@ -1260,5 +1462,6 @@ void PdSolver::solve()
     if(isRoot)
         cout << "Starting solver" << endl;
     solver->solve();
+
 }
 //------------------------------------------------------------------------------

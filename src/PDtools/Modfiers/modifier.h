@@ -25,6 +25,10 @@ protected:
     int m_dim;
     int m_myRank = 0;
     int m_nCores = 1;
+
+    bool m_hasStepOne = false;
+    bool m_hasUpdateOne = false;
+    bool m_hasStepTwo = false;
 public:
     Modifier();
     virtual ~Modifier();
@@ -72,6 +76,9 @@ public:
 
     void
     setGrid(Grid *grid);
+    bool hasStepOne() const;
+    bool hasStepTwo() const;
+    bool hasUpdateOne() const;
 };
 //------------------------------------------------------------------------------
 }

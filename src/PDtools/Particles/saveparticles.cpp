@@ -270,8 +270,7 @@ void SaveParticles::writeBinaryBody(Particles &particles,
 
         for(const auto & coord:m_saveCoordinates)
         {
-            const double r_i = r(j, coord.first);
-//            const double r_i = r(j, coord.first)*coord.second;
+            const double r_i = r(j, coord.first)*coord.second;
             buffer[i++] = r_i;
         }
 

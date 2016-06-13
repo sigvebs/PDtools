@@ -11,14 +11,15 @@ class ADR: public Solver
 {
 protected:
     double m_globalError;
+    double m_du_u;
     double m_c;
     double m_epsilon = 0.2;
     int m_maxSteps = 2000;
     int m_maxStepsFracture = 1000;
+    int m_counter = 0;
 
 public:
     ADR();
-    ~ADR();
 
     virtual void
     solve();
@@ -42,14 +43,14 @@ protected:
     checkInitialization();
     virtual void
     initialize();
-    void
-    calculateStableMass();
     virtual void
     integrateStepOne();
     virtual void
     integrateStepTwo();
     void
     staticModifiers();
+    void
+    calculateStableMass();
     virtual void
     updateGridAndCommunication();
 };

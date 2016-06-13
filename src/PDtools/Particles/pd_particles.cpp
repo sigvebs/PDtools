@@ -36,16 +36,16 @@ void PD_Particles::initializeMatrices()
 {
     Particles::initializeMatrices();
 
-    m_r0 = mat(m_maxParticles*PARTICLE_BUFFER, DIM);
-    m_F  = mat(m_maxParticles*PARTICLE_BUFFER, DIM);
+    m_r0 = mat(m_maxParticles*PARTICLE_BUFFER, M_DIM);
+    m_F  = mat(m_maxParticles*PARTICLE_BUFFER, M_DIM);
     m_stableMass = vec(m_maxParticles*PARTICLE_BUFFER);
-    m_Fold  = mat(m_maxParticles*PARTICLE_BUFFER, DIM);
+    m_Fold  = mat(m_maxParticles*PARTICLE_BUFFER, M_DIM);
 }
 //------------------------------------------------------------------------------
 void PD_Particles::initializeBodyForces()
 {
-    m_u = mat(m_nParticles, DIM); // TMP
-    m_b = mat(m_nParticles, DIM); // TMP
+    m_u = mat(m_nParticles, M_DIM); // TMP
+    m_b = mat(m_nParticles, M_DIM); // TMP
 }
 //------------------------------------------------------------------------------
 void PD_Particles::deleteParticleById(const int deleteId)
@@ -55,7 +55,7 @@ void PD_Particles::deleteParticleById(const int deleteId)
     const int moveId = m_colToId.at(moveCol);
     m_idToCol.erase(deleteId);
 
-    for(int d=0;d<DIM; d++)
+    for(int d=0;d<M_DIM; d++)
     {
         m_r(deleteCol, d) = m_r(moveCol, d);
         m_r0(deleteCol, d) = m_r0(moveCol, d);

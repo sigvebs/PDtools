@@ -40,6 +40,7 @@ protected:
     int m_nGhostParticles = 0;
     int m_newId;
     int m_needGhostVelocity = 0;
+    int m_needGhostR0 = 0;
 
     enum ErrorCodes
     {
@@ -143,6 +144,8 @@ public:
     int newId();
     int needGhostVelocity() const;
     void setNeedGhostVelocity(int needGhostVelocity);
+    int getNeedGhostR0() const;
+    void setNeedGhostR0(int needGhostR0);
 };
 //------------------------------------------------------------------------------
 // Inline functions

@@ -23,6 +23,21 @@ void Modifier::setGrid(Grid *grid)
     m_grid = grid;
 }
 //------------------------------------------------------------------------------
+bool Modifier::hasStepOne() const
+{
+    return m_hasStepOne;
+}
+//------------------------------------------------------------------------------
+bool Modifier::hasStepTwo() const
+{
+    return m_hasStepTwo;
+}
+//------------------------------------------------------------------------------
+bool Modifier::hasUpdateOne() const
+{
+    return m_hasUpdateOne;
+}
+//------------------------------------------------------------------------------
 Modifier::Modifier()
 {
     

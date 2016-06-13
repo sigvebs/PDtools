@@ -20,3 +20,5 @@ SOURCES += \
 
 HEADERS += \
     pdsolver.h
+
+include(deployment.pri)

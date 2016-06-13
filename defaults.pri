@@ -16,7 +16,7 @@ CONFIG(debug, debug|release){
     DEFINES *= DEBUG_MODE
 } else {
     message(Building in release mode)
-    DEFINES *= ARMA_NO_DEBUG
+#    DEFINES *= ARMA_NO_DEBUG
     QMAKE_CXXFLAGS_RELEASE -= -O1
     QMAKE_CXXFLAGS_RELEASE -= -O2
     QMAKE_CXXFLAGS_RELEASE *= -O3
@@ -34,6 +34,9 @@ abel {
 } else {
     LIBS *= -lconfig++
     LIBS *= -larmadillo
+    # Carefull
+    LIBS *= -llapack
+    LIBS *= -lblas
 }
 
 
@@ -79,16 +82,30 @@ MPI {
         }
     }
 
-    linux-g++ {
-        QMAKE_CXX = mpicxx
-        QMAKE_CC = mpicc
+    linux-g++ | macx {
+        macx {
+            QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
+            QMAKE_CXX = mpic++
+            QMAKE_CC = mpic++
+        }
+        linux-g++ {
+#            QMAKE_CXX = mpicxx
+#            QMAKE_CC = mpicc
+            QMAKE_CXX = mpic++
+            QMAKE_CC = mpicc
+        }
+
         QMAKE_CXX_RELEASE = $$QMAKE_CXX
         QMAKE_CXX_DEBUG = $$QMAKE_CXX
         QMAKE_LINK = $$QMAKE_CXX
 
-        QMAKE_CFLAGS = $$system(mpicxx --showme:compile)
-        QMAKE_LFLAGS = $$system(mpicxx --showme:link)
-        QMAKE_CXXFLAGS = $$system(mpicxx --showme:compile)
+        QMAKE_CFLAGS = $$system(mpic++ --showme:compile)
+        QMAKE_LFLAGS = $$system(mpic++ --showme:link)
+        QMAKE_CXXFLAGS = $$system(mpic++ --showme:compile)
+
+#        QMAKE_CFLAGS = $$system(mpicxx --showme:compile)
+#        QMAKE_LFLAGS = $$system(mpicxx --showme:link)
+#        QMAKE_CXXFLAGS = $$system(mpicxx --showme:compile)
 
         CONFIG(debug, debug|release){
             QMAKE_CXXFLAGS += -g
@@ -102,12 +119,12 @@ MPI {
             QMAKE_CXXFLAGS_RELEASE *= -ffast-math
             QMAKE_CXXFLAGS_RELEASE *= -funroll-loops
         }
-    }
 
+    }
     LIBS *= -lmpi
 }
 
-linux-g++ {
+linux-g++ | macx {
     QMAKE_CXX *= -Wno-unused-result
 }
 
@@ -132,7 +149,7 @@ linux-icc-64 {
 DEFINES *= PARTICLE_BUFFER=1.5
 #DEFINES *= PARTICLE_BUFFER=1.3
 DEFINES *= PARAMETER_BUFFER=30
-DEFINES *= DIM=3
-#DEFINES *= ARMA_DONT_USE_WRAPPER
+DEFINES *= M_DIM=3
+#DEFINES *= ARMA_DONT_USE_WRAPPER # Comment out on abel
 #DEFINES *= ARMA_USE_BLAS
-#DEFINES *= ARMA_USE_LAPACK
+#DEFINES *= ARMA_USE_LAPACK # Comment out on abel

@@ -11,10 +11,16 @@ namespace PDtools
 class PD_Particles;
 
 //------------------------------------------------------------------------------
-class LoadPdParticles: public T_LoadParticles<PD_Particles>
+class LoadPdParticles: public LoadParticles
 {
 public:
     LoadPdParticles();
+
+    PD_Particles
+    load(string loadPath,
+         string format,
+         bool bin=false,
+         unordered_map<string, int> loadParameters={{}});
 
 protected:
     const vector<string>

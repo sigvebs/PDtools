@@ -32,7 +32,7 @@ private:
     int m_indexConnected;
     int m_indexRadius;
     int m_indexUnbreakable;
-    int m_indexFs[DIM];
+    int m_indexFs[M_DIM];
 
     double m_Kn;
     double m_Ks;

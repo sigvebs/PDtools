@@ -11,6 +11,55 @@ vector<pair<string, int> > Force::getNeededProperties() const
     return neededProperties;
 }
 //------------------------------------------------------------------------------
+int Force::getCalulateStress() const
+{
+    return m_calulateStress;
+}
+//------------------------------------------------------------------------------
+bool Force::getHasStepOneModifier() const
+{
+    return m_hasStepOneModifier;
+}
+//------------------------------------------------------------------------------
+void Force::evaluateStepOne(int id, int i)
+{
+    (void) id;
+    (void) i;
+}
+//------------------------------------------------------------------------------
+void Force::evaluateStepTwo(int id, int i)
+{
+    (void) id;
+    (void) i;
+}
+//------------------------------------------------------------------------------
+void Force::evaluateStatic(int id, int i)
+{
+    (void) id;
+    (void) i;
+}
+//------------------------------------------------------------------------------
+bool Force::getHasStepTwoModifier() const
+{
+    return m_hasStepTwoModifier;
+}
+//------------------------------------------------------------------------------
+bool Force::getContinueState() const
+{
+    return m_continueState;
+}
+//------------------------------------------------------------------------------
+bool Force::getHasStaticModifier() const
+{
+    return m_hasStaticModifier;
+}
+//------------------------------------------------------------------------------
+bool Force::getHasUpdateState() const
+{
+    return m_hasUpdateState;
+}
+//------------------------------------------------------------------------------
+
 Force::Force(PD_Particles &particles, string _type):
     m_particles(particles),
     m_r(m_particles.r()),

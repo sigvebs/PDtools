@@ -5,6 +5,7 @@
 #include <math.h>
 #include <unordered_map>
 #include <armadillo>
+#include <algorithm>
 
 namespace PDtools
 {
@@ -51,6 +52,11 @@ public:
     addParticle(pair<int, int> p)
     {
         m_particles.push_back(p);
+    }
+    void
+    removeParticle(const pair<int, int> &p)
+    {
+        m_particles.erase(std::remove(m_particles.begin(), m_particles.end(), p), m_particles.end());
     }
     const vector<pair<int, int>> &
     particles() const
@@ -134,7 +140,8 @@ protected:
     double m_gridspacing;
     int m_myRank = 0;
     int m_nCores = 1;
-    int m_nGrid[DIM];
+    int m_nGrid[3];
+//    int m_nGrid[M_DIM];
     arma::ivec3 m_nGridArma;
     arma::ivec6 m_nGrid_with_boundary;
     arma::vec3 m_gridSpacing;

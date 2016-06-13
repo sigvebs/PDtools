@@ -29,7 +29,7 @@ void
 cleanUpPdConnections(PD_Particles & particles);
 
 void
-applyVolumeCorrection(PD_Particles &particles, double delta, double lc);
+applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int dim);
 
 void
 reCalculatePdMicromodulus(PD_Particles & particles, int dim);

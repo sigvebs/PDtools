@@ -21,15 +21,20 @@ public:
     virtual void
     update();
 
+    void
+    calulateShapeFunction();
+
 private:
     double m_delta;
     vector<pair<double,double>> &m_domain;
     int m_indexStrain[6];
+    int m_indexShapeFunction[6];
     int m_nStrainElements;
     int m_indexConnected;
     int m_indexVolume;
     int m_indexVolumeScaling;
     int m_indexDr0;
+    double m_w;
     double m_h = 1.;
 };
 //------------------------------------------------------------------------------
