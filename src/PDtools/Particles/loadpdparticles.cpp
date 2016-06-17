@@ -384,7 +384,6 @@ PD_Particles load_pd(string loadPath, Grid &grid)
     const string type = lineSplit.back();
 
     PD_Particles particles = loadParticles.load(loadPath, type);
-    double test = sizeof(particles);
 
     particles.type(type);
     return move(particles);

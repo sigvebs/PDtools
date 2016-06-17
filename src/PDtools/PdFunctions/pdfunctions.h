@@ -57,6 +57,9 @@ possibleConfigurations3d(const int n);
 
 vector<int>
 optimalConfigurationCores(const int nCores, const vector<double> &domain, const int dim);
+
+string
+getFileEnding(string filename);
 }
 //------------------------------------------------------------------------------
 #endif // PDFUNCTIONS_H

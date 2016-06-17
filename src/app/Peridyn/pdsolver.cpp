@@ -7,6 +7,10 @@
 #include <PDtools/CalculateProperties/calculateproperties.h>
 #include "PDtools/SavePdData/savepddata.h"
 
+#include "Mesh/pdmesh.h"
+#include "Mesh/loadmesh.h"
+#include "Mesh/meshtopdpartices.h"
+
 #include <armadillo>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
@@ -55,6 +59,7 @@ PdSolver::PdSolver(string cfgPath, int myRank, int nMpiNodes):
 //------------------------------------------------------------------------------
 PdSolver::~PdSolver()
 {
+
 }
 //------------------------------------------------------------------------------
 int PdSolver::initialize()
@@ -166,7 +171,6 @@ int PdSolver::initialize()
     lc /= L0;
     delta /= L0;
 
-
     double gridspacing = 1.25*(delta + 0.5*lc);
 //    double gridspacing = 1.35*(delta + 0.5*lc);
     m_grid = Grid(domain, gridspacing, periodicBoundaries);
@@ -195,8 +199,19 @@ int PdSolver::initialize()
         exit(EXIT_FAILURE);
     }
     string particlesPath = (const char *) m_cfg.lookup("particlesPath");
-    m_particles = load_pd(particlesPath, m_grid);
+    string fileType = getFileEnding(particlesPath);
+
+    if(boost::iequals(fileType, "msh")) {
+        int quadratureDegree = 1;
+        m_cfg.lookupValue("quadratureDegree", quadratureDegree);
+        PdMesh msh = loadMesh2d(particlesPath);
+        m_particles = convertMshToPdParticles(dim, quadratureDegree, msh, m_grid);
+    } else {
+        m_particles = load_pd(particlesPath, m_grid);
+    }
+
     m_particles.dimensionalScaling(E0, L0, v0, t0, rho0);
+
     //--------------------------------------------------------------------------
     // TODO: Setting the initial position. Should not be done here
     //--------------------------------------------------------------------------
@@ -251,10 +266,13 @@ int PdSolver::initialize()
     int performVolumeCorrection = 1;
     m_cfg.lookupValue("performVolumeCorrection", performVolumeCorrection);
     setPdConnections(m_particles, m_grid, delta, lc);
+
     m_grid.clearGhostParticles();
     exchangeInitialGhostParticles(m_grid, m_particles);
 //    addFractures(m_particles, domain);
-    removeVoidConnections(m_particles, m_grid, delta, lc);
+//    removeVoidConnections(m_particles, m_grid, delta, lc);
+
+
     cleanUpPdConnections(m_particles);
     m_particles.registerPdParameter("volumeScaling", 1);
     if(performVolumeCorrection)
@@ -267,6 +285,9 @@ int PdSolver::initialize()
     //--------------------------------------------------------------------------
     string solverType = (const char *) m_cfg.lookup("solverType");
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    cout << "hello from " << m_myRank << endl;
+    MPI_Barrier(MPI_COMM_WORLD);
     int nSteps;
     double dt;
 
@@ -1360,7 +1381,6 @@ int PdSolver::initialize()
     {
         neededProperties.push_back(property);
     }
-
     //--------------------------------------------------------------------------
     // Setting the properties needs to be calculated
     //--------------------------------------------------------------------------
@@ -1453,15 +1473,14 @@ int PdSolver::initialize()
     double nSec = timer.toc();
     if(isRoot)
         cout << "Time: " << nSec << "s" << endl;
-
     return 0;
 }
 //------------------------------------------------------------------------------
 void PdSolver::solve()
 {
+
     if(isRoot)
         cout << "Starting solver" << endl;
     solver->solve();
-
 }
 //------------------------------------------------------------------------------

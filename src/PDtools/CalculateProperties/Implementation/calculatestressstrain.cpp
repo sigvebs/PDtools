@@ -288,6 +288,10 @@ void CalculateStressStrain::computeK(int id, int i)
     const int nConnections = PDconnections_i.size();
     double dr0_ij[m_dim];
 
+    if(id == 26161)
+    {
+        double b = 2;
+    }
     int nConnected = 0;
     for(int l_j=0; l_j<nConnections; l_j++)
     {
@@ -337,7 +341,8 @@ void CalculateStressStrain::computeK(int id, int i)
     }
     else
     {
-        K = inv_sympd(K);
+//        K = inv_sympd(K);
+        K = inv(K);
     }
 
     if(m_dim >= 2)

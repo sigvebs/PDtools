@@ -235,7 +235,6 @@ void exchangeInitialGhostParticles_boundary(Grid &grid, PD_Particles &particles)
                 }
             }
         }
-
         // Sending and receiving data
         int nSendElements = sendData.size();
         int nRecieveElements;

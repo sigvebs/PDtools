@@ -84,7 +84,10 @@ HEADERS += \
     Modfiers/Implementation/savestate.h \
     Modfiers/Implementation/BoundaryConditions/moveparticletype.h \
     Modfiers/Implementation/FractureCriterion/mohrcoulombmaxfractureweightedadr.h \
-    Force/PdForces/pd_pmb_linear_integrator.h
+    Force/PdForces/pd_pmb_linear_integrator.h \
+    Mesh/pdmesh.h \
+    Mesh/loadmesh.h \
+    Mesh/meshtopdpartices.h
 
 SOURCES += \
     Grid/grid.cpp \
@@ -159,6 +162,9 @@ SOURCES += \
     Modfiers/Implementation/savestate.cpp \
     Modfiers/Implementation/BoundaryConditions/moveparticletype.cpp \
     Modfiers/Implementation/FractureCriterion/mohrcoulombmaxfractureweightedadr.cpp \
-    Force/PdForces/pd_pmb_linear_integrator.cpp
+    Force/PdForces/pd_pmb_linear_integrator.cpp \
+    Mesh/pdmesh.cpp \
+    Mesh/loadmesh.cpp \
+    Mesh/meshtopdpartices.cpp
 
 include(deployment.pri)

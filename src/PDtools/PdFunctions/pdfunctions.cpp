@@ -1,5 +1,6 @@
 #include "pdfunctions.h"
 
+#include <boost/algorithm/string.hpp>
 #include <limits>
 #include <math.h>
 #include <armadillo>
@@ -8,8 +9,8 @@
 #include "Grid/grid.h"
 #include "PDtools/Force/force.h"
 
-#define USE_EXTENDED_RANGE_RADIUS 1
-#define USE_EXTENDED_RANGE_LC 0
+#define USE_EXTENDED_RANGE_RADIUS 0
+//#define USE_EXTENDED_RANGE_LC 0
 //#define USE_EXTENDED_RANGE_LC 0
 
 namespace PDtools
@@ -58,6 +59,8 @@ void setPdConnections(PD_Particles & particles,
         const double radius_i = data(col_i, indexRadius);
 #elif USE_EXTENDED_RANGE_LC
         const double radius_i = 0.5*lc;
+#else
+            const double radius_i = 0.;
 #endif
             for(const pair<int, int> & idCol_j:gridPoint.particles())
             {
@@ -77,7 +80,8 @@ void setPdConnections(PD_Particles & particles,
 //                const double l_delta = delta + 0.5*lc;
                 const double radius_j = 0.5*lc;
 #else
-                const double l_delta = delta;
+                const double radius_j = 0.;
+                //                const double l_delta = delta;
 #endif
 //                const double deltaSquared = pow(l_delta, 2);
 
@@ -120,7 +124,8 @@ void setPdConnections(PD_Particles & particles,
 #elif USE_EXTENDED_RANGE_LC
                 const double radius_j = 0.5*lc;
 #else
-                const double l_delta = delta;
+                    const double radius_j = 0.;
+//                const double l_delta = delta;
 #endif
 //                    const double deltaSquared = pow(l_delta, 2);
 
@@ -183,6 +188,8 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
                 const double r_i = data(i, indexRadius);
 #elif USE_EXTENDED_RANGE_LC
                 const double r_i = 0.5*lc;
+#else
+            const double r_i = 0.;
 #endif
 
             vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(id_i);
@@ -199,7 +206,8 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
                 const double r_j = 0.5*lc;
 //                const double radius_j = data(col_j, indexRadius);
 #else
-                const double r_j = data(col_j, indexRadius);
+                const double r_j = 0.;
+//                const double r_j = data(col_j, indexRadius);
 #endif
                 const double rc_j = delta - r_j;
 
@@ -412,6 +420,7 @@ void calculateRadius(PD_Particles &particles, int dim, double h)
             const double V = data(i, indexVolume);
             const double r = sqrt(V/(M_PI * h));
             data(i, indexRadius) = scale*r;
+//            cout << data(i, indexRadius) << endl;
         }
     }
     else if (dim == 1)
@@ -946,6 +955,13 @@ vector<int> optimalConfigurationCores(const int nCores,
     }
 #endif
     return optimal;
+}
+//------------------------------------------------------------------------------
+string getFileEnding(string filename)
+{
+    std::vector<std::string> elements;
+    boost::split(elements, filename, boost::is_any_of("."), boost::token_compress_on);
+    return elements[elements.size()-1];
 }
 //------------------------------------------------------------------------------
 }
