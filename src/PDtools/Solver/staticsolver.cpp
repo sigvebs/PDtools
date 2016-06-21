@@ -46,7 +46,7 @@ void StaticSolver::iterate()
 {
 //ARMA_USE_WRAPPER
 #ifdef ARMA_USE_WRAPPER
-    const int nParticles = m_particles->nParticles();
+    const size_t nParticles = m_particles->nParticles();
     //--------------------------------------------------------------------------
     // Setting the boundary conditions
     //--------------------------------------------------------------------------
@@ -56,7 +56,7 @@ void StaticSolver::iterate()
 //    B.reshape(nParticles*m_dim, 1);
 //    vec b_k = B.col(0);
 
-    for(int i=0; i<nParticles; i++)
+    for(size_t i=0; i<nParticles; i++)
     {
         for(int d=0; d<m_dim; d++)
         {

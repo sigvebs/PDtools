@@ -87,7 +87,12 @@ HEADERS += \
     Force/PdForces/pd_pmb_linear_integrator.h \
     Mesh/pdmesh.h \
     Mesh/loadmesh.h \
-    Mesh/meshtopdpartices.h
+    Mesh/meshtopdpartices.h \
+    Elements/pd_element.h \
+    Utilities/gaussianquadrature.h \
+    Utilities/geometryfunctions.h \
+    PdFunctions/pdelementfunctions.h \
+    Utilities/boostgeometry_settings.h
 
 SOURCES += \
     Grid/grid.cpp \
@@ -165,6 +170,11 @@ SOURCES += \
     Force/PdForces/pd_pmb_linear_integrator.cpp \
     Mesh/pdmesh.cpp \
     Mesh/loadmesh.cpp \
-    Mesh/meshtopdpartices.cpp
+    Mesh/meshtopdpartices.cpp \
+    Elements/pd_element.cpp \
+    Utilities/gaussianquadrature.cpp \
+    Utilities/geometryfunctions.cpp \
+    PdFunctions/pdelementfunctions.cpp \
+    Utilities/boostgeometry_settings.cpp
 
 include(deployment.pri)

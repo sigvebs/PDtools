@@ -37,6 +37,7 @@ public:
     {
         return m_ghost;
     }
+
     void
     setParticles(vector<pair<int, int>> particles)
     {
@@ -48,11 +49,16 @@ public:
         m_particles.reserve(m_particles.size() + particles.size());
         m_particles.insert(m_particles.end(), particles.begin(), particles.end());
     }
+
     void
     addParticle(pair<int, int> p)
     {
         m_particles.push_back(p);
     }
+
+    void
+    addElement(const array<size_t, 2> &id_col);
+
     void
     removeParticle(const pair<int, int> &p)
     {
@@ -118,6 +124,8 @@ public:
     void
     setPeriodicNeighbourRank(const int periodicNeighbourRank);
 
+    vector<array<size_t, 2> > elements() const;
+
 protected:
     int m_id;
     vector<int> m_nGridId;
@@ -125,6 +133,7 @@ protected:
     vec3 m_center;
     bool m_ghost;
     vector<pair<int,int>> m_particles;
+    vector<array<size_t, 2>> m_elements;
     vector<GridPoint*> m_neighbours;
     vector<int> m_neighbourRanks;
     int m_periodicNeighbourRank;
@@ -141,7 +150,7 @@ protected:
     int m_myRank = 0;
     int m_nCores = 1;
     int m_nGrid[3];
-//    int m_nGrid[M_DIM];
+//  int m_nGrid[M_DIM];
     arma::ivec3 m_nGridArma;
     arma::ivec6 m_nGrid_with_boundary;
     arma::vec3 m_gridSpacing;
@@ -170,103 +179,44 @@ public:
                   const ivec3 &periodicBoundaries);
 
     ~Grid();
-    void
-    initialize();
-    void
-    createGrid();
-    void
-    setNeighbours();
-    int
-    gridId(const vec3 & r) const;
-    int gridIdN(const vector<int> &nId) const;
-    int
-    particlesBelongsTo(const vec3 & r) const;
-    void
-    update();
-    void
-    placeParticlesInGrid(Particles &particles);
-    void
-    clearParticles();
-    void
-    clearAllParticles();
-    void
-    clearGhostParticles();
-    void
-    setIdAndCores(int myRank, int nCores);
-    void
-    setMyGridpoints();
-    int
-    belongsTo(const int gId) const;
-    const vector<int> &
-    myGridPoints() const
-    {
-        return m_myGridPoints;
-    }
-    int
-    dim()
-    {
-        return m_dim;
-    }
-    void
-    dim(int d)
-    {
-        m_dim = d;
-    }
+    void initialize();
+    void createGrid();
+    void setNeighbours();
+    int  gridId(const vec3 & r) const;
+    int  gridIdN(const vector<int> &nId) const;
+    int  particlesBelongsTo(const vec3 & r) const;
+    void update();
+    void placeParticlesInGrid(Particles &particles);
+    void placeElementsInGrid(PD_Particles &nodes);
+    void clearParticles();
+    void clearElements();
+    void clearAllParticles();
+    void clearGhostParticles();
+    void setIdAndCores(int myRank, int nCores);
+    void setMyGridpoints();
+    int belongsTo(const int gId) const;
+    const vector<int> & myGridPoints() const {return m_myGridPoints;}
 
-    unordered_map<int, GridPoint*> &
-    gridpoints()
-    {
-        return m_gridpoints;
-    }
-    void
-    setOwnership();
+    unordered_map<int, GridPoint*> & gridpoints() {return m_gridpoints;}
 
-    int
-    myRank()
-    {
-        return m_myRank;
-    }
-    int
-    nCores()
-    {
-        return m_nCores;
-    }
+    void setOwnership();
+    int myRank() {return m_myRank;}
+    int nCores() {return m_nCores;}
+    vector<int> & boundaryGridPoints();
+    vector<int> & neighbouringCores();
+    const std::vector<int> & ghostGrid();
+    void setInitialPositionScaling(const double L0);
+    double initialPositionScaling();
+    const arma::ivec3 & nGrid();
+    const vector<pair<double, double>> & boundary();
+    vector<int> nCpuGrid() const;
+    void setBoundaryGrid();
+    std::vector<int> periodicSendGridIds() const;
+    std::vector<int> periodicReceiveGridIds() const;
+    std::vector<pair<double, double>> originalBoundary() const;
 
-    vector<int> &
-    boundaryGridPoints();
-
-    vector<int> &
-    neighbouringCores();
-
-    const std::vector<int> &
-    ghostGrid();
-
-    void
-    setInitialPositionScaling(const double L0);
-
-    double
-    initialPositionScaling();
-
-    const arma::ivec3 &
-    nGrid();
-
-    const vector<pair<double, double>> &
-    boundary();
-
-    vector<int>
-    nCpuGrid() const;
-
-    void
-    setBoundaryGrid();
-
-    std::vector<int>
-    periodicSendGridIds() const;
-
-    std::vector<int>
-    periodicReceiveGridIds() const;
-
-    std::vector<pair<double, double> >
-    originalBoundary() const;
+    int dim() const;
+    void dim(int dim);
 };
 //------------------------------------------------------------------------------
 // Inline functions

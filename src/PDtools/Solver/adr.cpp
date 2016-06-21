@@ -196,7 +196,7 @@ void ADR::iterate(int maxNumberOfSteps)
 //------------------------------------------------------------------------------
 void ADR::integrateStepOne()
 {
-    ivec & colToId = m_particles->colToId();
+//    ivec & colToId = m_particles->colToId();
     using namespace arma;
 
     const double alpha = (2.*m_dt)/(2. + m_c*m_dt);

@@ -1,10 +1,13 @@
 #include "grid.h"
 
 #include <array>
+#include <map>
 #include "PDtools/PdFunctions/pdfunctions.h"
 #include "Particles/particles.h"
 #include "Particles/pd_particles.h"
-#include <map>
+#include "Utilities/geometryfunctions.h"
+
+
 namespace PDtools
 {
 //------------------------------------------------------------------------------
@@ -26,6 +29,16 @@ std::vector<int> Grid::periodicReceiveGridIds() const
 std::vector<pair<double, double> > Grid::originalBoundary() const
 {
     return m_originalBoundary;
+}
+//------------------------------------------------------------------------------
+int Grid::dim() const
+{
+    return m_dim;
+}
+//------------------------------------------------------------------------------
+void Grid::dim(int dim)
+{
+    m_dim = dim;
 }
 //------------------------------------------------------------------------------
 Grid::Grid()
@@ -312,14 +325,35 @@ void Grid::placeParticlesInGrid(Particles &particles)
 #endif
     for(unsigned int i=0; i<particles.nParticles(); i++)
     {
-        const int id = colToId.at(i);
+        const size_t id = colToId.at(i);
         const vec3 &r = R.row(i).t();
-        const int gId = gridId(r);
+        const size_t gId = gridId(r);
         const pair<int, int> id_pos(id, i);
 #ifdef USE_OPENMP
 #pragma omp critical
 #endif
         m_gridpoints[gId]->addParticle(id_pos);
+    }
+}
+//------------------------------------------------------------------------------
+void Grid::placeElementsInGrid(PD_Particles &nodes)
+{
+    clearElements();
+    const mat & R = nodes.r();
+    const ivec & colToId = nodes.colToId();
+    const unordered_map<int, int> & idToCol = nodes.idToCol();
+    const vector<PD_triElement> & triElements = nodes.getTriElements();
+    const vector<PD_quadElement> & quadElements = nodes.getQuadElements();
+
+    // Quad elements
+    for(int i=0; i< quadElements.size(); i++) {
+        const size_t e_id = quadElements[i].id();
+        const PD_quadElement & quadElement = quadElements[i];
+        const vec3 &r = centroidOfQuad(nodes, quadElement);
+        const size_t gId = gridId(r);
+//        array<size_t, 2> id_col = ;
+        m_gridpoints[gId]->addElement({e_id, i});
+//        m_gridpoints[gId]->addElement(id_col);
     }
 }
 //------------------------------------------------------------------------------
@@ -331,6 +365,16 @@ void Grid::clearParticles()
         gp->clearParticles();
     }
     clearGhostParticles();
+}
+//------------------------------------------------------------------------------
+void Grid::clearElements()
+{
+//    for(int id:m_myGridPoints)
+//    {
+//        GridPoint* gp = m_gridpoints[id];
+//        gp->clearParticles();
+//    }
+//    clearGhostParticles();
 }
 //------------------------------------------------------------------------------
 void Grid::clearAllParticles()
@@ -434,7 +478,7 @@ void Grid::setOwnership()
     int rank;
     for(const auto &gridPoint:m_gridpoints)
     {
-        const int id = gridPoint.first;
+//        const int id = gridPoint.first;
         vector<int> n = gridPoint.second->nGridId();
 #if USE_MPI
         int i[M_DIM];
@@ -460,8 +504,6 @@ void Grid::setOwnership()
 //------------------------------------------------------------------------------
 void Grid::setBoundaryGrid()
 {
-    int rank;
-
     for(int d=0; d<m_dim; d++)
     {
         if(m_periodicBoundaries[d])
@@ -591,6 +633,11 @@ GridPoint::GridPoint(int id, vec3 center, bool ghost):
 {
 }
 //------------------------------------------------------------------------------
+void GridPoint::addElement(const array<size_t, 2> &id_col)
+{
+    m_elements.push_back(id_col);
+}
+//------------------------------------------------------------------------------
 void GridPoint::setnGridId(const vector<int> &ids)
 {
     m_nGridId = ids;
@@ -619,6 +666,11 @@ int GridPoint::periodicNeighbourRank() const
 void GridPoint::setPeriodicNeighbourRank(const int periodicNeighbourRank)
 {
     m_periodicNeighbourRank = periodicNeighbourRank;
+}
+//------------------------------------------------------------------------------
+vector<array<size_t, 2> > GridPoint::elements() const
+{
+    return m_elements;
 }
 //------------------------------------------------------------------------------
 // Other grid dependent functions

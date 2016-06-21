@@ -213,8 +213,8 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
 
                 double v1 = 1.;
                 double v2 = 1.;
-                double b1 = 1.;
-                double b2 = 1.;
+//                double b1 = 1.;
+//                double b2 = 1.;
 
                 if(dr > rc_j)
                 {
@@ -231,8 +231,8 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
                     const double A_a = M_PI*r*r;
 
                     v1 = A/A_a;
-                    b2 = 0.5*(delta + r_i - dr)/r_i;
-                    b1 = 0.5*(delta + r_j - dr)/r_j;
+//                    b2 = 0.5*(delta + r_i - dr)/r_i;
+//                    b1 = 0.5*(delta + r_j - dr)/r_j;
                 }
                 if(dr > rc_i)
                 {
@@ -245,10 +245,10 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
                     const double A1 = R*R * acos(d1/R) - d1*sqrt(R*R - d1*d1);
                     const double A2 = r*r * acos(d2/r) - d2*sqrt(r*r - d2*d2);
 
-                    const double A = A1 + A2;
-                    const double A_a = M_PI*r*r;
-                    v2 = A/A_a;
-                    b2 = 0.5*(delta + r_i - dr)/r_i;
+//                    const double A = A1 + A2;
+//                    const double A_a = M_PI*r*r;
+//                    v2 = A/A_a;
+//                    b2 = 0.5*(delta + r_i - dr)/r_i;
                 }
 
                 double volumeCorrection = 1.0;

@@ -465,8 +465,8 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
         }
 
         // Sending and receiving data
-        int nSendElements = sendData.size();
-        int nRecieveElements;
+        size_t nSendElements = sendData.size();
+        size_t nRecieveElements;
         MPI_Status status;
         MPI_Sendrecv(&nSendElements, 1, MPI_INT,
                      toCore, 0,
@@ -483,7 +483,7 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
                 MPI_COMM_WORLD, &status);
 
         // Storing the received particle data
-        unsigned int j = 0;
+        size_t j = 0;
         while(j < nRecieveElements)
         {
             const int col = nParticles;

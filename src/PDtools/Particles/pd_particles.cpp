@@ -24,13 +24,44 @@ void PD_Particles::setReceivedParticles2(const vector<vector<int> > &receivedPar
     m_receivedParticles2 = receivedParticles2;
 }
 //------------------------------------------------------------------------------
+void PD_Particles::addTri(const PD_triElement &tElement)
+{
+    m_triElements.push_back(tElement);
+}
+//------------------------------------------------------------------------------
+void PD_Particles::addQuad(const PD_quadElement &qElement)
+{
+    m_quadElements.push_back(qElement);
+}
+//------------------------------------------------------------------------------
+vector<PD_quadElement> PD_Particles::getQuadElements() const
+{
+    return m_quadElements;
+}
+//------------------------------------------------------------------------------
+vector<PD_triElement> PD_Particles::getTriElements() const
+{
+    return m_triElements;
+}
+//------------------------------------------------------------------------------
 PD_Particles::PD_Particles()
 {
 }
 //------------------------------------------------------------------------------
-PD_Particles::~PD_Particles()
+void PD_Particles::initializeElements(const size_t nTriangles, const size_t nQuads, const size_t degree)
 {
+    m_triElements.reserve(nTriangles);
+    m_quadElements.reserve(nQuads);
+    GaussLegendreQuad GaussLegendre_quadBasis(m_dim, degree);
+
+    m_gaussianPoints = GaussLegendre_quadBasis.gaussianPoints_2d();
+    m_gaussianWeights = GaussLegendre_quadBasis.gaussianWeights_2d();
+    m_shapeFunction = GaussLegendre_quadBasis.shapeFunction_2d();
 }
+//------------------------------------------------------------------------------
+//PD_Particles::~PD_Particles()
+//{
+//}
 //------------------------------------------------------------------------------
 void PD_Particles::initializeMatrices()
 {
