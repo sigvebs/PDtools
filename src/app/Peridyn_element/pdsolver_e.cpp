@@ -22,9 +22,14 @@
 #include "Elements/pd_element.h"
 #include "PdFunctions/pdelementfunctions.h"
 
+#include "Force/EPD/epd_bondforce.h"
+#include "CalculateProperties/ImplementationEPD/calculatestressstrainepd.h"
+//" CalculateStressStrainEPD"
+
 #ifdef USE_MPI
 #include <mpi.h>
 #endif
+
 
 using namespace PDtools;
 using namespace arma;
@@ -64,6 +69,7 @@ PdSolver_e::PdSolver_e(string cfgPath, int myRank, int nMpiNodes):
 //------------------------------------------------------------------------------
 PdSolver_e::~PdSolver_e()
 {
+
 
 }
 //------------------------------------------------------------------------------
@@ -178,7 +184,8 @@ int PdSolver_e::initialize()
     lc /= L0;
     delta /= L0;
 
-    double gridspacing = 1.25*(delta + 0.5*lc);
+    double gridspacing = 1.25*(delta + 1.0*lc);
+//    double gridspacing = 1.25*(delta + 0.5*lc);
 //    double gridspacing = 1.35*(delta + 0.5*lc);
     m_grid = Grid(domain, gridspacing, periodicBoundaries);
     m_grid.setIdAndCores(m_myRank, m_nCores);
@@ -200,7 +207,8 @@ int PdSolver_e::initialize()
     // Setting the element grid
     //--------------------------------------------------------------------------
 //    const double elementGridspacing = 1.25*(delta + 0.5*lc);
-    const double elementGridspacing = 1.25*(delta + 1.0*lc);
+//    const double elementGridspacing = 1.25*(delta + 1.0*lc);
+    const double elementGridspacing = 1.5*(delta + 1.5*lc);
     Grid elementGrid(domain, elementGridspacing, periodicBoundaries);
     elementGrid.setIdAndCores(m_myRank, m_nCores);
     elementGrid.dim(dim);
@@ -260,6 +268,7 @@ int PdSolver_e::initialize()
 //    m_discretization.registerParameter("s0", s0);
     m_discretization.registerParameter("groupId");
 
+
     //    m_particles.registerParameter("radius");
     //    calculateRadius(m_particles, dim, dxdydz[2]);
     int calculateMicromodulus = 0;
@@ -269,15 +278,15 @@ int PdSolver_e::initialize()
     //--------------------------------------------------------------------------
     if(isRoot)
         cout << "Gridding particles and setting PD-connections" << endl;
-
     m_grid.clearParticles();
     m_grid.placeParticlesInGrid(m_discretization);
+    m_grid.placeElementsInGrid(m_discretization);
+//    elementGrid.clearParticles();
+//    elementGrid.placeParticlesInGrid(m_discretization);
+//    elementGrid.placeElementsInGrid(m_discretization);
+    updateElementQuadrature(m_discretization);
 
-    elementGrid.clearParticles();
-    elementGrid.placeParticlesInGrid(m_discretization);
-    elementGrid.placeElementsInGrid(m_discretization);
 
-    //lc *= 1.05;
 #ifdef USE_MPI
 //    vector<string> ghostParameters = {"volume", "radius", "groupId"};
     vector<string> ghostParameters = {"groupId"};
@@ -287,19 +296,16 @@ int PdSolver_e::initialize()
     }
     exchangeGhostParticles(m_grid, m_discretization);
 #endif
-
-    setPdConnections(m_discretization, m_grid, delta, lc);
-    setPdElementConnections(m_discretization, elementGrid, delta);
-    cout << "Done tmp" << endl;
-    return 0;
-    exit(EXIT_SUCCESS);
+//    setPdConnections(m_discretization, m_grid, delta, lc);
+//    setPdElementConnections(m_discretization, elementGrid, delta);
+    setPdElementConnections(m_discretization, m_grid, delta);
 
     m_grid.clearGhostParticles();
     exchangeInitialGhostParticles(m_grid, m_discretization);
 //    addFractures(m_particles, domain);
 //    removeVoidConnections(m_particles, m_grid, delta, lc);
 
-    cleanUpPdConnections(m_discretization);
+//    cleanUpPdConnections(m_discretization);
     m_discretization.registerPdParameter("volumeScaling", 1);
     setPD_N3L(m_discretization);
     //--------------------------------------------------------------------------
@@ -307,9 +313,7 @@ int PdSolver_e::initialize()
     //--------------------------------------------------------------------------
     string solverType = (const char *) m_cfg.lookup("solverType");
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    cout << "hello from " << m_myRank << endl;
-    MPI_Barrier(MPI_COMM_WORLD);
+//    MPI_Barrier(MPI_COMM_WORLD);
     int nSteps;
     double dt;
 
@@ -375,6 +379,7 @@ int PdSolver_e::initialize()
 
     if(isRoot)
         cout << "Solver set: " << solverType << endl;
+
     //--------------------------------------------------------------------------
     // Setting the Forces
     //--------------------------------------------------------------------------
@@ -392,8 +397,8 @@ int PdSolver_e::initialize()
 
         if(boost::iequals(type, "bond force"))
         {
-            forces.push_back(new PD_bondForce(m_discretization));
-        }
+            forces.push_back(new EPD_bondForce(m_discretization));
+        }/*
         else if(boost::iequals(type, "dampened bond force"))
         {
             double c;
@@ -522,6 +527,7 @@ int PdSolver_e::initialize()
             cfg_forces[i].lookupValue("c", c);
             forces.push_back(new ViscousDamper(m_discretization, c));
         }
+        */
         else
         {
             cerr << "Force: " << type << " has not been implemented." << endl;
@@ -767,6 +773,7 @@ int PdSolver_e::initialize()
         {
             double appliedForce;
             int axis, forceAxis;
+            int incremental = 0;
             int steps = -1;
             double a0 = cfg_modifiers[i]["area"][0];
             double a1 = cfg_modifiers[i]["area"][1];
@@ -775,6 +782,7 @@ int PdSolver_e::initialize()
 
             pair<double, double> area(a0, a1);
             cfg_modifiers[i].lookupValue("steps", steps);
+            cfg_modifiers[i].lookupValue("incremental", incremental);
 
             if (!cfg_modifiers[i].lookupValue("appliedForce", appliedForce) ||
                     !cfg_modifiers[i].lookupValue("axis", axis) ||
@@ -786,13 +794,10 @@ int PdSolver_e::initialize()
             }
             appliedForce /= (E0/pow(L0, 4));
 
-            if(boost::iequals(solverType, "ADR"))
-            {
-                boundaryModifiers.push_back(new boundaryForce(appliedForce, forceAxis, area, axis, steps, delta));
-            }
-            else
-            {
-                boundaryModifiers.push_back(new boundaryForce(appliedForce, forceAxis, area, axis, steps, delta));
+            if(boost::iequals(solverType, "ADR")) {
+                boundaryModifiers.push_back(new boundaryForce(appliedForce, forceAxis, area, axis, steps, delta, incremental));
+            } else {
+                boundaryModifiers.push_back(new boundaryForce(appliedForce, forceAxis, area, axis, steps, delta, incremental));
             }
         }
         else if(boost::iequals(type, "PMB fracture"))
@@ -1442,13 +1447,14 @@ int PdSolver_e::initialize()
         }
         else if(boost::iequals(type, "stress") || boost::iequals(type, "strain"))
         {
-            CalculateProperty *property = new CalculateStressStrain(forces, E, nu, delta, planeStress);
+//            CalculateProperty *property = new CalculateStressStrain(forces, E, nu, delta, planeStress);
+            CalculateProperty *property = new CalculateStressStrainEPD(forces, E, nu, delta, planeStress);
            property->setUpdateFrquency(updateFrquency);
             calcProperties.push_back(property);
         }
         else if(boost::iequals(type, "damage"))
         {
-            CalculateProperty *property = new CalculateDamage();
+            CalculateProperty *property = new CalculateDamage(delta);
             property->setUpdateFrquency(updateFrquency);
             calcProperties.push_back(property);
         }
@@ -1496,6 +1502,10 @@ int PdSolver_e::initialize()
     if(isRoot)
         cout << "Time: " << nSec << "s" << endl;
     return 0;
+
+    cout << "Done tmp" << endl;
+    return 0;
+    exit(EXIT_SUCCESS);
 }
 //------------------------------------------------------------------------------
 void PdSolver_e::solve()

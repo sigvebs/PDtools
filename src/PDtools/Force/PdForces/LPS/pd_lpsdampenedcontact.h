@@ -1,7 +1,7 @@
 #ifndef PD_LPSDAMPENEDCONTACT_H
 #define PD_LPSDAMPENEDCONTACT_H
 
-#include "PDtools/Force/PdForces/pd_lps.h"
+#include "PDtools/Force/PdForces/LPS/pd_lps.h"
 
 namespace PDtools
 {

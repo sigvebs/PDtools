@@ -30,6 +30,8 @@ void MohrCoulombMax::registerParticleParameters()
     m_indexBroken = m_particles->registerParameter("broken", 0);
     m_idToCol = &m_particles->idToCol();
 
+    m_particles->registerParameter("damage");
+
     switch(m_dim)
     {
     case 1:

@@ -75,15 +75,13 @@ void ADRmohrCoulombFracture::evaluateStepTwo(const int id_i, const int i)
 //    arma::mat S_i(m_dim, m_dim);
 //    arma::mat S(m_dim, m_dim);
 
-    if(m_dim == 2)
-    {
+    if(m_dim == 2) {
 //        S_i(0, 0) = data(i, m_indexStress[0]);
 //        S_i(1, 1) = data(i, m_indexStress[1]);
 //        S_i(0, 1) = data(i, m_indexStress[2]);
 //        S_i(1, 0) = S_i(0, 1);
         int counter = 0;
-        for(auto &con:PDconnections)
-        {
+        for(auto &con:PDconnections) {
             const int id_j = con.first;
             const int j = (*m_idToCol)[id_j];
 
@@ -100,23 +98,22 @@ void ADRmohrCoulombFracture::evaluateStepTwo(const int id_i, const int i)
             const double first = 0.5*(sx + sy);
             const double second = sqrt(0.25*(sx - sy)*(sx - sy) + sxy*sxy);
 
-            double p_2 = first + second; // max
-            double p_1 = first - second; // min
+            const double p_1 = first + second; // max
+            const double p_2 = first - second; // min
 
-            const double shear = fabs(0.5*(p_1 - p_2)*m_sin_theta);
-            const double normal = 0.5*(p_1 + p_2) + 0.5*(p_1 - p_2)*m_cos_theta;
+            const double shear_max = 0.5*(p_1 - p_2);
+            const double shear = shear_max*m_cos_theta;
+            const double normal = 0.5*(p_1 + p_2) + shear_max*m_sin_theta;
 
-            const double criticalShear = fabs(shear) - fabs(m_C - m_d*normal);
-            const double criticalTensile = p_2 - m_T;
+            const double criticalShear = shear + m_d*normal - m_C;
+            const double criticalTensile = p_1 - m_T;
 
-            if(criticalShear >= 0  && normal < 0)
-            {
+            //                if(criticalShear >= 0  && normal < 0)
+            if(criticalShear >= 0) {
                 con.second[m_indexConnected] = 0;
                 data(i, m_indexBrokenNow) = 1;
                 m_maxPId = pair<int, int>(id_i, counter);
-            }
-            else if(criticalTensile >= 0)
-            {
+            } else if(criticalTensile >= 0) {
                 con.second[m_indexConnected] = 0;
                 data(i, m_indexBrokenNow) = 1;
                 m_maxPId = pair<int, int>(id_i, counter);
@@ -175,8 +172,7 @@ void ADRmohrCoulombFracture::evaluateStepTwo(const int id_i, const int i)
             counter++;
         }
     }
-    else if(m_dim == 3)
-    {
+    else if(m_dim == 3) {
         /*
         S_i(0, 0) = data(i, m_indexStress[0]);
         S_i(1, 1) = data(i, m_indexStress[1]);

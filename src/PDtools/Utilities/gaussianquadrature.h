@@ -10,6 +10,39 @@ namespace PDtools
 using namespace arma;
 using namespace std;
 //------------------------------------------------------------------------------
+class orderedGrid
+{
+public:
+    orderedGrid(int _dim, int _n);
+    const int dim;
+    const int n;
+
+    vector<double> shapeFunction(double x, double y);
+
+    vector<double> x() const;
+    vector<double> w() const;
+
+    mat gaussianPoints_2d();
+    vec gaussianWeights_2d();
+    mat shapeFunction_2d();
+
+    int nPoints() const;
+
+    vector<vector<double> > jakobi_1() const;
+    vector<vector<double> > jakobi_2() const;
+
+protected:
+    vector<double> m_shapeFunction;
+    vector<double> m_x;
+    vector<double> m_w;
+    int m_nPoints;
+    mat m_gaussianPoints_2d;
+    mat m_gaussianShapFunction_2d;
+    vec m_weights_2d;
+    vector<vector<double>> m_jakobi_1;
+    vector<vector<double>> m_jakobi_2;
+};
+
 class GaussLegendreQuad
 {
 public:
@@ -28,6 +61,9 @@ public:
 
     int nPoints() const;
 
+    vector<vector<double> > jakobi_1() const;
+    vector<vector<double> > jakobi_2() const;
+
 protected:
     vector<double> m_shapeFunction;
     vector<double> m_x;
@@ -36,6 +72,8 @@ protected:
     mat m_gaussianPoints_2d;
     mat m_gaussianShapFunction_2d;
     vec m_weights_2d;
+    vector<vector<double>> m_jakobi_1;
+    vector<vector<double>> m_jakobi_2;
 
     // For quads
     const double x1[1] = {0.};

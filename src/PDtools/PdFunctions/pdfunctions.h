@@ -19,7 +19,7 @@ setPdConnections(PD_Particles & particles, Grid & grid,
                       double radius, double lc);
 
 void
-addFractures(PD_Particles & particles, const vector<pair<double,double>> &domain);
+addFractures(PD_Particles & particles, const vector<pair<double,double>> &domain, const vector<double> &fracture);
 
 void
 removeVoidConnections(PD_Particles & particles, Grid & grid,

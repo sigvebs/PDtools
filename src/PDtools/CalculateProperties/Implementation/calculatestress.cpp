@@ -9,16 +9,16 @@ namespace PDtools
 CalculateStress::CalculateStress(vector<Force *> &forces):
     CalculateProperty("stress2")
 {
-    for(Force* force: forces)
-    {
+    for(Force* force: forces) {
         m_forces.push_back(force);
     }
 }
 //------------------------------------------------------------------------------
 void CalculateStress::initialize()
 {
-    switch(m_dim)
-    {
+    m_particles->setNeedGhostR0(true);
+
+    switch(m_dim) {
     case 1:
         m_nStressElements = 1;
         m_indexStress[0] = m_particles->registerParameter("s_xx");
@@ -50,10 +50,8 @@ void CalculateStress::clean()
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-    for(int i=0; i<nParticles; i++)
-    {
-        for(int s=0; s<m_nStressElements; s++)
-        {
+    for(int i=0; i<nParticles; i++) {
+        for(int s=0; s<m_nStressElements; s++) {
             data(i, m_indexStress[s]) = 0;
         }
     }
@@ -68,11 +66,9 @@ void CalculateStress::update()
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-    for(int i=0; i<nParticles; i++)
-    {
+    for(int i=0; i<nParticles; i++) {
         const int id_i = colToId(i);
-        for(Force *force: m_forces)
-        {
+        for(Force *force: m_forces) {
             force->calculateStress(id_i, i, m_indexStress);
         }
     }

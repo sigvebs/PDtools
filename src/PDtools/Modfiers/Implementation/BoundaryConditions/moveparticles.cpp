@@ -26,6 +26,9 @@ void MoveParticles::registerParticleParameters()
 {
     m_particles->registerParameter("unbreakable");
     m_ghostParameters = {"unbreakable"};
+
+    m_particles->setNeedGhostVelocity(1);
+    m_particles->setNeedGhostR0(1);
 }
 //------------------------------------------------------------------------------
 void MoveParticles::evaluateStepOne()
@@ -37,20 +40,12 @@ void MoveParticles::evaluateStepOne()
     arma::mat & F = m_particles->F();
     arma::mat & Fold = m_particles->Fold();
 
-    for(const int &id:m_localParticleIds)
-    {
+    for(const int &id:m_localParticleIds) {
         const int i =  idToCol.at(id);
         r(i, m_velOritentation) += dr;
         v(i, m_velOritentation) = 0.0;
         F(i, m_velOritentation) = 0.0;
         Fold(i, m_velOritentation) = 0.0;
-
-//        for(int d=0;d<M_DIM; d++)
-//        {
-//            v(i, d) = 0.0;
-//            F(i, d) = 0.0;
-//            Fold(i, d) = 0.0;
-//        }
     }
 }
 //------------------------------------------------------------------------------
@@ -63,36 +58,24 @@ void MoveParticles::initialize()
     arma::imat & isStatic = m_particles->isStatic();
     const int unbreakablePos = m_particles->registerParameter("unbreakable");
 
-    double uRadius = 0.5*(m_boundary.second - m_boundary.first);
-    int n = 0;
+    double uRadius = 0.15*(m_boundary.second - m_boundary.first);
 
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
-    for(unsigned int i=0; i<m_particles->nParticles(); i++)
-    {
-        double pos = r(i, m_boundaryOrientation);
-        if(m_boundary.first <= pos && pos < m_boundary.second)
-        {
+    // Selecting particles
+    for(unsigned int i=0; i<m_particles->nParticles(); i++) {
+        const double pos = r(i, m_boundaryOrientation);
+
+        if(m_boundary.first <= pos && pos < m_boundary.second) {
             const int id = colToId(i);
 
             if(m_isStatic)
                 isStatic(i) = 1;
-#ifdef USE_OPENMP
-#pragma omp critical
-#endif
+
             m_localParticleIds.push_back(id);
             data(i, unbreakablePos) = 1;
         }
-        if(m_usingUnbreakableBorder)
-        {
-            if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second)
-            {
-#ifdef USE_OPENMP
-#pragma omp critical
-#endif
+        if(m_usingUnbreakableBorder) {
+            if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second) {
                 data(i, unbreakablePos) = 1;
-                n++;
             }
         }
     }
@@ -105,20 +88,12 @@ void MoveParticles::staticEvaluation()
     arma::mat & F = m_particles->F();
     arma::mat & Fold = m_particles->Fold();
 
-    for(const int &id:m_localParticleIds)
-    {
+    for(const int &id:m_localParticleIds) {
         const int i = idToCol.at(id);
 
         v(i, m_velOritentation) = 0.0;
         F(i, m_velOritentation) = 0.0;
         Fold(i, m_velOritentation) = 0.0;
-
-//        for(int d=0;d<M_DIM; d++)
-//        {
-//            v(i, d) = 0.0;
-//            F(i, d) = 0.0;
-//            Fold(i, d) = 0.0;
-//        }
     }
 }
 //------------------------------------------------------------------------------

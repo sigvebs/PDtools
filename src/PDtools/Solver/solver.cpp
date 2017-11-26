@@ -48,8 +48,7 @@ Solver::Solver()
 //------------------------------------------------------------------------------
 Solver::~Solver()
 {     
-    for(Force *force:m_oneBodyForces)
-    {
+    for(Force *force:m_oneBodyForces) {
       delete force;
     } 
     m_oneBodyForces.clear();
@@ -60,30 +59,25 @@ void Solver::applyBoundaryConditions()
     const ivec &colToId = m_particles->colToId();
     const int nParticles =  m_particles->nParticles();
 
-    for(Modifier *modifier:m_boundaryModifiers)
-    {
+    for(Modifier *modifier:m_boundaryModifiers) {
         modifier->evaluateStepOne();
     }
 
-    for(Modifier *modifier:m_boundaryModifiers)
-    {
+    for(Modifier *modifier:m_boundaryModifiers) {
         if(!modifier->hasStepOne())
             continue;
 
-        for(int i=0; i<nParticles; i++)
-        {
+        for(int i=0; i<nParticles; i++) {
             const int id = colToId(i);
             modifier->evaluateStepOne(id, i);
         }
     }
 
-    for(Modifier *modifier:m_boundaryModifiers)
-    {
+    for(Modifier *modifier:m_boundaryModifiers) {
         if(!modifier->hasUpdateOne())
             continue;
 
-        for(int i=0; i<nParticles; i++)
-        {
+        for(int i=0; i<nParticles; i++) {
             const int id = colToId(i);
             modifier->updateStepOne(id, i);
         }
@@ -100,12 +94,12 @@ void Solver::updateGridAndCommunication()
 
     // Updating lists in modifiers
     int counter = 0;
-    for(Modifier *modifier:m_boundaryModifiers)
-    {
+    for(Modifier *modifier:m_boundaryModifiers) {
         updateModifierLists(*modifier, *m_particles, counter);
         counter++;
     }
 #endif
+    updateElementQuadrature(*m_particles);
 }
 //------------------------------------------------------------------------------
 void Solver::updateGhosts()
@@ -117,8 +111,7 @@ void Solver::updateGhosts()
 //------------------------------------------------------------------------------
 void Solver::save(int timesStep)
 {
-    if(timesStep % m_saveInterval == 0)
-    {
+    if(timesStep % m_saveInterval == 0) {
         m_saveParticles->evaluate(m_t, timesStep);
         m_saveParticles->saveData(m_t, timesStep);
 
@@ -134,56 +127,50 @@ void Solver::initialize()
 //------------------------------------------------------------------------------
 void Solver::modifiersStepOne()
 {
-    for(Modifier *modifier:m_spModifiers)
-    {
+    for(Modifier *modifier:m_spModifiers) {
         modifier->evaluateStepOne();
     }
     const ivec &colToId = m_particles->colToId();
     const int nParticles =  m_particles->nParticles();
-    if(!m_spModifiers.empty())
-    {
-        for(Modifier *modifier:m_spModifiers)
-        {
+
+    if(!m_spModifiers.empty()) {
+        for(Modifier *modifier:m_spModifiers) {
             if(!modifier->hasStepOne())
                 continue;
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-            for(int i=0; i<nParticles; i++)
-            {
+            for(int i=0; i<nParticles; i++) {
                 const int id = colToId(i);
                 modifier->evaluateStepOne(id, i);
             }
         }
 
-        for(Modifier *modifier:m_spModifiers)
-        {
+        for(Modifier *modifier:m_spModifiers) {
             if(!modifier->hasUpdateOne())
                 continue;
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-            for(int i=0; i<nParticles; i++)
-            {
+            for(int i=0; i<nParticles; i++) {
                 const int id = colToId(i);
                 modifier->updateStepOne(id, i);
             }
         }
     }
 
-    for(Modifier *modifier:m_spModifiers)
-    {
+    for(Modifier *modifier:m_spModifiers) {
         modifier->evaluateStepOnePost();
     }
 
     // Forces modifiers
-    for(Force *oneBodyForce:m_oneBodyForces)
-    {
+    for(Force *oneBodyForce:m_oneBodyForces) {
+        oneBodyForce->evaluateStepOne();
+
         if(!oneBodyForce->getHasStepOneModifier())
             continue;
 
-        for(int i=0; i<nParticles; i++)
-        {
+        for(int i=0; i<nParticles; i++) {
             const int id = colToId(i);
             oneBodyForce->evaluateStepOne(id, i);
         }
@@ -192,25 +179,21 @@ void Solver::modifiersStepOne()
 //------------------------------------------------------------------------------
 void Solver::modifiersStepTwo()
 {
-    for(Modifier *modifier:m_boundaryModifiers)
-    {
+    for(Modifier *modifier:m_boundaryModifiers) {
         modifier->evaluateStepTwo();
     }
 
     const ivec &colToId = m_particles->colToId();
     const int nParticles =  m_particles->nParticles();
 
-    if(!m_spModifiers.empty())
-    {
-        for(Modifier *modifier:m_spModifiers)
-        {
+    if(!m_spModifiers.empty()) {
+        for(Modifier *modifier:m_spModifiers) {
             if(!modifier->hasStepTwo())
                 continue;
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-            for(int i=0; i<nParticles; i++)
-            {
+            for(int i=0; i<nParticles; i++) {
                 const int id = colToId(i);
                 modifier->evaluateStepTwo(id, i);
             }
@@ -218,13 +201,11 @@ void Solver::modifiersStepTwo()
     }
 
     // Forces modifiers
-    for(Force *oneBodyForce:m_oneBodyForces)
-    {
+    for(Force *oneBodyForce:m_oneBodyForces) {
         if(!oneBodyForce->getHasStepTwoModifier())
             continue;
 
-        for(int i=0; i<nParticles; i++)
-        {
+        for(int i=0; i<nParticles; i++) {
             const int id = colToId(i);
             oneBodyForce->evaluateStepTwo(id, i);
         }
@@ -236,14 +217,10 @@ void Solver::zeroForces()
     const int nParticles = m_particles->nParticles() + m_particles->nGhostParticles();
     mat & F = m_particles->F();
 
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
-    for(int i=0; i<nParticles; i++)
-    {
-        for(int d=0; d<m_dim; d++)
-        {
-            F(i, d) = 0;
+    for(int d=0; d<m_dim; d++) {
+        double * Fd = F.colptr(d);
+        for(int i=0; i<nParticles; i++) {
+            Fd[i] = 0;
         }
     }
 }
@@ -334,44 +311,41 @@ void Solver::calculateForces(int timeStep)
     (void) timeStep;
 
     const ivec &colToId = m_particles->colToId();
-//    const imat & isStatic = m_particles->isStatic();
     const int nParticles = m_particles->nParticles();
+    updateGhosts();
 
+    bool hasUpdateState = false;
     // Updating overall state
-    for(Force *oneBodyForce:m_oneBodyForces)
-    {
+    for(Force *oneBodyForce:m_oneBodyForces) {
         oneBodyForce->updateState();
     }
+//    updateGhosts(); // Tmp solution
 
     // Updating single particle states
-    for(Force *oneBodyForce:m_oneBodyForces)
-    {
+    for(Force *oneBodyForce:m_oneBodyForces) {
        if(!oneBodyForce->getHasUpdateState())
             continue;
+        hasUpdateState = true;
 
-#ifdef USE_OPENMP
-#pragma omp parallel for
-#endif
-        for(int i=0; i<nParticles; i++)
-        {
-            const int id = colToId(i);
+        for(int i=0; i<nParticles; i++) {
+            const int id = colToId[i];
             oneBodyForce->updateState(id, i);
         }
     }
+    // TODO: only needed for updated one body forces used in NOPD
+    if(hasUpdateState) {
+        updateGhosts();
+        //    updateGridAndCommunication();
+    }
 
     // Calculating one-body forces
-#ifdef USE_OPENMP
-#pragma omp parallel for
-#endif
-    for(int i=0; i<nParticles; i++)
-    {
+    for(int i=0; i<nParticles; i++) {
 //        if(isStatic(i))
 //            continue;
 
-        const int id = colToId(i);
+        const int id = colToId[i];
 
-        for(Force *oneBodyForce:m_oneBodyForces)
-        {
+        for(Force *oneBodyForce:m_oneBodyForces) {
             oneBodyForce->calculateForces(id, i);
         }
     }
@@ -379,12 +353,10 @@ void Solver::calculateForces(int timeStep)
 //------------------------------------------------------------------------------
 void Solver::updateProperties(const int timeStep)
 {
-    for(CalculateProperty* property:m_properties)
-    {
+    for(CalculateProperty* property:m_properties) {
         const int updateFrequency = property->updateFrequency();
 
-        if(timeStep % updateFrequency == 0)
-        {
+        if(timeStep % updateFrequency == 0) {
             property->clean();
             property->update();
         }
@@ -410,3 +382,4 @@ void Solver::printProgress(const double progress)
 }
 //------------------------------------------------------------------------------
 }
+

@@ -30,10 +30,22 @@ public:
 
     void
     computeK(int id, int i);
+
+//    double weightFunction(const double dr0) const {return 1.;}
+//    double weightFunction(const double dr0) const {return 1./dr0;}
+    double weightFunction(const double dr0) const {return m_delta/dr0;}
+//    double weightFunction(const double dr0) const {return (1. - 1.1*dr0/m_delta);}
+
+
+    virtual double
+    calculateStableMass(const int id_a, const int a,
+                        double dt);
 protected:
 
     // Material dampening
     double m_dampCoeff;
+    double m_C_PMB; // The coefficient in PMB
+    double m_C_hg; // Hourglass coefficient, usutally 10-3~10
 
     // MC criterion
     double m_phi;
@@ -44,6 +56,8 @@ protected:
     double m_sin_theta;
 
     // Stress strain related
+    int m_indexPK[6];
+    int m_indexF[6];
     int m_indexStress[6];
     int m_indexStrain[6];
     int m_indexK[6];
@@ -55,17 +69,15 @@ protected:
     int m_iVolumeScaling;
     int m_iDr0;
     int m_iBrokenNow;
-    bool m_smallStrain = false;
     bool m_greenStrain = false;
     bool m_planeStress = false;
 
-
-    mat _F;
+    mat m_DGT; // Displacement gradient tensor
     mat m_strain;
     mat m_K_i;
     mat m_K_j;
-    mat m_P_i;
-    mat m_P_j;
+    mat m_PK_i;
+    mat m_PK_j;
     vec f_ij;
 };
 //------------------------------------------------------------------------------

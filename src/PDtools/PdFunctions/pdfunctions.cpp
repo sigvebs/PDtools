@@ -9,8 +9,12 @@
 #include "Grid/grid.h"
 #include "PDtools/Force/force.h"
 
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
+
 #define USE_EXTENDED_RANGE_RADIUS 0
-//#define USE_EXTENDED_RANGE_LC 0
+#define USE_EXTENDED_RANGE_LC 1
 //#define USE_EXTENDED_RANGE_LC 0
 
 namespace PDtools
@@ -40,14 +44,12 @@ void setPdConnections(PD_Particles & particles,
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<mygridPoints.size(); i++)
-    {
+    for(unsigned int i=0; i<mygridPoints.size(); i++) {
         double dx, dy, dz;
         int gridId = mygridPoints.at(i);
         const GridPoint & gridPoint = *gridpoints.at(gridId);
 
-        for(const pair<int, int> & idCol_i:gridPoint.particles())
-        {
+        for(const pair<int, int> & idCol_i:gridPoint.particles()) {
             int id_i = idCol_i.first;
             int col_i = idCol_i.second;
             const vec & r_i = R.row(col_i).t();
@@ -62,8 +64,7 @@ void setPdConnections(PD_Particles & particles,
 #else
             const double radius_i = 0.;
 #endif
-            for(const pair<int, int> & idCol_j:gridPoint.particles())
-            {
+            for(const pair<int, int> & idCol_j:gridPoint.particles()) {
                 const int id_j = idCol_j.first;
                 const int col_j = idCol_j.second;
                 if(id_i == id_j)
@@ -94,8 +95,7 @@ void setPdConnections(PD_Particles & particles,
                 const double dr = sqrt(drSquared);
 
 //                if(drSquared <= deltaSquared)
-                if(delta >= dr - radius_i && delta >= dr - radius_j)
-                {
+                if(delta >= dr - radius_i && delta >= dr - radius_j) {
                     vector<double> connectionData;
 //                    const double dr = sqrt(drSquared);
 
@@ -109,10 +109,8 @@ void setPdConnections(PD_Particles & particles,
             // Neighbouring cells
             const vector<GridPoint*> & neighbours = gridPoint.neighbours();
 
-            for(const GridPoint *neighbour:neighbours)
-            {
-                for(const pair<int, int> & idCol_j:neighbour->particles())
-                {
+            for(const GridPoint *neighbour:neighbours) {
+                for(const pair<int, int> & idCol_j:neighbour->particles()) {
                     const int col_j = idCol_j.second;
                     const int group_j = data(col_j, iGroupId);
                     if(group_i != group_j)
@@ -138,16 +136,14 @@ void setPdConnections(PD_Particles & particles,
                     const double dr = sqrt(drSquared);
 
 //                    if(drSquared <= deltaSquared)
-                    if(delta >= dr - radius_i && delta >= dr - radius_j)
-//                    if(delta <= dr - radius_i && delta <= dr - radius_j)
-                    {
+                    if(delta >= dr - radius_i && delta >= dr - radius_j) {
                         int id_j = idCol_j.first;
                         vector<double> connectionData;
 //                        const double dr = sqrt(drSquared);
                         connectionData.push_back(dr);
                         connectionData.push_back(1.0); // Connected
                         connections[id_j] = connectionData;
-                        connectionsVector.push_back(pair<int, vector<double>>(id_j, connectionData) );
+                        connectionsVector.push_back(pair<int, vector<double>>(id_j, connectionData));
                     }
                 }
             }
@@ -216,8 +212,7 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
 //                double b1 = 1.;
 //                double b2 = 1.;
 
-                if(dr > rc_j)
-                {
+                if(dr > rc_j) {
                     const double d = dr;
                     const double R = delta;
                     const double r = r_j;
@@ -285,8 +280,7 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
                 const double rc = delta - radius_j;
 
                 double volumeCorrection = 1.0;
-                if(dr > rc)
-                {
+                if(dr > rc) {
                     volumeCorrection = 0.5*(delta + radius_j - dr)/radius_j;
                 }
                 con.second[indexVolumeScaling] = volumeCorrection;
@@ -311,14 +305,12 @@ void reCalculatePdMicromodulus(PD_Particles &particles, int dim)
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<particles.nParticles(); i++)
-    {
+    for(unsigned int i=0; i<particles.nParticles(); i++) {
         const int pId = colToId(i);
         double dRvolume = 0;
 
         const vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(pId);
-        for(auto &con:PDconnections)
-        {
+        for(auto &con:PDconnections) {
             const int id_j = con.first;
             const int col_j = idToCol.at(id_j);
 //            double volumeScaling = con.second[indexVolumeScaling];
@@ -396,48 +388,40 @@ void calculateRadius(PD_Particles &particles, int dim, double h)
     const int indexVolume = particles.getParamId("volume");
     const int indexRadius = particles.getParamId("radius");
 
-    if(dim == 3)
-    {
+    if(dim == 3) {
         const double scale = 0.9; // Shoudl be 0.704? Optimal sphere packing
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-        for(unsigned int i=0; i<particles.nParticles(); i++)
-        {
+        for(unsigned int i=0; i<particles.nParticles(); i++) {
             const double V = data(i, indexVolume);
             const double r = pow(3.*V/(4.*M_PI), 1./3.);
             data(i, indexRadius) = scale*r;
         }
     }
-    else if (dim == 2)
-    {
+    else if (dim == 2) {
         const double scale = 0.9069;
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-        for(unsigned int i=0; i<particles.nParticles(); i++)
-        {
+        for(unsigned int i=0; i<particles.nParticles(); i++) {
             const double V = data(i, indexVolume);
             const double r = sqrt(V/(M_PI * h));
             data(i, indexRadius) = scale*r;
 //            cout << data(i, indexRadius) << endl;
         }
     }
-    else if (dim == 1)
-    {
+    else if (dim == 1) {
         const double scale = 1.0;
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-        for(unsigned int i=0; i<particles.nParticles(); i++)
-        {
+        for(unsigned int i=0; i<particles.nParticles(); i++) {
             const double V = data(i, indexVolume);
             const double r = 0.5*V/(h * h);
             data(i, indexRadius) = scale*r;
         }
-    }
-    else
-    {
+    } else {
         cerr << "Dimension not supported in radius calulations: " << dim << endl;
         throw;
     }
@@ -660,87 +644,101 @@ void removeVoidConnections(PD_Particles &particles, Grid &grid,
     const mat & R0 = particles.r0();
     const int indexDr0 = particles.getPdParamId("dr0");
     const int indexRadius = particles.getParamId("radius");
-    const int dim = 2; // TODO: fix dimensions!
-    const int m = 15; // Number of sample points
+    const int dim = grid.dim();
+//    const int m = 7; // Number of sample points
+    const int m = 9; // Number of sample points
     const int indexConnected = particles.getPdParamId("connected");
-    const double sf = 1.5;
+    double sf = 1.0;
+
+    if(dim == 3)
+        sf = 1.35;
+//    sf = 1.8;
+    if(dim == 2)
+        sf = 1.55;
+
+
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<particles.nParticles(); i++)
-    {
-        const int pId = colToId.at(i);
-        vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(pId);
-        const vec & r_a = R0.row(i).t();
+    for(unsigned int i=0; i<particles.nParticles(); i++) {
+        const int pId_i = colToId.at(i);
+        vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(pId_i);
+        const vec & r_i = R0.row(i).t();
         ivec filled(m);
         arma::mat filledCenters = arma::zeros(M_DIM, m);
         const double radius_i = sf*data(i, indexRadius);
 
-        for(auto &con:PDconnections)
-        {
-            const int id_g = con.first;
-            const int col_g = idToCol.at(id_g);
-            const double dr0 = con.second[indexDr0];
-            const vec & r_g = R0.row(col_g).t();
-            const vec & n = (r_g - r_a)/dr0;
-            const double radius_g = sf*data(col_g, indexRadius);
-            const double radius_ig = radius_i + radius_g;
+        for(auto &con:PDconnections) {
+            const int id_j = con.first;
+            const int col_j = idToCol.at(id_j);
+            const double dr0_ij = con.second[indexDr0];
+            const vec & r_j = R0.row(col_j).t();
 
-            if(radius_ig >= dr0)
+            vec start = r_i;
+            vec n_ij = (r_j - r_i)/dr0_ij;
+
+            const double radius_j = sf*data(col_j, indexRadius);
+            const double radius_ij = radius_i + radius_j;
+
+            double r0 = radius_i;
+            if(r_i(0)> r_j(0)) {
+                start = r_j;
+                n_ij = -n_ij;
+                r0 = radius_j;
+            }
+
+
+            if(radius_ij >= dr0_ij)
                 continue;
 
-            const double spacing = (dr0 - radius_ig)/(m + 1);
+            const double spacing = (dr0_ij - radius_ij)/m;
+            const double radius_spacing = 0.5*spacing;
 
-            for(int k=0; k<m; k++)
-            {
+            for(int k=0; k<m; k++) {
                 filled(k) = 0;
-                filledCenters.col(k) = r_a + ((k+1)*spacing + radius_i)*n;
+                filledCenters.col(k) = start + (r0 + radius_spacing + k*spacing)*n_ij;
             }
 
             int nFilled = 0;
 
-            for(auto &con_b:PDconnections)
-            {
+            for(auto &con_b:PDconnections) {
                 const int id_b = con_b.first;
                 const int b = idToCol.at(id_b);
-                if(col_g == b)
+                if(col_j == b)
                     continue;
                 const vec & r_b = R0.row(b).t();
                 const double radius = sf*data(b, indexRadius);
 
                 // Distance to each point
-                for(int k=0; k<m; k++)
-                {
-                    const arma::vec& diff = filledCenters.col(k) - r_b;
+                for(int k=0; k<m; k++) {
+                    const vec & checkPoint = filledCenters.col(k);
+                    const arma::vec& diff = checkPoint - r_b;
                     double len_sq = 0;
-                    for(int d=0;d<dim; d++)
-                    {
-                        len_sq += diff(d)*diff(d);
+                    for(int d=0;d<dim; d++) {
+                        len_sq += pow(diff(d), 2);
                     }
 
-                    if(len_sq <= radius*radius)
-                    {
+                    if(len_sq <= pow(radius + radius_spacing,2)) {
+                        if(filled(k) < 1) {
+                            nFilled++;
+                        }
                         filled(k) = 1;
-                        nFilled++;
                     }
                 }
 
-                if(nFilled == m)
+                if(nFilled >= m)
                     continue;
             }
 
             bool remove = false;
 
-            for(int l=0; l<m; l++)
-            {
-                if(filled(l) == 0)
-                {
+            for(int l=0; l<m; l++) {
+                if(filled(l) == 0) {
                     remove = true;
                 }
             }
 
-            if(remove)
-            {
+            if(remove) {
                 con.second[indexConnected] = 0;
             }
         }
@@ -751,22 +749,150 @@ void removeVoidConnections(PD_Particles &particles, Grid &grid,
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<particles.nParticles(); i++)
-    {
+    for(unsigned int i=0; i<particles.nParticles(); i++) {
         const int id_i = colToId.at(i);
         const vector<pair<int, vector<double>>> & PDconnections_i = particles.pdConnections(id_i);
 
-        for(auto &con_j:PDconnections_i)
-        {
+        for(auto &con_j:PDconnections_i) {
             const int id_j = con_j.first;
             const bool connected = con_j.second[indexConnected];
-            if(!connected)
-            {
+            if(!connected) {
                 vector<pair<int, vector<double>>> & PDconnections_j = particles.pdConnections(id_j);
-                for(auto &con_k:PDconnections_j)
-                {
-                    if(con_k.first == id_i)
-                    {
+                for(auto &con_k:PDconnections_j) {
+                    if(con_k.first == id_i) {
+                        con_k.second[indexConnected] = 0;
+                        nFound++;
+                    }
+                }
+            }
+        }
+    }
+
+#ifdef USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+    cout << "Void bonds removed due to symmetry = " << nFound << endl;
+    /*
+     * (void) grid;
+    (void) delta;
+    (void) lc;
+
+    arma::mat & data = particles.data();
+    std::unordered_map<int, int> &idToCol = particles.idToCol();
+    const ivec &colToId = particles.colToId();
+
+    const mat & R0 = particles.r0();
+    const int indexDr0 = particles.getPdParamId("dr0");
+    const int indexRadius = particles.getParamId("radius");
+    const int dim = grid.dim();
+    const int m = 15; // Number of sample points
+    const int indexConnected = particles.getPdParamId("connected");
+    double sf = 1.0;
+
+    if(dim == 3)
+        sf = 1.8;
+    if(dim == 2)
+        sf = 1.55;
+
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
+    for(unsigned int i=0; i<particles.nParticles(); i++) {
+        const int pId_i = colToId.at(i);
+        vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(pId_i);
+        const vec & r_i = R0.row(i).t();
+        ivec filled(m);
+        arma::mat filledCenters = arma::zeros(M_DIM, m);
+        const double radius_i = sf*data(i, indexRadius);
+
+        for(auto &con:PDconnections) {
+            const int id_j = con.first;
+            const int col_j = idToCol.at(id_j);
+            const double dr0_ij = con.second[indexDr0];
+            const vec & r_j = R0.row(col_j).t();
+
+            vec start = r_i;
+            vec n_ij = (r_j - r_i)/dr0_ij;
+            if(r_i(0)> r_j(0)) {
+                start = r_j;
+                n_ij = -n_ij;
+            }
+
+            const double radius_j = sf*data(col_j, indexRadius);
+            const double radius_ij = radius_i + radius_j;
+
+            if(radius_ij >= dr0_ij)
+                continue;
+
+            const double spacing = (dr0_ij - radius_ij)/(m + 1);
+
+            for(int k=0; k<m; k++) {
+                filled(k) = 0;
+                filledCenters.col(k) = start + ((k+1)*spacing + radius_i)*n_ij;
+            }
+
+            int nFilled = 0;
+
+            for(auto &con_b:PDconnections) {
+                const int id_b = con_b.first;
+                const int b = idToCol.at(id_b);
+                if(col_j == b)
+                    continue;
+                const vec & r_b = R0.row(b).t();
+                const double radius = sf*data(b, indexRadius);
+                const double radius2 = radius*radius;
+
+                // Distance to each point
+                for(int k=0; k<m; k++) {
+                    const vec & checkPoint = filledCenters.col(k);
+                    const arma::vec& diff = checkPoint - r_b;
+                    double len_sq = 0;
+                    for(int d=0;d<dim; d++) {
+                        len_sq += pow(diff(d), 2);
+                    }
+
+                    if(len_sq <= radius2) {
+                        if(filled(k) < 1) {
+                            nFilled++;
+                        }
+                        filled(k) = 1;
+                    }
+                }
+
+                if(nFilled >= m)
+                    continue;
+            }
+
+            bool remove = false;
+
+            for(int l=0; l<m; l++) {
+                if(filled(l) == 0) {
+                    remove = true;
+                }
+            }
+
+            if(remove) {
+                con.second[indexConnected] = 0;
+            }
+        }
+    }
+
+    // Enforcing symmetry
+    int nFound = 0;
+#ifdef USE_OPENMP
+# pragma omp parallel for
+#endif
+    for(unsigned int i=0; i<particles.nParticles(); i++) {
+        const int id_i = colToId.at(i);
+        const vector<pair<int, vector<double>>> & PDconnections_i = particles.pdConnections(id_i);
+
+        for(auto &con_j:PDconnections_i) {
+            const int id_j = con_j.first;
+            const bool connected = con_j.second[indexConnected];
+            if(!connected) {
+                vector<pair<int, vector<double>>> & PDconnections_j = particles.pdConnections(id_j);
+                for(auto &con_k:PDconnections_j) {
+                    if(con_k.first == id_i) {
                         con_k.second[indexConnected] = 0;
                         nFound++;
                     }
@@ -776,74 +902,137 @@ void removeVoidConnections(PD_Particles &particles, Grid &grid,
     }
 
     cout << "Void bonds removed due to symmetry = " << nFound << endl;
+    */
 }
 //------------------------------------------------------------------------------
 void cleanUpPdConnections(PD_Particles &particles)
 {
+    const int minNumberOfConnections = 5;
     const int indexConnected = particles.getPdParamId("connected");
     const ivec &colToId = particles.colToId();
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<particles.nParticles(); i++)
-    {
+    for(unsigned int i=0; i<particles.nParticles(); i++) {
         const int id_i = colToId(i);
         vector<pair<int, vector<double>>> & PDconnections_i = particles.pdConnections(id_i);
         vector<pair<int, vector<double>>> removeConnections;
 
-        for(auto &con_j:PDconnections_i)
-        {
+
+        for(auto &con_j:PDconnections_i) {
             const bool connected = con_j.second[indexConnected];
-            if(!connected)
-            {
+            if(!connected) {
                 removeConnections.push_back(con_j);
             }
         }
 
-        for(auto &con_j:removeConnections)
-        {
+        for(auto &con_j:removeConnections) {
             PDconnections_i.erase(std::remove(PDconnections_i.begin(), PDconnections_i.end(), con_j), PDconnections_i.end());
+        }
+
+        if(PDconnections_i.size()<= minNumberOfConnections) {
+            std::cerr << "Warning: node_id " << id_i << "\t\t has PDconnections.size(): "
+                      << PDconnections_i.size() << endl;
         }
     }
 }
 //------------------------------------------------------------------------------
-void addFractures(PD_Particles &particles, const vector<pair<double, double> > &domain)
+void addFractures(PD_Particles &particles, const vector<pair<double, double> > &domain, const vector<double> &fracture)
 {
+//    double error_thres = 2.2204e-016;
+    double error_thres = 1.e-10;
+    cout << "Removing custom fractures" << endl;
     std::unordered_map<int, int> &idToCol = particles.idToCol();
     const ivec &colToId = particles.colToId();
     const mat & R0 = particles.r0();
     const int indexConnected = particles.getPdParamId("connected");
+    vec r2 = {fracture[0], fracture[2]};
+    vec r3 = {fracture[1], fracture[3]};
 
-    const double xFrac = 0.5*(domain[0].second + domain[0].first);
-    const double yFrac = 0.5*(domain[1].second + domain[1].first);
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
-    for(unsigned int i=0; i<particles.nParticles(); i++)
-    {
-        const int pId = colToId(i);
-        vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(pId);
-        const vec & r_a = R0.row(i).t();
+    int broken_bonds = 0;
+    for(unsigned int i=0; i<particles.nParticles(); i++) {
+        const int id_i = colToId(i);
+        vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(id_i);
+        vec r0 = R0.row(i).t();
 
-        for(auto &con:PDconnections)
-        {
-            const int id_b = con.first;
-            const int b = idToCol.at(id_b);
-            const vec & r_b = R0.row(b).t();
-            bool remove = false;
+        for(auto &con:PDconnections) {
+            bool inverted = false;
+            double x, y;
 
-            if(r_a(1) > yFrac && r_b(1) < yFrac && r_a(0) < xFrac && r_b(0) < xFrac)
-                remove = true;
+            const int id_j = con.first;
+            const int j = idToCol.at(id_j);
+            vec r1 = R0.row(j).t();
 
-            if(r_a(1) < yFrac && r_b(1) > yFrac && r_a(0) < xFrac && r_b(0) < xFrac)
-                remove = true;
+            // Special case where the particles are on top of each other in 3d
+            if(r0[0] == r1[0] && r0[1] == r1[1] ) continue;
 
-            if(remove)
-            {
+            if (abs(r3[0]-r2[0]) < error_thres && abs(r1[1]-r0[1]) < error_thres) {
+                x = r3[0];
+                y = r1[1];
+            }else if(abs(r3[1]-r2[1]) < error_thres && abs(r1[0]-r0[0]) < error_thres) {
+                x = r1[0];
+                y = r3[1];
+            }else {
+                // Special case where the x-axis is parallel with the axis cross
+                if(r1[0]-r0[0] == 0 or r3[0]-r2[0] == 0) {
+                    inverted = true;
+                    r0 = {r0[1], r0[0]};
+                    r1 = {r1[1], r1[0]};
+                    r2 = {r2[1], r2[0]};
+                    r3 = {r3[1], r3[0]};
+                }
+                double a = (r1[1]-r0[1])/(r1[0]-r0[0]);
+                double b = r0[1] - r0[0]*a;
+
+                double am = (r3[1]-r2[1])/(r3[0]-r2[0]);
+                double bm = r2[1] - r2[0]*am;
+
+                if(a == am) continue;
+
+                x = (bm-b)/(a-am);
+                y = a*x + b;
+            }
+
+            vector<double> r = {x, y};
+
+            bool intersect = true;
+            for(int d=0; d<2; d++) {
+                if (r[d] < min(r0[d], r1[d])){
+                    if(abs(r[d] - min(r0[d], r1[d])) > error_thres)
+                        intersect = false;
+                }
+                if (r[d] > max(r0[d], r1[d])){
+                    if(abs(r[d] - max(r0[d], r1[d])) > error_thres)
+                        intersect = false;
+                }
+                if (r[d] < min(r2[d], r3[d])){
+                    if(abs(r[d] - min(r2[d], r3[d])) > error_thres)
+                        intersect = false;
+                }
+                if (r[d] > max(r2[d], r3[d])){
+                    if(abs(r[d] - max(r2[d], r3[d])) > error_thres)
+                        intersect = false;
+                }
+            }
+            if(inverted) {
+                r0 = {r0[1], r0[0]};
+                r1 = {r1[1], r1[0]};
+                r2 = {r2[1], r2[0]};
+                r3 = {r3[1], r3[0]};
+            }
+
+            if(intersect) {
                 con.second[indexConnected] = 0;
+                //                cout << "intersects: " << id_i << " " << id_j << endl;
+//                cout << "r0 = np.array([" << r0[0] << "," << r0[1] <<"])" << endl
+//                     << "r1 = np.array([" << r1[0] << "," << r1[1] <<"])" << endl;
+//                cout << "r = np.array([" << x << "," << y <<"])" << endl;
+                broken_bonds++;
             }
         }
     }
+
+    cout << "broken_bonds: " << broken_bonds << endl;
 }
 
 //------------------------------------------------------------------------------

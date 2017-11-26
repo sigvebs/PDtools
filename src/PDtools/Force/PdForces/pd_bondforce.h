@@ -20,9 +20,9 @@ protected:
     int m_indexWeightfunction;
     int m_indexConnected;
     int m_indexMyPdPosition;
+    int m_indexStress[6];
 
-    enum PD_bondForceErrorMessages
-    {
+    enum PD_bondForceErrorMessages {
         MicrmodulusNotSet
     };
 

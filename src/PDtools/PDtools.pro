@@ -47,7 +47,7 @@ HEADERS += \
     Modfiers/Implementation/BoundaryConditions/boundaryforce.h \
     Modfiers/Implementation/FractureCriterion/bondenergyfracture.h \
     Modfiers/Implementation/FractureCriterion/simplefracture.h \
-    Force/PdForces/pd_lps.h \
+    Force/PdForces/LPS/pd_lps.h \
     Solver/ADRsolvers/dynamicadr.h \
     Solver/staticsolver.h \
     Solver/TimeIntegrators/eulercromerintegrator.h \
@@ -75,10 +75,10 @@ HEADERS += \
     Modfiers/Implementation/FractureCriterion/strainfracture.h \
     Modfiers/Implementation/FractureCriterion/vonmisesfracture.h \
     CalculateProperties/Implementation/calculatestressstrain.h \
-    Force/PdForces/pd_lpsdampenedcontact.h \
+    Force/PdForces/LPS/pd_lpsdampenedcontact.h \
     Modfiers/Implementation/BoundaryConditions/strainboundary.h \
-    Force/PdForces/lps_mc.h \
-    Force/PdForces/pd_lps_adrmc.h \
+    Force/PdForces/LPS/lps_mc.h \
+    Force/PdForces/LPS/pd_lps_adrmc.h \
     Force/PdForces/pd_nopd.h \
     Modfiers/Implementation/BoundaryConditions/moveparticleszone.h \
     Modfiers/Implementation/savestate.h \
@@ -92,7 +92,24 @@ HEADERS += \
     Utilities/gaussianquadrature.h \
     Utilities/geometryfunctions.h \
     PdFunctions/pdelementfunctions.h \
-    Utilities/boostgeometry_settings.h
+    Utilities/boostgeometry_settings.h \
+    Force/EPD/epd_lps.h \
+    Force/EPD/epd_bondforce.h \
+    Utilities/epd_functions.h \
+    CalculateProperties/ImplementationEPD/calculatestressstrainepd.h \
+    Force/PdForces/pd_bondforce_hourglass.h \
+    Modfiers/Implementation/BoundaryConditions/boundarystress.h \
+    Force/PdForces/LPS/pd_lps_crit_strain.h \
+    Force/PdForces/LPS/pd_lps_adr_strain.h \
+    Force/PdForces/LPS_porosity/lps_p_mc.h \
+    Force/PdForces/LPS_porosity/pd_lps_p.h \
+    Force/PdForces/LPS_porosity/pd_lps_p_adrmc.h \
+    Force/PdForces/LPS_porosity/pd_lpsdampenedcontact_p.h \
+    Force/PdForces/LPS/pd_lps_k.h \
+    Force/PdForces/LPSS/pd_lpss.h \
+    Force/PdForces/LPSS/pd_lpss_g.h \
+    Force/PdForces/LPSS/pd_lpss_opt.h \
+    Force/PdForces/LPS/pd_lps2.h
 
 SOURCES += \
     Grid/grid.cpp \
@@ -125,8 +142,8 @@ SOURCES += \
     Force/PdForces/pd_bondforcegaussian.cpp \
     Force/PdForces/pd_pmb.cpp \
     Force/PdForces/pd_osp.cpp \
-    Force/PdForces/pd_lps.cpp \
-    Force/PdForces/pd_lpsdampenedcontact.cpp \
+    Force/PdForces/LPS/pd_lps.cpp \
+    Force/PdForces/LPS/pd_lpsdampenedcontact.cpp \
     Force/PdForces/viscousdamper.cpp \
     Force/PdForces/pd_dampenedbondforce.cpp \
     Force/DemForces/demforce.cpp \
@@ -160,8 +177,8 @@ SOURCES += \
     Modfiers/Implementation/FractureCriterion/adrfractureaverage.cpp \
     Modfiers/Implementation/FractureCriterion/adrmohrcoulombfracture.cpp \
     Modfiers/Implementation/BoundaryConditions/strainboundary.cpp \
-    Force/PdForces/lps_mc.cpp \
-    Force/PdForces/pd_lps_adrmc.cpp \
+    Force/PdForces/LPS/lps_mc.cpp \
+    Force/PdForces/LPS/pd_lps_adrmc.cpp \
     Force/PdForces/pd_nopd.cpp \
     Modfiers/Implementation/BoundaryConditions/moveparticleszone.cpp \
     Modfiers/Implementation/savestate.cpp \
@@ -175,6 +192,23 @@ SOURCES += \
     Utilities/gaussianquadrature.cpp \
     Utilities/geometryfunctions.cpp \
     PdFunctions/pdelementfunctions.cpp \
-    Utilities/boostgeometry_settings.cpp
+    Utilities/boostgeometry_settings.cpp \
+    Force/EPD/epd_lps.cpp \
+    Force/EPD/epd_bondforce.cpp \
+    Utilities/epd_functions.cpp \
+    CalculateProperties/ImplementationEPD/calculatestressstrainepd.cpp \
+    Force/PdForces/pd_bondforce_hourglass.cpp \
+    Modfiers/Implementation/BoundaryConditions/boundarystress.cpp \
+    Force/PdForces/LPS/pd_lps_crit_strain.cpp \
+    Force/PdForces/LPS/pd_lps_adr_strain.cpp \
+    Force/PdForces/LPS_porosity/lps_p_mc.cpp \
+    Force/PdForces/LPS_porosity/pd_lps_p_adrmc.cpp \
+    Force/PdForces/LPS_porosity/pd_lps_p.cpp \
+    Force/PdForces/LPS_porosity/pd_lpsdampenedcontact_p.cpp \
+    Force/PdForces/LPS/pd_lps_k.cpp \
+    Force/PdForces/LPSS/pd_lpss.cpp \
+    Force/PdForces/LPSS/pd_lpss_g.cpp \
+    Force/PdForces/LPSS/pd_lpss_opt.cpp \
+    Force/PdForces/LPS/pd_lps2.cpp
 
 include(deployment.pri)

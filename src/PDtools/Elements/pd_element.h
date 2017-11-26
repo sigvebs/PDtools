@@ -16,8 +16,6 @@ class PdMesh;
 class PD_Particles;
 class Grid;
 
-//enum elementTYpes {TRIANGLE=3, QUAD=4};
-
 //------------------------------------------------------------------------------
 template <size_t T>
 class PD_element
@@ -29,17 +27,17 @@ public:
 
     size_t id() const {return m_id;}
 
-    arma::mat guassianQuadraturePoints_initial() const {return m_guassianQuadraturePoints_initial;}
+    const arma::mat &guassianQuadraturePoints_initial() const {return m_guassianQuadraturePoints_initial;}
     void setGuassianQuadraturePoints_initial(const arma::mat &guassianQuadraturePoints_initial)
-    {m_guassianQuadraturePoints_initial = guassianQuadraturePoints_initial;}
+    {m_guassianQuadraturePoints_initial =  arma::mat(guassianQuadraturePoints_initial);}
 
-    arma::mat guassianQuadraturePoints() const {return m_guassianQuadraturePoints;}
+    arma::mat &guassianQuadraturePoints() {return m_guassianQuadraturePoints;}
     void setGuassianQuadraturePoints(const arma::mat &guassianQuadraturePoints)
-    {m_guassianQuadraturePoints = guassianQuadraturePoints;}
+    {m_guassianQuadraturePoints = arma::mat(guassianQuadraturePoints);}
 
     arma::mat guassianQuadratureWeights() const {return m_guassianQuadratureWeights;}
-    void setGuassianQuadratureWeights(const arma::mat &guassianQuadratureWeights)
-    {m_guassianQuadratureWeights = guassianQuadratureWeights;}
+    void setGuassianQuadratureWeights(const arma::vec &guassianQuadratureWeights)
+    {m_guassianQuadratureWeights = arma::vec(guassianQuadratureWeights);}
 
 protected:
     const size_t m_id;
@@ -53,6 +51,8 @@ typedef PD_element<3> PD_triElement;
 typedef PD_element<4> PD_quadElement;
 
 PD_Particles initializeElementPd(const PdMesh &msh, const Grid & grid, const size_t quadratureDegree);
+void updateElementQuadrature(PD_Particles &discretization);
+void printElement(const int element_id, PD_Particles &nodes);
 //------------------------------------------------------------------------------
 //class PD_elementsAndNodes
 //{

@@ -26,6 +26,7 @@ void SimpleFracture::initialize()
     m_broken = false;
     m_state = false;
     m_hasStepOne = true;
+
 }
 //------------------------------------------------------------------------------
 void SimpleFracture::evaluateStepOne(const int id_i, const int i)

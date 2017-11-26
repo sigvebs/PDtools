@@ -24,15 +24,16 @@ public:
     int m_indexS0;
     int m_indexS_new;
     int m_indexS00;
+    int m_indexUnbreakable;
 
     double **f;
     double **x;
     double **r0;
 
     double m_alpha;
+    int m_indexStress[6];
 
-    enum PD_bondForceErrorMessages
-    {
+    enum PD_bondForceErrorMessages {
         MicrmodulusNotSet
     };
 

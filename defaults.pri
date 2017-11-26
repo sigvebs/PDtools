@@ -16,7 +16,7 @@ CONFIG(debug, debug|release){
     DEFINES *= DEBUG_MODE
 } else {
     message(Building in release mode)
-#    DEFINES *= ARMA_NO_DEBUG
+    DEFINES *= ARMA_NO_DEBUG
     QMAKE_CXXFLAGS_RELEASE -= -O1
     QMAKE_CXXFLAGS_RELEASE -= -O2
     QMAKE_CXXFLAGS_RELEASE *= -O3
@@ -138,6 +138,7 @@ INCLUDEPATH *= $$SRC_DIR/PDtools
 LIBS *= -lboost_system -lboost_filesystem -lboost_serialization
 LIBS *= -lboost_regex
 
+
 linux-icc-64 {
     LIBS *= -lpthread
     LIBS *= -lm
@@ -148,7 +149,8 @@ linux-icc-64 {
 #-------------------------------------------------------------------------------
 DEFINES *= PARTICLE_BUFFER=1.5
 #DEFINES *= PARTICLE_BUFFER=1.3
-DEFINES *= PARAMETER_BUFFER=30
+#DEFINES *= PARAMETER_BUFFER=30
+DEFINES *= PARAMETER_BUFFER=48
 DEFINES *= M_DIM=3
 #DEFINES *= ARMA_DONT_USE_WRAPPER # Comment out on abel
 #DEFINES *= ARMA_USE_BLAS

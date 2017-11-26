@@ -4,11 +4,15 @@
 #include <unordered_map>
 #include <armadillo>
 
+#include "Elements/pd_element.h"
+
 using namespace std;
 namespace PDtools
 {
 // Forward declerations
 class PD_Particles;
+//class PD_element;
+//class PD_quadElement;
 
 //------------------------------------------------------------------------------
 class Force
@@ -33,6 +37,11 @@ protected:
     unordered_map<int, int> & m_idToCol;
     arma::ivec & m_colToId;
     int m_calulateStress = false;
+
+    // Element based Pd (EPD)
+    unordered_map<int, int> &m_idToElement;
+    vector<PD_triElement> &m_triElements;
+    vector<PD_quadElement> &m_quadElements;
 
     enum enum_coordinates{X, Y, Z};
     static constexpr double THRESHOLD = 2.2204e-016;
@@ -122,6 +131,9 @@ public:
     int getCalulateStress() const;
 
     // Modifiers
+    virtual void
+    evaluateStepOne();
+
     virtual void
     evaluateStepOne(int id, int i);
 

@@ -76,8 +76,7 @@ Particles::~Particles()
 //------------------------------------------------------------------------------
 void Particles::initializeMatrices()
 {
-    if(m_nParticles == 0)
-    {
+    if(m_nParticles == 0) {
         cerr << "nParticles can not be zero when initializeing particle matrices" << endl;
         throw ZeroParticles;
     }
@@ -213,8 +212,7 @@ bool Particles::hasParameter(string paramId)
 //------------------------------------------------------------------------------
 int Particles::getParamId(string paramId)
 {
-    if(m_parameters.count(paramId) != 1)
-    {
+    if(m_parameters.count(paramId) != 1) {
         cerr << "ERROR: accessing a particle parameter that does not exist: "
              << paramId << endl;
         throw ParameterDoesNotExist;
@@ -226,8 +224,7 @@ void Particles::setParameter(string paramId, double value)
 {
     int param_pos = m_parameters.at(paramId);
 
-    for(unsigned int p=0;p<m_nParticles; p++)
-    {
+    for(unsigned int p=0;p<m_nParticles; p++) {
         m_data(p, param_pos) = value;
     }
 }
@@ -235,8 +232,7 @@ void Particles::setParameter(string paramId, double value)
 int Particles::registerParameter(string paramId, double value)
 {
     // It the parameter exists return the original position.
-    if(m_parameters.count(paramId) > 0)
-    {
+    if(m_parameters.count(paramId) > 0) {
 #ifdef DEBUG
         cerr << "WARNING: Parameter '" << paramId
              << "' already registered. Using that." << endl;
@@ -247,15 +243,13 @@ int Particles::registerParameter(string paramId, double value)
     m_parameters[paramId] = m_parameters.size();
     int param_pos = m_parameters[paramId];
 
-    if(param_pos>=PARAMETER_BUFFER)
-    {
+    if(param_pos>=PARAMETER_BUFFER) {
         cerr << "The number of parameters per particle is limited to"
              << PARAMETER_BUFFER << endl;
         throw OutOfBounds;
     }
 
-    for(unsigned int p=0;p<m_nParticles; p++)
-    {
+    for(unsigned int p=0;p<m_nParticles; p++) {
         m_data(p, param_pos) = value;
     }
 
@@ -264,18 +258,16 @@ int Particles::registerParameter(string paramId, double value)
 //------------------------------------------------------------------------------
 void Particles::scaleParameter(const string &paramId, double value)
 {
-    m_parameters[paramId] = m_parameters.size();
+//    m_parameters[paramId] = m_parameters.size();
     int param_pos = m_parameters[paramId];
 
-    if(param_pos>=PARAMETER_BUFFER)
-    {
+    if(param_pos>=PARAMETER_BUFFER) {
         cerr << "The number of parameters per particle is limited to"
              << PARAMETER_BUFFER << endl;
         throw OutOfBounds;
     }
 
-    for(unsigned int p=0;p<m_nParticles; p++)
-    {
+    for(unsigned int p=0;p<m_nParticles; p++) {
         m_data(p, param_pos) *= value;
     }
 }

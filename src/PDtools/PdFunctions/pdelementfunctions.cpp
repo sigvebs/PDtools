@@ -48,8 +48,8 @@ void setPdElementConnections(PD_Particles & discretization,
             unordered_map<int, vector<double>> connections;
             vector<pair<int, vector<double>>> connectionsVector;
 
-            const polygon_2d interactionPolygon_i = translatePolygon(baseCicle,
-                                            point_2d(R(col_i, 0), R(col_i, 1)));
+//            const polygon_2d interactionPolygon_i = translatePolygon(baseCicle,
+//                                            point_2d(R(col_i, 0), R(col_i, 1)));
 
             int totoalNumberPolygons = 0;
             int intersectingPolygons = 0;
@@ -79,6 +79,17 @@ void setPdElementConnections(PD_Particles & discretization,
                 if(isInside == false)
                     continue;
 
+                const int element_id = idCol_j[0];
+                const double overlap = 1;
+
+                vector<double> connectionData;
+                connectionData.push_back(1.0); // Connected
+                connectionData.push_back(overlap); // Overlap factor
+                connections[element_id] = connectionData;
+                connectionsVector.push_back(pair<int, vector<double>>(element_id, connectionData) );
+                intersectingPolygons++;
+
+                /*
                 polygon_2d polygon_j;
                 polygon_j.outer().push_back(point_2d(R(pCols[0], 0), R(pCols[0], 1)));
                 polygon_j.outer().push_back(point_2d(R(pCols[3], 0), R(pCols[3], 1)));
@@ -103,6 +114,7 @@ void setPdElementConnections(PD_Particles & discretization,
                     intersectingPolygons++;
                     tot_area += area_intersection;
                 }
+                */
                 totoalNumberPolygons++;
             }
 
@@ -134,13 +146,23 @@ void setPdElementConnections(PD_Particles & discretization,
                     if(isInside == false)
                         continue;
 
+                    const int element_id = idCol_j[0];
+                    const double overlap = 1;
+
+                    vector<double> connectionData;
+                    connectionData.push_back(1.0); // Connected
+                    connectionData.push_back(overlap); // Overlap factor
+                    connections[element_id] = connectionData;
+                    connectionsVector.push_back(pair<int, vector<double>>(element_id, connectionData) );
+                    intersectingPolygons++;
+
+                    /*
                     polygon_2d polygon_j;
                     polygon_j.outer().push_back(point_2d(R(pCols[0], 0), R(pCols[0], 1)));
                     polygon_j.outer().push_back(point_2d(R(pCols[3], 0), R(pCols[3], 1)));
                     polygon_j.outer().push_back(point_2d(R(pCols[2], 0), R(pCols[2], 1)));
                     polygon_j.outer().push_back(point_2d(R(pCols[1], 0), R(pCols[1], 1)));
                     polygon_j.outer().push_back(point_2d(R(pCols[0], 0), R(pCols[0], 1)));
-
 
                     std::deque<polygon_2d> output;
                     boost::geometry::intersection(interactionPolygon_i, polygon_j, output);
@@ -159,6 +181,7 @@ void setPdElementConnections(PD_Particles & discretization,
                         intersectingPolygons++;
                         tot_area += area_intersection;
                     }
+                    */
                     totoalNumberPolygons++;
                 }
             }

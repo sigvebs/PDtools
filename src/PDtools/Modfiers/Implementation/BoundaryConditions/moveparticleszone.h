@@ -35,7 +35,7 @@ private:
     double m_time;
     bool m_usingUnbreakableBorder;
     vec m_velocityDirection;
-    vec m_vd = {0,0,0};
+    vec m_vd_abs = {0,0,0};
 };
 //------------------------------------------------------------------------------
 }

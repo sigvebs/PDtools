@@ -1,126 +1,123 @@
 #include "boundaryforce.h"
 
+#if USE_MPI
+#include <mpi.h>
+#endif
+
 #include "PDtools/Particles/pd_particles.h"
 
 namespace PDtools
 {
 //------------------------------------------------------------------------------
 boundaryForce::boundaryForce(double appliedForce,
-                                   double forceOrientation,
-                                   pair<double, double> boundary,
-                                   int boundaryOrientation,
-                                   int steps,
-                             double delta)
+                             double forceOrientation,
+                             pair<double, double> boundary,
+                             int boundaryOrientation,
+                             int steps,
+                             double delta,
+                             int incremental,
+                             int scale)
 {
     m_forceDensity = appliedForce;
     m_forceOritentation = forceOrientation;
     m_boundary = boundary;
     m_boundaryOrientation = boundaryOrientation;
-    m_inceremental = false;
-    m_incrementalForce = 0;
+    m_inceremental = incremental;
+    m_incrementalForce = m_forceDensity;
     m_delta = delta;
-    if(!m_inceremental)
-    {
+    m_scale = scale;
+    if(!m_inceremental) {
         m_incrementalForce = m_forceDensity;
     }
 }
 //------------------------------------------------------------------------------
-boundaryForce::~boundaryForce()
+void boundaryForce::registerParticleParameters()
 {
+    m_particles->registerParameter("unbreakable");
+    m_ghostParameters = {"unbreakable"};
 
+    m_particles->setNeedGhostVelocity(1);
+    m_particles->setNeedGhostR0(1);
 }
 //------------------------------------------------------------------------------
 void boundaryForce::evaluateStepOne()
 {
-    arma::mat & F = m_particles->F();
-    arma::mat & data = m_particles->data();
-
-    for(pair<int, int> &idCol:m_boundaryParticles)
-    {
-        const int i = idCol.second;
-        const double radius = data(i, m_indexRadius);
-        F(i, m_forceOritentation) += m_incrementalForce/radius;
-    }
-}
-//------------------------------------------------------------------------------
-void boundaryForce::evaluateStepTwo()
-{
-    arma::mat & b = m_particles->b();
-    b.zeros();
-    if(m_inceremental)
-    {
-        m_incrementalForce += m_forceDensity;
-    }
-    evaluateStepOne();
-}
-//------------------------------------------------------------------------------
-void boundaryForce::staticEvaluation()
-{
     const unordered_map<int, int> &idToCol = m_particles->idToCol();
-    arma::mat & v = m_particles->v();
     arma::mat & F = m_particles->F();
-    arma::mat & Fold = m_particles->Fold();
 
-    for(const int &id:m_localParticleIds)
-    {
+    for(const int &id:m_localParticleIds) {
         const int i = idToCol.at(id);
-
-        v(i, m_forceOritentation) = 0.0;
-        F(i, m_forceOritentation) = 0.0;
-        Fold(i, m_forceOritentation) = 0.0;
-
-//        for(int d=0;d<M_DIM; d++)
-//        {
-//            v(i, d) = 0.0;
-//            F(i, d) = 0.0;
-//            Fold(i, d) = 0.0;
-//        }
+        const double f = m_incrementalForce;
+        F(i, m_forceOritentation) += f;
     }
-//    boundaryForce::evaluateStepTwo();
 }
 //------------------------------------------------------------------------------
 void boundaryForce::initialize()
 {
+    const ivec &colToId = m_particles->colToId();
     m_indexRadius = m_particles->registerParameter("radius");
     const arma::mat & r = m_particles->r();
     arma::mat & data = m_particles->data();
 
     m_indexVolume = m_particles->getParamId("volume");
     double volume = 0;
-
     int unbreakablePos;
 
-    if(m_particles->hasParameter("unbreakable"))
-    {
+    if(m_particles->hasParameter("unbreakable")) {
         unbreakablePos = m_particles->getParamId("unbreakable");
-    }
-    else
-    {
+    } else {
         unbreakablePos = m_particles->registerParameter("unbreakable");
     }
 
-//    double uRadius = 0.5*(m_boundary.second - m_boundary.first);
-    double uRadius = 6*m_delta;
+    double uRadius = 0.15*(m_boundary.second - m_boundary.first);
 
     // Selecting particles
-    for(unsigned int i=0; i<m_particles->nParticles(); i++)
-    {
-        const int col_i = i;
-        const double pos = r(col_i, m_boundaryOrientation);
-        if(m_boundary.first <= pos && pos < m_boundary.second)
-        {
-            const pair<int, int> pId(i, i);
-            m_boundaryParticles.push_back(pId);
+    for(unsigned int i=0; i<m_particles->nParticles(); i++) {
+        const double pos = r(i, m_boundaryOrientation);
+
+        if(m_boundary.first <= pos && pos < m_boundary.second) {
+            const int id = colToId(i);
+            m_localParticleIds.push_back(id);
             volume += data(i, m_indexVolume);
-            data(i, unbreakablePos) = 1;
+//            data(i, unbreakablePos) = 1;
         }
 
-        if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second)
-        {
-            data(i, unbreakablePos) = 1;
+        if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second) {
+//            data(i, unbreakablePos) = 1;
         }
     }
-//    m_forceDensity /= volume;
+    if(m_scale) {
+#if USE_MPI
+        MPI_Allreduce(MPI_IN_PLACE, &volume, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
+        m_forceDensity /= volume;
+        m_incrementalForce = m_forceDensity;
+        if(!m_inceremental) {
+            m_incrementalForce = m_forceDensity;
+        }
+    }
+}
+//------------------------------------------------------------------------------
+void boundaryForce::evaluateStepTwo()
+{
+    if(m_inceremental) {
+        m_incrementalForce += m_forceDensity;
+    }
+//    evaluateStepOne();
+}
+//------------------------------------------------------------------------------
+void boundaryForce::staticEvaluation()
+{
+    const unordered_map<int, int> &idToCol = m_particles->idToCol();
+    arma::mat & F = m_particles->F();
+
+    for(const int &id:m_localParticleIds) {
+        const int i = idToCol.at(id);
+
+        const double f = m_incrementalForce;
+        F(i, m_forceOritentation) += f;
+    }
+    //    boundaryForce::evaluateStepTwo();
 }
 //------------------------------------------------------------------------------
 }

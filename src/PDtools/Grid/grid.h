@@ -43,6 +43,7 @@ public:
     {
         m_particles = particles;
     }
+
     void
     addParticles(const vector<pair<int, int>> &particles)
     {
@@ -111,7 +112,7 @@ public:
     setnGridId(const vector<int> & ids);
 
     const vector<int> &
-    nGridId();
+    nGridId() const;
 
     vector<double>
     periodicShift() const;
@@ -204,11 +205,11 @@ public:
     int nCores() {return m_nCores;}
     vector<int> & boundaryGridPoints();
     vector<int> & neighbouringCores();
-    const std::vector<int> & ghostGrid();
+    const std::vector<int> & ghostGrid() const;
     void setInitialPositionScaling(const double L0);
-    double initialPositionScaling();
-    const arma::ivec3 & nGrid();
-    const vector<pair<double, double>> & boundary();
+    double initialPositionScaling() const;
+    const arma::ivec3 & nGrid() const;
+    const vector<pair<double, double>> & boundary() const;
     vector<int> nCpuGrid() const;
     void setBoundaryGrid();
     std::vector<int> periodicSendGridIds() const;

@@ -13,25 +13,8 @@ PD_PMB::PD_PMB(PD_Particles &particles, double lc, double delta, double alpha):
     m_indexS00 = m_particles.registerPdParameter("s00");
     m_indexConnected = m_particles.getPdParamId("connected");
     m_indexS_new = m_particles.registerParameter("s_new");
+    m_indexUnbreakable = m_particles.registerParameter("unbreakable");
 
-    // Setting the initial max stretch between two particles
-    const ivec & colToId = m_particles.colToId();
-    for(unsigned int i=0;i<m_particles.nParticles();i++)
-    {
-        const int pId = colToId(i);
-        const double s0_i = m_data(i, m_indexS0);
-
-        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-        for(auto &con:PDconnections)
-        {
-            const int id_j = con.first;
-            const int col_j = m_idToCol.at(id_j);
-            const double s0_j = m_data(col_j, m_indexS0);
-            const double s0 = 0.5*(s0_i + s0_j);
-            con.second[m_indexS00] = s0;
-            m_data(i, m_indexS_new) = s0;
-        }
-    }
 
     m_indexMicromodulus = m_particles.registerParameter("micromodulus");
 
@@ -49,23 +32,27 @@ PD_PMB::PD_PMB(PD_Particles &particles, double lc, double delta, double alpha):
     x = new double* [nParticles];
     r0 = new double* [nParticles];
 
-    for(int i=0;i<m_dim; i++)
-    {
+    for(int i=0;i<m_dim; i++) {
         f[i] = m_F.colptr(i);
         x[i] = m_r.colptr(i);
         r0[i] = m_r0.colptr(i);
     }
+
+    m_ghostParameters.push_back("volume");
+    m_ghostParameters.push_back("unbreakable");
+    m_ghostParameters.push_back("micromodulus"); // For contact forces
+    m_initialGhostParameters = {"volume", "s0"};
 }
 //------------------------------------------------------------------------------
 PD_PMB::~PD_PMB()
 {
 }
 //------------------------------------------------------------------------------
-void PD_PMB::calculateForces(const int id, const int i)
+void PD_PMB::calculateForces(const int id_i, const int i)
 {
     const double c_i = m_data(i, m_indexMicromodulus);
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id);
+    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
 //    vector<pair<int, vector<double>> *> removeParticles;
 
     int jnum;
@@ -81,17 +68,20 @@ void PD_PMB::calculateForces(const int id, const int i)
 
 //    bool first;
 
-    xtmp = x[i][0];
-    ytmp = x[i][1];
-    ztmp = x[i][2];
+//    xtmp = x[i][0];
+//    ytmp = x[i][1];
+//    ztmp = x[i][2];
+
+    xtmp = m_r(i,0);
+    ytmp = m_r(i,1);
+    ztmp = m_r(i,2);
 
     m_data(i, m_indexS0) = m_data(i, m_indexS_new);
     const double s0_i = m_data(i, m_indexS0);
     s0_new = numeric_limits<double>::max();
 //    first = true;
 
-    for (int jj = 0; jj < jnum; jj++)
-    {
+    for (int jj = 0; jj < jnum; jj++) {
         auto &con = PDconnections[jj];
         if(con.second[m_indexConnected] <= 0.5)
             continue;
@@ -101,17 +91,19 @@ void PD_PMB::calculateForces(const int id, const int i)
         const double dr0 = con.second[m_indexDr0];
 
         // compute force density, add to PD equation of motion
-        delx = xtmp - x[j][0];
-        dely = ytmp - x[j][1];
-        delz = ztmp - x[j][2];
+        delx = xtmp - m_r(j,0);
+        dely = ytmp - m_r(j,1);
+        delz = ztmp - m_r(j,2);
+//        delx = xtmp - x[j][0];
+//        dely = ytmp - x[j][1];
+//        delz = ztmp - x[j][2];
 
         rsq = delx*delx + dely*dely + delz*delz;
         r = sqrt(rsq);
         dr = r - dr0;
 
         // avoid roundoff errors
-        if (fabs(dr) < 2.2204e-016)
-        {
+        if (fabs(dr) < 2.2204e-016) {
             dr = 0.0;
         }
 
@@ -119,19 +111,17 @@ void PD_PMB::calculateForces(const int id, const int i)
         const double c_j = m_data(j, m_indexMicromodulus);
         const double c_ij = 0.5*(c_i + c_j);
 
-        if ((fabs(dr0 - delta)) <= half_lc)
-        {
+        if ((fabs(dr0 - delta)) <= half_lc) {
             vfrac_scale = (-1.0/(2*half_lc))*(dr0)
                     + (1.0 + ((delta - half_lc)/(2*half_lc) ) );
         }
-        else
-        {
+        else {
             vfrac_scale = 1.0;
         }
 
         const double vfrac_j = m_data(j, m_indexVolume);
 
-        stretch = dr / dr0;
+        stretch = dr/dr0;
         rk = (c_ij * vfrac_j) * vfrac_scale * stretch;
 
         if (r > 0.0)
@@ -139,14 +129,23 @@ void PD_PMB::calculateForces(const int id, const int i)
         else
             fbond = 0.0;
 
-        f[i][0] += delx*fbond;
-        f[i][1] += dely*fbond;
-        f[i][2] += delz*fbond;
+        m_F(i,X) += delx*fbond;
+        m_F(i,Y) += dely*fbond;
+        m_F(i,Z) += delz*fbond;
+//        f[i][0] += delx*fbond;
+//        f[i][1] += dely*fbond;
+//        f[i][2] += delz*fbond;
 
         const double s0_j = m_data(j, m_indexS0);
 
         if (stretch > min(s0_i, s0_j)){
-            con.second[m_indexConnected] = 0;
+            if( m_data(i, m_indexUnbreakable) > 0|| m_data(j, m_indexUnbreakable) > 0) {
+
+            } else {
+                cout << "broken:" << id_i << " " << id_j << " s:" << stretch
+                     << " s0_i:" << s0_i  << " s0_j:" << s0_i << endl;
+                con.second[m_indexConnected] = 0;
+            }
         }
 //            removeParticles.push_back(&con);
 
@@ -178,8 +177,7 @@ double PD_PMB::calculatePotentialEnergyDensity(const int id_i, const int i)
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
 
-    for(auto &con:PDconnections)
-    {
+    for(auto &con:PDconnections) {
         if(con.second[m_indexConnected] <= 0.5)
             continue;
 
@@ -242,11 +240,15 @@ void PD_PMB::calculateStress(const int id_i, const int i, const int (&indexStres
     const double half_lc = 0.5*lc;
     double vfrac_scale = 1.0;
 
-//    bool first;
+//    bool first; 
+    //    xtmp = x[i][0];
+    //    ytmp = x[i][1];
+    //    ztmp = x[i][2];
 
-    xtmp = x[i][0];
-    ytmp = x[i][1];
-    ztmp = x[i][2];
+    xtmp = m_r(i,0);
+    ytmp = m_r(i,1);
+    ztmp = m_r(i,2);
+
     double f_tmp[3];
 
     m_data(i, m_indexS0) = m_data(i, m_indexS_new);
@@ -262,17 +264,16 @@ void PD_PMB::calculateStress(const int id_i, const int i, const int (&indexStres
         const double dr0 = con.second[m_indexDr0];
 
         // compute force density, add to PD equation of motion
-        delx = xtmp - x[j][0];
-        dely = ytmp - x[j][1];
-        delz = ztmp - x[j][2];
+        delx = xtmp -  m_r(j,0);
+        dely = ytmp -  m_r(j,1);
+        delz = ztmp -  m_r(j,2);
 
         rsq = delx*delx + dely*dely + delz*delz;
         r = sqrt(rsq);
         dr = r - dr0;
 
         // avoid roundoff errors
-        if (fabs(dr) < 2.2204e-016)
-        {
+        if (fabs(dr) < 2.2204e-016) {
             dr = 0.0;
         }
 
@@ -280,13 +281,10 @@ void PD_PMB::calculateStress(const int id_i, const int i, const int (&indexStres
         const double c_j = m_data(j, m_indexMicromodulus);
         const double c_ij = 0.5*(c_i + c_j);
 
-        if ((fabs(dr0 - delta)) <= half_lc)
-        {
+        if ((fabs(dr0 - delta)) <= half_lc) {
             vfrac_scale = (-1.0/(2*half_lc))*(dr0)
                     + (1.0 + ((delta - half_lc)/(2*half_lc) ) );
-        }
-        else
-        {
+        } else {
             vfrac_scale = 1.0;
         }
 
@@ -308,8 +306,7 @@ void PD_PMB::calculateStress(const int id_i, const int i, const int (&indexStres
         m_data(i, indexStress[1]) += 0.5*f_tmp[Y]*dely;
         m_data(i, indexStress[2]) += 0.5*f_tmp[X]*dely;
 
-        if(m_dim == 3)
-        {
+        if(m_dim == 3) {
             m_data(i, indexStress[3]) += 0.5*f_tmp[Z]*delz;
             m_data(i, indexStress[4]) += 0.5*f_tmp[X]*delz;
             m_data(i, indexStress[5]) += 0.5*f_tmp[Y]*delz;
@@ -340,8 +337,7 @@ double PD_PMB::calculateStableMass(const int id_a, const int a, double dt)
     double k_two[3];
 
 
-    for(int i=0; i<3; i++)
-    {
+    for(int i=0; i<3; i++) {
         k_one[X] = 0;
         k_one[Y] = 0;
         k_one[Z] = 0;
@@ -350,8 +346,7 @@ double PD_PMB::calculateStableMass(const int id_a, const int a, double dt)
         k_two[Y] = 0;
         k_two[Z] = 0;
 
-        for(auto &con:PDconnections)
-        {
+        for(auto &con:PDconnections) {
             int id_b = con.first;
             int b = m_idToCol.at(id_b);
 
@@ -388,10 +383,8 @@ double PD_PMB::calculateStableMass(const int id_a, const int a, double dt)
 
     double stiffness = 0;
 
-    for(int d=0;d<3; d++)
-    {
-        if(m[d]>stiffness)
-        {
+    for(int d=0;d<3; d++) {
+        if(m[d]>stiffness) {
             stiffness = m[d];
         }
     }
@@ -402,29 +395,42 @@ double PD_PMB::calculateStableMass(const int id_a, const int a, double dt)
 void PD_PMB::initialize(double E, double nu, double delta, int dim, double h, double lc)
 {
     Force::initialize(E, nu, delta, dim, h, lc);
+
+
+    // Setting the initial max stretch between two particles
+    const ivec & colToId = m_particles.colToId();
+    for(unsigned int i=0;i<m_particles.nParticles();i++) {
+        const int pId = colToId(i);
+        const double s0_i = m_data(i, m_indexS0);
+
+        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
+        for(auto &con:PDconnections) {
+            const int id_j = con.first;
+            const int col_j = m_idToCol.at(id_j);
+            const double s0_j = m_data(col_j, m_indexS0);
+            const double s0 = 0.5*(s0_i + s0_j);
+            con.second[m_indexS00] = s0;
+            m_data(i, m_indexS_new) = s0;
+        }
+    }
+
+    // Setting the micromodulus
     double k;
     double c;
 
-    if(dim == 3)
-    {
+    if(dim == 3) {
         nu = 1./4.;
         k = E/(3.*(1. - 2.*nu));
         c = 18.*k/(M_PI*pow(delta, 4));
-    }
-    else if(dim == 2)
-    {
+    } else if(dim == 2) {
         nu = 1./3.;
         k = E/(2.*(1. - nu));
         c = 12*k/(h*M_PI*pow(delta, 3));
-    }
-    else if(dim == 1)
-    {
+    } else if(dim == 1) {
         nu = 1.;
         k = E;
         c = 12*E/(h*h*pow(delta, 2));
-    }
-    else
-    {
+    } else {
         cerr << "ERROR: dimension " << dim << " not supported" << endl;
         cerr << "use 1, 2 or 3." << endl;
         exit(EXIT_FAILURE);
@@ -432,27 +438,22 @@ void PD_PMB::initialize(double E, double nu, double delta, int dim, double h, do
 
     if(m_numericalInitialization){
         m_particles.setParameter("micromodulus", k);
-    }
-    else
-    {
+    } else {
         m_particles.setParameter("micromodulus", c);
         return;
     }
 
     const double dimScaling = 2.*pow(dim, 2.);
 
-    const ivec & colToId = m_particles.colToId();
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<m_particles.nParticles(); i++)
-    {
+    for(unsigned int i=0; i<m_particles.nParticles(); i++) {
         const int pId = colToId(i);
         double dRvolume = 0;
 
         vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-        for(auto &con:PDconnections)
-        {
+        for(auto &con:PDconnections) {
             const int id_j = con.first;
             const int col_j = m_idToCol.at(id_j);
             const double dr0Len = con.second[m_indexDr0];

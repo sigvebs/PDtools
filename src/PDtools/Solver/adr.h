@@ -14,6 +14,7 @@ protected:
     double m_du_u;
     double m_c;
     double m_epsilon = 0.2;
+    int m_minSteps = 100;
     int m_maxSteps = 2000;
     int m_maxStepsFracture = 1000;
     int m_counter = 0;

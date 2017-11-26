@@ -5,29 +5,21 @@
 #include "Grid/grid.h"
 #include "Mesh/pdmesh.h"
 
+#define DEBUG_PRINT_ELEMENT_INIT 0
 //------------------------------------------------------------------------------
 namespace PDtools
 {
 //------------------------------------------------------------------------------
-//PD_elementsAndNodes::PD_elementsAndNodes(Grid &grid):
-//    m_dim(grid.dim()), m_grid(grid)
-//{
-
-//}
-////------------------------------------------------------------------------------
-//void PD_elementsAndNodes::initialize(const PdMesh &msh)
-//{
-
-//}
-
-//------------------------------------------------------------------------------
 PD_Particles initializeElementPd(const PdMesh &msh, const Grid &grid, const size_t quadratureDegree)
 {
+    // For a review of quadrature rules for triangles and quads:
+    // http://math2.uncc.edu/~shaodeng/TEACHING/math5172/Lectures/Lect_15.PDF
+
     const int dim = grid.dim();
     const int nTriangles = msh.nTriangles();
     const int nQuads = msh.nQuads();
-    const int nElements = msh.nElements();
-    const int nVertices = msh.nElements();
+//    const int nElements = msh.nElements();
+//    const int nVertices = msh.nElements();
 
     const vector<array<double, 3> > &vertices = msh.vertices();
     const vector<vector<int> > &elements = msh.elements();
@@ -53,24 +45,33 @@ PD_Particles initializeElementPd(const PdMesh &msh, const Grid &grid, const size
     arma::ivec & get_id = particles.colToId();
     arma::mat & r0 = particles.r0();
     arma::mat & r = particles.r();
-    arma::mat & v = particles.v();
-    arma::mat & data = particles.data();
+//    arma::mat & v = particles.v();
+//    arma::mat & data = particles.data();
 
     int elementId = 0;
     int pd_nodeId = 0;
     int pd_col = 0;
-
     //--------------------------------------------------------------------------
     // Setting the quadrature
     //--------------------------------------------------------------------------
-    GaussLegendreQuad GaussLegendre_quadBasis(dim, quadratureDegree);
+//    GaussLegendreQuad GaussLegendre_quadBasis(dim, quadratureDegree);
+    orderedGrid GaussLegendre_quadBasis(dim, quadratureDegree);
     const int nQuadPoints = GaussLegendre_quadBasis.nPoints();
 
-    mat gaussianPoints = GaussLegendre_quadBasis.gaussianPoints_2d();
+//    mat gaussianPoints = GaussLegendre_quadBasis.gaussianPoints_2d();
     vec gaussianWeights = GaussLegendre_quadBasis.gaussianWeights_2d();
     mat shapeFunction = GaussLegendre_quadBasis.shapeFunction_2d();
     mat quadraturePoints = zeros(nQuadPoints, dim);
+    vector<vector<double> > jakobi_1 = GaussLegendre_quadBasis.jakobi_1();
+    vector<vector<double> > jakobi_2 = GaussLegendre_quadBasis.jakobi_2();
+
+    particles.setShapeFunction(shapeFunction);
     //--------------------------------------------------------------------------
+    double height = 1.;
+    if(dim == 2) {
+        const vector<pair<double, double>> &bondunary = grid.boundary();
+        height = bondunary[2].second - bondunary[2].first;
+    }
 
     switch (dim) {
     case 2:
@@ -109,7 +110,9 @@ PD_Particles initializeElementPd(const PdMesh &msh, const Grid &grid, const size
         case 4: // QUAD
         {
             array<size_t, 4> verticeIds;
-
+            double quad_x[4];
+            double quad_y[4];
+            int j = 0;
             for(int vId:element) {
                 int vCol = IdToCol_vertices.at(vId);
                 const array<double, 3> & vert_i = vertices[vCol];
@@ -125,20 +128,70 @@ PD_Particles initializeElementPd(const PdMesh &msh, const Grid &grid, const size
                 r0(pd_col, 1) = vert_i[1];
                 r0(pd_col, 2) = vert_i[2];
 
+                quad_x[j] = vert_i[0];
+                quad_y[j] = vert_i[1];
+
                 verticeIds[counter] = pd_nodeId;
                 pd_nodeId++;
                 pd_col++;
                 counter++;
+                j++;
             }
+            //------------------------------------------------------------------
+#if DEBUG_PRINT_ELEMENT_INIT
+            double area = 0;
+            double area_span = 0;
+            for(int i=0; i<3; i++) {
+                area_span += (quad_x[i]*quad_y[i+1] - quad_x[i+1]*quad_y[i]);
+            }
+            area_span += (quad_x[3]*quad_y[0] - quad_x[0]*quad_y[3]);
+            area_span *= 0.5;
+#endif
+            // Setting the quadrature points
+            vec weights(nQuadPoints);
 
+            for(int i=0; i<nQuadPoints; i++) {
+                const vector<double> &dnda = jakobi_1[i];
+                const vector<double> &dndb = jakobi_2[i];
 
-//            // Setting the quadrature points
-//            for(int i=0; i<nQuadPoints; i++) {
-//                const double x =
-//                quadraturePoints(i, 0) = ;
-//            }
+                double dxda = 0;
+                double dyda = 0;
+                double dxdb = 0;
+                double dydb = 0;
 
-            particles.addQuad(PD_quadElement(elementId, verticeIds));
+                double x = 0;
+                double y = 0;
+                for(int d=0; d<4; d++) {
+                    x += quad_x[d]*shapeFunction(i, d);
+                    y += quad_y[d]*shapeFunction(i, d);
+                    dxda += quad_x[d]*dnda[d];
+                    dxdb += quad_x[d]*dndb[d];
+                    dyda += quad_y[d]*dnda[d];
+                    dydb += quad_y[d]*dndb[d];
+                }
+
+                quadraturePoints(i, 0) = x;
+                quadraturePoints(i, 1) = y;
+                const double jakobiDeterminant = dxda*dydb - dxdb*dyda;
+                weights(i) = height*gaussianWeights(i)*jakobiDeterminant;
+#if DEBUG_PRINT_ELEMENT_INIT
+                area += gaussianWeights(i)*jakobiDeterminant;
+#endif
+            }
+#if DEBUG_PRINT_ELEMENT_INIT
+            cout << shapeFunction << endl;
+            cout.precision(8);
+            quadraturePoints.col(0).raw_print(cout, "x = ");
+            quadraturePoints.col(1).raw_print(cout, "y = ");
+
+            cout << area << " " << area_span << endl;
+#endif
+            PD_quadElement qe(elementId, verticeIds);
+
+            qe.setGuassianQuadraturePoints_initial(quadraturePoints);
+            qe.setGuassianQuadraturePoints(quadraturePoints);
+            qe.setGuassianQuadratureWeights(weights);
+            particles.addQuad(qe);
             elementId++;
             break;
         }
@@ -173,18 +226,79 @@ PD_Particles initializeElementPd(const PdMesh &msh, const Grid &grid, const size
     saveParticles->writeToFile(particles, saveParticlesPath);
 
     return particles;
-
 }
-
 //------------------------------------------------------------------------------
-//template<size_t T>
-//const array<size_t, T> &PD_element::verticeIds() const
-//{
-//    return m_verticeIds;
-//}
-//------------------------------------------------------------------------------
+void updateElementQuadrature(PD_Particles &nodes)
+{
+    // TODO: elements are not MPI ready - only the apropriate elements should be updated
+    const mat & R = nodes.r();
+    const unordered_map<int, int> & idToCol = nodes.idToCol();
+//    const vector<PD_triElement> & triElements = nodes.getTriElements();
+    vector<PD_quadElement> & quadElements = nodes.getQuadElements();
+    const mat & shapeFunction = nodes.getShapeFunction();
 
-//------------------------------------------------------------------------------
+    // Quad elements
+    double quad_x[4];
+    double quad_y[4];
 
+    const size_t nQuadPoints = shapeFunction.n_rows;
+
+    for(PD_quadElement &quadElement:quadElements) {
+
+        if(quadElement.id() == 596){
+
+            double b = 3;
+        }
+
+        const array<size_t, 4> & verticeIds = quadElement.verticeIds();
+        int j = 0;
+
+        mat & quadraturePoints = quadElement.guassianQuadraturePoints();
+//        const mat & gaussPoints_initial = quadElement.guassianQuadraturePoints_initial();
+
+        for(size_t vId:verticeIds) {
+            const int i = idToCol.at(vId);
+            quad_x[j] = R(i,0);
+            quad_y[j] = R(i,1);
+            j++;
+        }
+
+        for(size_t i=0; i<nQuadPoints; i++) {
+
+            double x = 0;
+            double y = 0;
+            for(int d=0; d<4; d++) {
+                x += quad_x[d]*shapeFunction(i, d);
+                y += quad_y[d]*shapeFunction(i, d);
+            }
+            quadraturePoints(i, 0) = x;
+            quadraturePoints(i, 1) = y;
+        }
+    }
+}
+//------------------------------------------------------------------------------
+void printElement(const int element_id, PD_Particles &nodes)
+{
+    const mat & R = nodes.r();
+
+    const vector<PD_quadElement> & quadElements = nodes.getQuadElements();
+    const unordered_map<int, int> & idToElement =  nodes.getIdToElement();
+
+
+
+    PD_quadElement quadElement = quadElements[idToElement.at(element_id)];
+    mat & quadraturePoints = quadElement.guassianQuadraturePoints();
+
+    const array<size_t, 4> & verticeIds = quadElement.verticeIds();
+
+
+//    int j = 0;
+//    for(size_t vId:verticeIds) {
+//        const int i = idToCol.at(vId);
+//        quad_x[j] = R(i,0);
+//        quad_y[j] = R(i,1);
+//        j++;
+//    }
+}
 //------------------------------------------------------------------------------
 }

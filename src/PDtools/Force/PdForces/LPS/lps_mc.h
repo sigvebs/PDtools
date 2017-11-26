@@ -2,7 +2,7 @@
 #define LPS_MC_H
 
 #include<armadillo>
-#include "PDtools/Force/PdForces/pd_lps.h"
+#include "PDtools/Force/PdForces/LPS/pd_lps.h"
 
 using namespace arma;
 
@@ -12,7 +12,7 @@ namespace PDtools
 class LPS_mc : public PD_LPS
 {
 public:
-    LPS_mc(PD_Particles &particles, double c, double phi, double C, double T, bool planeStress=false);
+    LPS_mc(PD_Particles &particles, double c, double phi, double C, double T, bool planeStress=false, bool analyticalM=false);
 
     virtual void
     calculateForces(const int id, const int i);
@@ -22,6 +22,9 @@ public:
 
     void
     computeK(int id, int i);
+
+    void
+    updateWeightedMass(int id, int i);
 
     virtual void
     evaluateStepTwo(int id, int i);
@@ -34,10 +37,13 @@ protected:
     // MC criterion
     double m_phi;
     double m_d;
-    double m_C;
+    double m_S0;
     double m_T;
     double m_cos_theta;
     double m_sin_theta;
+    double m_tan_theta;
+    double m_ks;
+    double m_C0;
 
     // Stress strain related
     int m_indexStress[6];
@@ -59,6 +65,9 @@ protected:
     mat m_strain;
     mat m_K;
     mat m_P;
+
+    double m_lambda;
+    double m_mu;
 };
 //------------------------------------------------------------------------------
 }

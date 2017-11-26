@@ -5,6 +5,8 @@
 #include "PDtools/SavePdData/savepddata.h"
 #include "PDtools/Modfiers/modifier.h"
 
+#include "Utilities/epd_functions.h"
+
 namespace PDtools
 {
 //------------------------------------------------------------------------------
@@ -15,22 +17,31 @@ void TimeIntegrator::solve()
     calculateForces(0);
     updateProperties(0);
     save(0);
+    // TMP
+//    string saveName = "data/gauss_" + to_string(0) + ".lmp";
+//    saveElementQuadrature(*m_particles, *m_mainGrid, saveName);
+    // TMP
 
     // Looping over all time, particles and components.
-    for (int i = 0; i < m_steps; i++)
-    {
+    for (int i = 0; i < m_steps; i++) {
         stepForward(i);
     }
 }
 //------------------------------------------------------------------------------
 void TimeIntegrator::stepForward(int timeStep)
 {
-    integrateStepOne();
     applyBoundaryConditions();
+    integrateStepOne();
 
     updateGridAndCommunication();
     updateProperties(timeStep + 1);
     updateGhosts();
+//    updateElementQuadrature(*m_particles);
+
+    // TMP
+//    string saveName = "data/gauss_" + to_string(timeStep+1) + ".lmp";
+//    saveElementQuadrature(*m_particles, *m_mainGrid, saveName);
+    // TMP
 
     modifiersStepOne();
     save(timeStep + 1);
@@ -48,16 +59,11 @@ void TimeIntegrator::stepForward(int timeStep)
 //------------------------------------------------------------------------------
 void TimeIntegrator::initialize()
 {
-    if(m_particles->hasParameter("rho"))
-    {
+    if(m_particles->hasParameter("rho")) {
         m_indexRho = m_particles->getParamId("rho");
-    }
-    else if(m_particles->hasParameter("mass"))
-    {
+    } else if(m_particles->hasParameter("mass")) {
         m_indexRho = m_particles->getParamId("mass");
-    }
-    else
-    {
+    } else {
         cerr << "ERROR: Particles data does not contain either"
              << " 'rho' or 'mass'. This is needed for time integration." << endl;
         throw ParticlesMissingRhoOrMass;
@@ -68,8 +74,7 @@ void TimeIntegrator::initialize()
 //------------------------------------------------------------------------------
 void TimeIntegrator::checkInitialization()
 {
-    if(m_dt == 0)
-    {
+    if(m_dt == 0) {
         cerr << "Error: 'dt' is not set in the timeintegrator" << endl;
         throw TimeStepNotSet;
     }

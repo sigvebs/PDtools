@@ -24,16 +24,13 @@ void ComputeDamage::update(const int id_i, const int i)
     const int jnum = PDconnections.size();
     const double maxConnections = jnum;
 //    const double maxConnections = (*m_data)(i, m_indexMaxPdConnections);
-    if(maxConnections <= 0)
-    {
-        (*m_data)(i, m_indexDamage) = 0;
+    if(maxConnections <= 0) {
+        (*m_data)(i, m_indexDamage) = 1.;
         return;
     }
 
-
     double tot = 0;
-    for (int jj = 0; jj < jnum; jj++)
-    {
+    for (int jj = 0; jj < jnum; jj++) {
         const auto &con = PDconnections[jj];
         if(con.second[m_indexConnected] <= 0.5)
             continue;

@@ -16,7 +16,7 @@ public:
     virtual void evaluateStepOne(const int id_i, const int i);
 
 private:
-    double m_C;
+    double m_S0;
     double m_T;
     double m_d;
     double m_phi;
@@ -24,6 +24,8 @@ private:
     double m_sin_theta;
     double m_tan_theta;
     double m_tan2_theta;
+    double m_k;
+    double m_C0;
 
     arma::mat *m_data;
     std::unordered_map<int, int> * m_idToCol;

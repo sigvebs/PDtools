@@ -11,6 +11,13 @@ int main(int argc, char** argv)
 {
     using namespace arma;
     using namespace std;
+
+
+    if(argc != 2) {
+        cerr << "usage: peridyn [path to config file]" << endl;
+        return 1;
+    }
+
     wall_clock timer;
 #ifdef USE_MPI
     MPI::Init (argc, argv);
@@ -22,8 +29,7 @@ int main(int argc, char** argv)
 #endif
     string configPath = argv[1];
 
-    if(myRank == 0)
-    {
+    if(myRank == 0) {
         cout << "Starting with " << nCores << endl;
         cout << "input file: " << configPath << endl;
     }
@@ -50,5 +56,6 @@ int main(int argc, char** argv)
 #ifdef USE_MPI
     MPI::Finalize( );
 #endif
+
     return 0;
 }

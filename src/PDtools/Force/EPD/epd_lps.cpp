@@ -1,11 +1,11 @@
-#include "pd_lps.h"
+#include "epd_lps.h"
 
 #include "PDtools/Particles/pd_particles.h"
 
 namespace PDtools
 {
 //------------------------------------------------------------------------------
-PD_LPS::PD_LPS(PD_Particles &particles, bool planeStress):
+EPD_LPS::EPD_LPS(PD_Particles &particles, bool planeStress):
     Force(particles),
     m_planeStress(planeStress)
 {
@@ -16,13 +16,11 @@ PD_LPS::PD_LPS(PD_Particles &particles, bool planeStress):
 
     m_iVolume = m_particles.getParamId("volume");
     m_iDr0 = m_particles.getPdParamId("dr0");
-    m_iVolumeScaling = m_particles.getPdParamId("volumeScaling");
+    m_iOverlap = m_particles.getPdParamId("overlap");
     m_iStretch = m_particles.registerPdParameter("stretch");
     m_iConnected = m_particles.getPdParamId("connected");
     m_indexBrokenNow = m_particles.registerParameter("brokenNow", 0);
 
-//    m_iForceScalingDilation = m_particles.registerPdParameter("forceScalingDilation", 1.);
-//    m_iForceScalingBond = m_particles.registerPdParameter("forceScalingBond", 1.);
     m_ghostParameters.push_back("volume");
     m_ghostParameters.push_back("theta");
     m_ghostParameters.push_back("LPS_mass");
@@ -31,32 +29,59 @@ PD_LPS::PD_LPS(PD_Particles &particles, bool planeStress):
     m_hasUpdateState = true;
 }
 //------------------------------------------------------------------------------
-void PD_LPS::calculateForces(const int id, const int i)
+void EPD_LPS::calculateForces(const int id, const int i)
 {
     const double theta_i = m_data(i, m_iTheta);
-//    const double theta_i = this->computeDilation(id, i);
     const double m_i = m_data(i, m_iMass);
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id);
 
     const int nConnections = PDconnections.size();
     double dr_ij[m_dim];
+    double dr0_ij[m_dim];
 
     double thetaNew = 0;
+
+    // First looping over all polygons
     for(int l_j=0; l_j<nConnections; l_j++)
     {
         auto &con = PDconnections[l_j];
         if(con.second[m_iConnected] <= 0.5)
             continue;
 
-        const int id_j = con.first;
+        const int polygon_id = con.first;
+        const double overlap = con.second[m_iOverlap];
+        const int polygon_i = m_idToElement.at(polygon_id);
+
+        PD_quadElement & element = m_quadElements[polygon_i];
+        const mat & gaussPoints_initial = element.guassianQuadraturePoints_initial();
+        const mat & gaussPoints = element.guassianQuadraturePoints();
+        const vec & gaussWeights = element.guassianQuadratureWeights();
+
+        const int nIntegrationPoints = gaussPoints.n_cols;
+
+        for(int j=0; j<nIntegrationPoints; j++) {
+            const double w_j = gaussWeights[j];
+
+            double dr2 = 0;
+            double dr2_0 = 0;
+            for(int d=0; d<m_dim; d++)
+            {
+                dr_ij[d] = gaussPoints(j, d) - m_r(j, d);
+                dr2 += dr_ij[d]*dr_ij[d];
+                dr0_ij[d] = gaussPoints_initial(j, d) - m_r0(j, d);
+                dr2_0 += dr_ij[d]*dr_ij[d];
+//                bond += m_alpha*(1./m_i + 1./m_j)*ds;
+            }
+        }
+
+        /*
         const int j = m_idToCol.at(id_j);
 
         const double m_j = m_data(j, m_iMass);
         const double theta_j = m_data(j, m_iTheta);
         const double vol_j = m_data(j, m_iVolume);
         const double dr0 = con.second[m_iDr0];
-        const double volumeScaling = con.second[m_iVolumeScaling];
         const double w = 1./dr0;
 
         double dr2 = 0;
@@ -71,8 +96,8 @@ void PD_LPS::calculateForces(const int id, const int i)
         const double ds = dr - dr0;
         double bond = m_c*(theta_i/m_i + theta_j/m_j)*dr0;
         bond += m_alpha*(1./m_i + 1./m_j)*ds;
-        bond *= w*vol_j*volumeScaling/dr;
-        thetaNew += w*dr0*ds*vol_j*volumeScaling;
+        bond *= w*vol_j*overlap/dr;
+        thetaNew += w*dr0*ds*vol_j*overlap;
 
         for(int d=0; d<m_dim; d++)
         {
@@ -80,6 +105,7 @@ void PD_LPS::calculateForces(const int id, const int i)
         }
 
         con.second[m_iStretch] = ds/dr0;
+        */
     }
 
     if(nConnections <= 3)
@@ -88,48 +114,17 @@ void PD_LPS::calculateForces(const int id, const int i)
         m_data(i, m_iThetaNew) = m_t*thetaNew/m_i;
 }
 //------------------------------------------------------------------------------
-double PD_LPS::calculatePotentialEnergyDensity(const int id_i, const int i)
+double EPD_LPS::calculatePotentialEnergyDensity(const int id_i, const int i)
 {
-    const double theta_i = this->computeDilation(id_i, i);
-    double dr_ij[m_dim];
+    (void) id_i;
+    (void) i;
 
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
-    const int nConnections = PDconnections.size();
-
-    double W_i = 0;
-    for(int l_j=0; l_j<nConnections; l_j++)
-    {
-        auto &con = PDconnections[l_j];
-        if(con.second[m_iConnected] <= 0.5)
-            continue;
-
-        const int id_j = con.first;
-        const int j = m_idToCol.at(id_j);
-
-        const double vol_j = m_data(j, m_iVolume);
-        const double dr0 = con.second[m_iDr0];
-        const double w = 1./dr0;
-        const double volumeScaling = con.second[m_iVolumeScaling];
-        double dr2 = 0;
-
-        for(int d=0; d<m_dim; d++)
-        {
-            dr_ij[d] = m_r(j, d) - m_r(i, d);
-            dr2 += dr_ij[d]*dr_ij[d];
-        }
-
-        const double dr = sqrt(dr2);
-        const double ds = dr - dr0;
-        const double extension_term =  m_alpha*w*(pow(ds - theta_i*dr0/m_dim, 2));
-
-        W_i += (extension_term)*vol_j*volumeScaling;
-    }
-    W_i += m_k*(pow(theta_i, 2));
-
-    return 0.5*W_i;
+    cerr << "Porential energy density not implemented for Element PLS" << endl;
+    exit(0);
+    return 0;
 }
 //------------------------------------------------------------------------------
-double PD_LPS::computeDilation(const int id_i, const int i)
+double EPD_LPS::computeDilation(const int id_i, const int i)
 {
     const double m_i = m_data(i, m_iMass);
     double dr_ij[m_dim];
@@ -150,7 +145,7 @@ double PD_LPS::computeDilation(const int id_i, const int i)
 
         const double vol_j = m_data(j, m_iVolume);
         const double dr0 = con.second[m_iDr0];
-        const double volumeScaling = con.second[m_iVolumeScaling];
+        const double volumeScaling = con.second[m_iOverlap];
         double dr2 = 0;
         const double w = 1./dr0;
 
@@ -172,19 +167,19 @@ double PD_LPS::computeDilation(const int id_i, const int i)
     return theta_i*m_t/m_i;
 }
 //------------------------------------------------------------------------------
-void PD_LPS::calculatePotentialEnergy(const int id_i, const int i, int indexPotential)
+void EPD_LPS::calculatePotentialEnergy(const int id_i, const int i, int indexPotential)
 {
     double vol_i = m_data(i, m_iVolume);
     m_data(i, indexPotential) += calculatePotentialEnergyDensity(id_i, i)*vol_i;
 }
 //------------------------------------------------------------------------------
-void PD_LPS::updateState(int id, int i)
+void EPD_LPS::updateState(int id, int i)
 {
     (void) id;
     m_data(i, m_iTheta) = m_data(i, m_iThetaNew);
 }
 //------------------------------------------------------------------------------
-double PD_LPS::calculateStableMass(const int id_a, const int a, double dt)
+double EPD_LPS::calculateStableMass(const int id_a, const int a, double dt)
 {
     dt *= 1.1;
 
@@ -226,16 +221,14 @@ double PD_LPS::calculateStableMass(const int id_a, const int a, double dt)
             const double dr0Len = con.second[m_iDr0];
             const double m_b = m_data(b, m_iMass);
             const double vol_b = m_data(b, m_iVolume);
-            const double volumeScaling = con.second[m_iVolumeScaling];
+            const double volumeScaling = con.second[m_iOverlap];
             const double Va = vol_a*volumeScaling;
             const double Vb = vol_b*volumeScaling;
             const double w = 1./dr0Len;
 
             // Check this
             const double dr0Len2 = pow(dr0Len, 2);
-//            double C = m_dim*m_c*(Vb/pow(m_a,2) + Va/pow(m_b,2)) + m_alpha*(1./m_a + 1./m_b);
             double C =  m_alpha*(1./m_a + 1./m_b);
-//            double C = m_dim*m_c*(1./pow(m_a,2) + 1./pow(m_b,2)) + m_alpha*(1./m_a + 1./m_b);
             C *= w*Vb/dr0Len2;
 
             double sum = 0;
@@ -263,7 +256,7 @@ double PD_LPS::calculateStableMass(const int id_a, const int a, double dt)
     return 4.*0.25*pow(dt, 2)*stiffness;
 }
 //------------------------------------------------------------------------------
-void PD_LPS::initialize(double E, double nu, double delta, int dim, double h, double lc)
+void EPD_LPS::initialize(double E, double nu, double delta, int dim, double h, double lc)
 {
     Force::initialize(E, nu, delta, dim, h, lc);
     m_delta = delta;
@@ -271,9 +264,6 @@ void PD_LPS::initialize(double E, double nu, double delta, int dim, double h, do
     m_nu = nu;
     m_mu = 0.5*E/(1 + nu);
     m_k = E/(3.*(1. - 2.*nu));
-
-    double k  = E/(2.*(1. - nu));
-    double c = 2.*(k - 2.*m_mu);
 
     if(dim == 3)
     {
@@ -304,23 +294,9 @@ void PD_LPS::initialize(double E, double nu, double delta, int dim, double h, do
     }
 
     calculateWeightedVolume();
-/*
-    if(dim == 3)
-    {
-        m_k = E/(3.*(1. - 2.*nu));
-        m_c = (3.*m_k - 5.*m_mu);
-        m_alpha = 15.*m_mu;
-    }
-    else if(dim == 2)
-    {
-        m_k  = E/(2.*(1. - nu));
-        m_c = 2.*(m_k - 2.*m_mu);
-        m_alpha = 8.*m_mu;
-    }
-    */
 }
 //------------------------------------------------------------------------------
-void PD_LPS::calculateWeightedVolume()
+void EPD_LPS::calculateWeightedVolume()
 {
     const int nParticles = m_particles.nParticles();
     bool analytical = false;
@@ -344,7 +320,7 @@ void PD_LPS::calculateWeightedVolume()
 
             const int id_j = con.first;
             const int j = m_idToCol.at(id_j);
-            const double volumeScaling = con.second[m_iVolumeScaling];
+            const double volumeScaling = con.second[m_iOverlap];
             const double vol_j = m_data(j, m_iVolume);
             const double dr0 = con.second[m_iDr0];
             const double w = 1./dr0;
@@ -370,70 +346,8 @@ void PD_LPS::calculateWeightedVolume()
     }
 }
 //------------------------------------------------------------------------------
-void PD_LPS::calculateStress(const int id_i, const int i, const int (&indexStress)[6])
+void EPD_LPS::calculateStress(const int id_i, const int i, const int (&indexStress)[6])
 {
-    /*
-    const double theta_i = m_data(i, m_iTheta);
-    const double m_i = m_data(i, m_iMass);
-
-    double beta = 0;
-    if(m_dim == 3)
-        beta = 15*m_mu;
-    else
-        beta = 8*m_mu;
-
-    const double alpha_i = beta/m_i;
-
-    vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
-
-    const int nConnections = PDconnections.size();
-    double dr_ij[m_dim];
-
-    for(int l_j=0; l_j<nConnections; l_j++)
-    {
-        auto &con = PDconnections[l_j];
-        if(con.second[m_iConnected] <= 0.5)
-            continue;
-
-        const int id_j = con.first;
-        const int j = m_idToCol.at(id_j);
-
-        const double m_j = m_data(j, m_iMass);
-        const double theta_j = m_data(j, m_iTheta);
-        const double vol_j = m_data(j, m_iVolume);
-        const double dr0 = con.second[m_iDr0];
-        const double volumeScaling = con.second[m_iVolumeScaling];
-        const double alpha_j = beta/m_j;
-        const double gb_ij = con.second[m_iForceScalingBond];
-        const double gd_ij = con.second[m_iForceScalingDilation];
-
-        double dr2 = 0;
-
-        for(int d=0; d<m_dim; d++)
-        {
-            dr_ij[d] = m_r(j, d) - m_r(i, d);
-            dr2 += dr_ij[d]*dr_ij[d];
-        }
-
-        const double dr = sqrt(dr2);
-        const double ds = dr - dr0;
-
-        double bond_ij = gd_ij*(3*m_k - 5*m_mu)*(theta_i/m_i + theta_j/m_j)*dr0;
-        bond_ij += gb_ij*(alpha_i + alpha_j)*ds;
-        bond_ij *= vol_j*volumeScaling/dr;
-
-        m_data(i, indexStress[0]) += 0.5*bond_ij*dr_ij[X]*dr_ij[X];
-        m_data(i, indexStress[1]) += 0.5*bond_ij*dr_ij[Y]*dr_ij[Y];
-        m_data(i, indexStress[2]) += 0.5*bond_ij*dr_ij[X]*dr_ij[Y];
-
-        if(m_dim == 3)
-        {
-            m_data(i, indexStress[3]) += 0.5*bond_ij*dr_ij[Z]*dr_ij[Z];
-            m_data(i, indexStress[4]) += 0.5*bond_ij*dr_ij[X]*dr_ij[Z];
-            m_data(i, indexStress[5]) += 0.5*bond_ij*dr_ij[Y]*dr_ij[Z];
-        }
-    }
-    */
 }
 //------------------------------------------------------------------------------
 }

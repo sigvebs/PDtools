@@ -20,6 +20,7 @@ class PD_Particles: public Particles
 protected:
     // For all particles
     mat m_r0;
+    mat m_r_prev;
     mat m_F;
     mat m_b;
     mat m_u;
@@ -38,7 +39,7 @@ protected:
 
     // For element based PD
     unordered_map<int, int> m_idToElement;
-    unordered_map<int, int> m_elementToID;
+    unordered_map<int, int> m_elementToId;
     vector<PD_triElement> m_triElements;
     vector<PD_quadElement> m_quadElements;
 
@@ -63,6 +64,7 @@ public:
     virtual void deleteParticleById(const int deleteId);
 
     mat & r0();
+    mat & r_prev();
     mat & F();
     vec & stableMass();
     mat & Fold();
@@ -91,81 +93,67 @@ public:
     void addTri(const PD_triElement &tElement);
     void addQuad(const PD_quadElement &qElement);
 
-    vector<PD_quadElement> getQuadElements() const;
-    vector<PD_triElement> getTriElements() const;
+    vector<PD_quadElement> &getQuadElements();
+    vector<PD_triElement> &getTriElements();
+    const mat & getShapeFunction() const;
+    void setShapeFunction(const mat &shapeFunction);
+    unordered_map<int, int> &getIdToElement();
+    size_t nIntegrationPoints() const;
+
+    void uppdateR_prev();
 };
 //------------------------------------------------------------------------------
 // Inline functions
 
-inline void
-PD_Particles::setPdConnections(int id, vector<pair<int, vector<double>>> connections)
-{
+inline void PD_Particles::setPdConnections(int id, vector<pair<int, vector<double>>> connections) {
     m_PdConnections[id] = connections;
 }
 
-inline vector<pair<int, vector<double>>> &
-PD_Particles::pdConnections(int id)
-{
+inline vector<pair<int, vector<double>>> & PD_Particles::pdConnections(int id) {
     return m_PdConnections.at(id);
 }
 
-inline mat &
-PD_Particles::u()
-{
+inline mat & PD_Particles::u() {
     return m_u;
 }
 
-inline mat &
-PD_Particles::r0()
-{
+inline mat & PD_Particles::r0() {
     return m_r0;
 }
 
-inline mat &
-PD_Particles::F()
-{
+inline mat & PD_Particles::r_prev() {
+    return m_r_prev;
+}
+
+inline mat & PD_Particles::F() {
     return m_F;
 }
 
-inline vec &
-PD_Particles::stableMass()
-{
+inline vec & PD_Particles::stableMass() {
     return m_stableMass;
 }
 
-inline mat &
-PD_Particles::Fold()
-{
+inline mat & PD_Particles::Fold() {
     return m_Fold;
 }
 
-inline mat &
-PD_Particles::b()
-{
+inline mat & PD_Particles::b() {
     return m_b;
 }
 
-inline void
-PD_Particles::sendtParticles(map<int, vector<int> > sp)
-{
+inline void PD_Particles::sendtParticles(map<int, vector<int> > sp) {
     m_sendtParticles = sp;
 }
 
-inline const map<int, vector<int>> &
-PD_Particles::sendtParticles() const
-{
+inline const map<int, vector<int>> & PD_Particles::sendtParticles() const {
     return m_sendtParticles;
 }
 
-inline void
-PD_Particles::receivedParticles(map<int, vector<int> > sp)
-{
+inline void PD_Particles::receivedParticles(map<int, vector<int> > sp) {
     m_receivedParticles = sp;
 }
 
-inline const map<int, vector<int>> &
-PD_Particles::receivedParticles() const
-{
+inline const map<int, vector<int>> & PD_Particles::receivedParticles() const {
     return m_receivedParticles;
 }
 //------------------------------------------------------------------------------

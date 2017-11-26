@@ -23,8 +23,7 @@ void PD_lpsDampenedContact::calculateForces(const int id, const int i)
     double dr_ij[m_dim];
 
     double thetaNew = 0;
-    for(int l_j=0; l_j<nConnections; l_j++)
-    {
+    for(int l_j=0; l_j<nConnections; l_j++) {
         auto &con = PDconnections[l_j];
 
         if(con.second[m_iConnected] <= 0.5)
@@ -38,7 +37,7 @@ void PD_lpsDampenedContact::calculateForces(const int id, const int i)
         const double vol_j = m_data(j, m_iVolume);
         const double dr0 = con.second[m_iDr0];
         const double volumeScaling = con.second[m_iVolumeScaling];
-        const double w = 1./dr0;
+        const double w = weightFunction(dr0);
 
         double dr2 = 0;
         double drdv = 0;
@@ -58,8 +57,7 @@ void PD_lpsDampenedContact::calculateForces(const int id, const int i)
         bond *= w*vol_j*volumeScaling/dr;
         thetaNew += w*dr0*ds*vol_j*volumeScaling;
 
-        for(int d=0; d<m_dim; d++)
-        {
+        for(int d=0; d<m_dim; d++) {
             m_F(i, d) += dr_ij[d]*bond;
         }
 
@@ -81,8 +79,7 @@ double PD_lpsDampenedContact::calculatePotentialEnergyDensity(const int id_i, co
     const int nConnections = PDconnections.size();
 
     double W_i = 0;
-    for(int l_j=0; l_j<nConnections; l_j++)
-    {
+    for(int l_j=0; l_j<nConnections; l_j++) {
         auto &con = PDconnections[l_j];
         if(con.second[m_iConnected] <= 0.5)
             continue;
@@ -92,13 +89,12 @@ double PD_lpsDampenedContact::calculatePotentialEnergyDensity(const int id_i, co
 
         const double vol_j = m_data(j, m_iVolume);
         const double dr0 = con.second[m_iDr0];
-        const double w = 1./dr0;
+        const double w = weightFunction(dr0);
         const double volumeScaling = con.second[m_iVolumeScaling];
         double dr2 = 0;
         double drdv = 0;
 
-        for(int d=0; d<m_dim; d++)
-        {
+        for(int d=0; d<m_dim; d++) {
             dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
             drdv += dr_ij[d]*(m_v(j, d) - m_v(i, d));

@@ -31,7 +31,7 @@ int main(int argc, char** argv)
     timer.tic();
     Solver.initialize();
 
-//    Solver.solve();
+    Solver.solve();
 
     if(myRank == 0){
         double nSec = timer.toc();

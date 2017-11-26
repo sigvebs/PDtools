@@ -86,14 +86,12 @@ void Grid::createGrid()
     int nz = floor(z_len/m_gridspacing) > 0 ? floor(z_len/m_gridspacing) : 1;
 
     m_gridSpacing = {x_len/nx, y_len/ny, z_len/nz };
-    if(m_dim <= 1)
-    {
+    if(m_dim <= 1) {
         ny = 1;
         y_len = m_gridspacing;
         m_gridSpacing(1) = 1.;
     }
-    if(m_dim <= 2)
-    {
+    if(m_dim <= 2) {
         nz = 1;
         z_len = m_gridspacing;
         m_gridSpacing(2) = 1.;
@@ -106,31 +104,24 @@ void Grid::createGrid()
     vector<ivec> inner_points;
     vector<ivec> boundary_points;
 
-    for(int d=0;d<M_DIM; d++)
-    {
-        if(m_periodicBoundaries[d])
-        {
+    for(int d=0;d<M_DIM; d++) {
+        if(m_periodicBoundaries[d]) {
             inner_points.push_back(linspace<ivec>(1, m_nGrid[d], m_nGrid[d]));
             boundary_points.push_back({0, m_nGrid[d] + 1});
             m_nGrid[d] += 2;
             m_boundary[d].first -= m_gridSpacing(d);
             m_boundary[d].second += m_gridSpacing(d);
             m_boundaryLength[d] +=  2*m_gridSpacing(d);
-        }
-        else
-        {
+        } else {
             inner_points.push_back(linspace<ivec>(0, m_nGrid[d]-1, m_nGrid[d]));
             boundary_points.push_back({});
         }
     }
 
     // Setting the grid
-    for(int x:inner_points[X])
-    {
-        for(int y:inner_points[Y])
-        {
-            for(int z:inner_points[Z])
-            {
+    for(int x:inner_points[X]) {
+        for(int y:inner_points[Y]) {
+            for(int z:inner_points[Z]) {
                 // id = x + nx*y + nx*ny*z;
                 // Center of gridpoint
                 const vec3 center = {
@@ -147,22 +138,18 @@ void Grid::createGrid()
     }
 
     // Boundary conditions
-    for(int d=0; d<M_DIM; d++)
-    {
+    for(int d=0; d<M_DIM; d++) {
         Col<int> xyz = {0, 0, 0};
 
-        for(int point_0:boundary_points[d])
-        {
+        for(int point_0:boundary_points[d]) {
             vector<int> inn_p = {0, 1, 2};
             inn_p.erase(inn_p.begin() + d);
 
             const ivec p1 = join_cols(inner_points[inn_p[0]], boundary_points[inn_p[0]]);
-            for(int point_1:p1)
-            {
+            for(int point_1:p1) {
                 const ivec p2 = join_cols(inner_points[inn_p[1]], boundary_points[inn_p[1]]);
 
-                for(int point_2:p2)
-                {
+                for(int point_2:p2) {
                     xyz(d) = point_0;
                     xyz(inn_p[0]) = point_1;
                     xyz(inn_p[1]) = point_2;
@@ -183,8 +170,7 @@ void Grid::createGrid()
     }
 
     m_nGridArma = {0, 0, 0};
-    for(int d=0;d<M_DIM; d++)
-    {
+    for(int d=0;d<M_DIM; d++) {
         m_nGridArma(d) = m_nGrid[d];
     }
 }
@@ -572,14 +558,14 @@ void Grid::setBoundaryGrid()
                     {
                         m_periodicSendGridIds.push_back(leftId);
                         m_periodicReceiveGridIds.push_back(leftId_0);
-//                        cout << m_myRank << " -> " << rightOwnedBy << " L left:" << leftId << " right:" << rightId << " "
+//                        cout << m_myRank << "->" << rightOwnedBy << " L left:" << leftId << " right:" << rightId << " "
 //                             << x0 << " "<< y << " " << z << endl;
                     }
                     if(rightOwnedBy == m_myRank)
                     {
                         m_periodicSendGridIds.push_back(rightId);
                         m_periodicReceiveGridIds.push_back(rightId_0);
-//                        cout << m_myRank  << " -> " << leftOwnedBy << " R left:" << leftId << " right:" << rightId << " "
+//                        cout << m_myRank  << "->" << leftOwnedBy << " R left:" << leftId << " right:" << rightId << " "
 //                             << xn << " "<< y << " " << z << endl;
                     }
                 }
@@ -588,7 +574,7 @@ void Grid::setBoundaryGrid()
     }
 }
 //------------------------------------------------------------------------------
-const std::vector<int> &Grid::ghostGrid()
+const std::vector<int> &Grid::ghostGrid() const
 {
     return m_ghostGridIds;
 }
@@ -598,17 +584,17 @@ void Grid::setInitialPositionScaling(const double L0)
     m_L0 = L0;
 }
 //------------------------------------------------------------------------------
-double Grid::initialPositionScaling()
+double Grid::initialPositionScaling() const
 {
     return m_L0;
 }
 //------------------------------------------------------------------------------
-const arma::ivec3 &Grid::nGrid()
+const arma::ivec3 &Grid::nGrid() const
 {
     return m_nGridArma;
 }
 //------------------------------------------------------------------------------
-const vector<pair<double, double> > &Grid::boundary()
+const vector<pair<double, double> > &Grid::boundary() const
 {
     return m_boundary;
 }
@@ -643,7 +629,7 @@ void GridPoint::setnGridId(const vector<int> &ids)
     m_nGridId = ids;
 }
 //------------------------------------------------------------------------------
-const vector<int> &GridPoint::nGridId()
+const vector<int> &GridPoint::nGridId() const
 {
     return m_nGridId;
 }

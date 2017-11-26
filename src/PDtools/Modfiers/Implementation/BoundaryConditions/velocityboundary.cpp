@@ -21,16 +21,13 @@ VelocityBoundary::VelocityBoundary(double velAmplitude,
     m_dt = dt;
     m_isStatic = isStatic;
 
-    if(m_velOritentation == 0)
-    {
+    if(m_velOritentation == 0) {
         m_otherAxis = {1, 2};
     }
-    else if(m_velOritentation == 1)
-    {
+    else if(m_velOritentation == 1) {
         m_otherAxis = {0, 2};
     }
-    else if(m_velOritentation == 2)
-    {
+    else if(m_velOritentation == 2) {
         m_otherAxis = {1, 2};
     }
 
@@ -50,8 +47,7 @@ void VelocityBoundary::registerParticleParameters()
 //------------------------------------------------------------------------------
 void VelocityBoundary::evaluateStepOne()
 {
-    if(fabs(m_v) < fabs(m_velAmplitude))
-    {
+    if(fabs(m_v) < fabs(m_velAmplitude)) {
         m_v += m_dv;
     }
     const unordered_map<int, int> &idToCol = m_particles->idToCol();
@@ -62,13 +58,12 @@ void VelocityBoundary::evaluateStepOne()
 
     const double v_dt = m_v * m_dt;
 
-    for(const int &id:m_localParticleIds)
-    {
+    for(const int &id:m_localParticleIds) {
         const int i = idToCol.at(id);
 
         v(i, m_velOritentation) = m_v;
-        if(isStatic(i))
-        {
+        F(i, m_velOritentation) = 0;
+        if(isStatic(i)) {
             r(i, m_velOritentation) += v_dt;
         }
     }
@@ -88,10 +83,8 @@ void VelocityBoundary::evaluateStepTwo()
         v(i, m_velOritentation) = m_v;
         F(i, m_velOritentation) = 0;
 
-        if(isStatic(i))
-        {
-            for(int d:m_otherAxis)
-            {
+        if(isStatic(i)) {
+            for(int d:m_otherAxis)             {
                 F(i, d) = 0;
             }
         }
@@ -107,17 +100,16 @@ void VelocityBoundary::initialize()
     arma::imat & isStatic = m_particles->isStatic();
     const int unbreakablePos = m_particles->registerParameter("unbreakable");
 
-    const double uRadius = 0.5*(m_boundary.second - m_boundary.first);
+//    const double uRadius = 0.5*(m_boundary.second - m_boundary.first);
+    const double uRadius = 1.25*(m_boundary.second - m_boundary.first);
     int n = 0;
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<m_particles->nParticles(); i++)
-    {
+    for(unsigned int i=0; i<m_particles->nParticles(); i++) {
         const double pos = r(i, m_boundaryOrientation);
-        if(m_boundary.first <= pos && pos < m_boundary.second)
-        {
+        if(m_boundary.first <= pos && pos < m_boundary.second) {
             const int id = colToId(i);
 
             if(m_isStatic)
@@ -129,10 +121,8 @@ void VelocityBoundary::initialize()
             data(i, unbreakablePos) = 1;
         }
 
-        if(m_usingUnbreakableBorder)
-        {
-            if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second)
-            {
+        if(m_usingUnbreakableBorder) {
+            if(m_boundary.first - uRadius <= pos && pos < uRadius + m_boundary.second) {
 #ifdef USE_OPENMP
 #pragma omp critical
 #endif

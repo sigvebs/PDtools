@@ -13,14 +13,10 @@ public:
                    pair<double, double> boundary, int boundaryOrientation,
                   double dt, bool isStatic);
 
-    virtual void
-    registerParticleParameters();
-    virtual void
-    evaluateStepOne();
-    virtual void
-    initialize();
-    virtual void
-    staticEvaluation();
+    virtual void registerParticleParameters();
+    virtual void evaluateStepOne();
+    virtual void initialize();
+    virtual void staticEvaluation();
 
 private:
     double m_velAmplitude;

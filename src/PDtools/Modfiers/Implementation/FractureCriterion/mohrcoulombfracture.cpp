@@ -7,7 +7,7 @@ namespace PDtools
 {
 //------------------------------------------------------------------------------
 MohrCoulombFracture::MohrCoulombFracture(double mu, double C, double T):
-    m_C(C), m_T(T)
+    m_S0(C), m_T(T)
 {
     m_neededProperties= {pair<string, int>("stress", 1)};
     m_phi = mu*M_PI/180.;
@@ -15,6 +15,11 @@ MohrCoulombFracture::MohrCoulombFracture(double mu, double C, double T):
 
     m_cos_theta = cos(M_PI/2. + m_phi);
     m_sin_theta = sin(M_PI/2. + m_phi);
+
+    m_S0 = C;
+    m_C0 = 2.*m_S0*m_cos_theta/(m_sin_theta - 1.);
+    m_k = (m_sin_theta + 1.)/(m_sin_theta - 1.);
+
     m_hasStepOne = true;
 }
 //------------------------------------------------------------------------------
@@ -71,10 +76,8 @@ void MohrCoulombFracture::evaluateStepOne(const int id_i, const int i)
 #endif
     vector<pair<int, vector<double>>> & PDconnections = m_particles->pdConnections(id_i);
 
-    if(m_dim == 2)
-    {
-        for(auto &con:PDconnections)
-        {
+    if(m_dim == 2) {
+        for(auto &con:PDconnections) {
             const int id_j = con.first;
             const int j = (*m_idToCol)[id_j];
 
@@ -91,25 +94,39 @@ void MohrCoulombFracture::evaluateStepOne(const int id_i, const int i)
             const double first = 0.5*(sx + sy);
             const double second = sqrt(0.25*(sx - sy)*(sx - sy) + sxy*sxy);
 
-            double p_2 = first + second; // max
-            double p_1 = first - second; // min
+            const double p_1 = first + second; // max
+            const double p_2 = first - second; // min
 
-            const double shear = fabs(0.5*(p_1 - p_2)*m_sin_theta);
-            const double normal = 0.5*(p_1 + p_2) + 0.5*(p_1 - p_2)*m_cos_theta;
+            //            const int criticalShear = p_2 <= m_C0 - m_k*p_1;
+            const int criticalShear = 0;
+            const int criticalTensile = p_1 >= m_T;
 
-            const double criticalShear = fabs(shear) - fabs(m_C - m_d*normal);
-            const double criticalTensile = p_2 - m_T;
-
-            if(criticalShear >= 0  && normal < 0)
-            {
+            if(criticalShear) {
+                data(i, m_indexBrokenNow) = 1;
+                con.second[m_indexConnected] = 0;
+            } else if(criticalTensile) {
                 data(i, m_indexBrokenNow) = 1;
                 con.second[m_indexConnected] = 0;
             }
-            else if(criticalTensile >= 0)
-            {
-                data(i, m_indexBrokenNow) = 1;
-                con.second[m_indexConnected] = 0;
-            }
+
+            //            double p_2 = first + second; // max
+            //            double p_1 = first - second; // min
+//            const double shear = fabs(0.5*(p_1 - p_2)*m_sin_theta);
+//            const double normal = 0.5*(p_1 + p_2) + 0.5*(p_1 - p_2)*m_cos_theta;
+
+//            const double criticalShear = fabs(shear) - fabs(m_S0 - m_d*normal);
+//            const double criticalTensile = p_2 - m_T;
+
+//            if(criticalShear >= 0  && normal < 0)
+//            {
+//                data(i, m_indexBrokenNow) = 1;
+//                con.second[m_indexConnected] = 0;
+//            }
+//            else if(criticalTensile >= 0)
+//            {
+//                data(i, m_indexBrokenNow) = 1;
+//                con.second[m_indexConnected] = 0;
+//            }
         }
     }
     else if(m_dim == 3)

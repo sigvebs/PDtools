@@ -30,8 +30,7 @@ SavePdData::~SavePdData()
 //------------------------------------------------------------------------------
 void SavePdData::initialize()
 {
-    if(m_particles == nullptr)
-    {
+    if(m_particles == nullptr) {
         cerr << "Particles not set for savePdData" << endl;
         throw;
     }
@@ -45,64 +44,63 @@ void SavePdData::initialize()
 
     for(string param:m_saveParameters)
     {
-        if(param == "damage")
-        {
+        if(param == "damage") {
             m_neededProperties.push_back(pair<string, int>("damage", m_updateFrquency));
             m_saveparam_scale.push_back(std::pair<std::string, double>("damage", 1.));
         }
-        if(param == "max_stretch")
-        {
+        else if(param == "max_stretch") {
             m_computeProperties.push_back(new ComputeMaxStretch(*m_particles));
             m_saveparam_scale.push_back(std::pair<std::string, double>("max_stretch", 1.));
         }
-        if(param == "radius")
-        {
+        else if(param == "radius") {
             m_saveparam_scale.push_back(std::pair<std::string, double>("radius", m_L0));
         }
-        if(param == "average_stretch")
-        {
+        else if(param == "porosity") {
+            m_saveparam_scale.push_back(std::pair<std::string, double>("porosity", 1.));
+        }
+        else if(param == "average_stretch") {
             m_computeProperties.push_back(new ComputeAverageStretch(*m_particles));
             m_saveparam_scale.push_back(std::pair<std::string, double>("average_stretch", 1.));
         }
-        else if(param == "kinetic_energy")
-        {
+        else if(param == "kinetic_energy") {
             m_computeProperties.push_back(new ComputeKineticEnergy(*m_particles));
             m_saveparam_scale.push_back(std::pair<std::string, double>("kinetic_energy", pow(m_v0, 2)*pow(m_L0, 3)*m_rho0));
         }
-        else if(param == "potential_energy")
-        {
+        else if(param == "potential_energy") {
             m_computeProperties.push_back(new ComputePotentialEnergy(*m_particles,
                                                                      *m_oneBodyForces));
             m_saveparam_scale.push_back(std::pair<std::string, double>("potential_energy", 1.));
         }
-        else if(param == "stress")
-        {
+        else if(param == "stress") {
             computeStress = true;
             m_neededProperties.push_back(pair<string, int>("stress", m_updateFrquency));
         }
-        else if(param == "id")
-        {
+        else if(param == "id") {
             m_saveparam_scale.push_back(std::pair<std::string, double>("id", 1.));
         }
-        else if(param == "coreId")
-        {
+        else if(param == "coreId") {
             m_saveparam_scale.push_back(std::pair<std::string, double>("coreId", 1.));
         }
-        else if(param == "rho")
-        {
+        else if(param == "rho") {
             m_saveparam_scale.push_back(std::pair<std::string, double>("rho", m_rho0));
         }
-        else if(param == "micromodulus")
-        {
+        else if(param == "micromodulus") {
             m_saveparam_scale.push_back(std::pair<std::string, double>("micromodulus", 1.));
         }
-        else if(param == "gridId")
-        {
+        else if(param == "theta") {
+            m_saveparam_scale.push_back(std::pair<std::string, double>("theta", 1.));
+        }
+        else if(param == "gridId") {
             m_computeProperties.push_back(new ComputeGridId(*m_particles, *m_mainGrid));
             m_saveparam_scale.push_back(std::pair<std::string, double>("gridId", 1.));
         }
-        else if(param == "x" || param == "y" || param == "z")
-        {
+        else if(param == "volume") {
+            m_saveparam_scale.push_back(std::pair<std::string, double>("volume", pow(m_L0, 3)));
+        }
+        else if(param == "porosity") {
+            m_saveparam_scale.push_back(std::pair<std::string, double>("porosity", 1.));
+        }
+        else if(param == "x" || param == "y" || param == "z") {
             m_saveparam_scale.push_back(std::pair<std::string, double>(param, m_L0));
         }
         else if(param == "v_x" || param == "v_y" || param == "v_z")
@@ -110,21 +108,17 @@ void SavePdData::initialize()
             m_saveparam_scale.push_back(std::pair<std::string, double>(param, m_v0));
         }
         else if(   param == "s_xx" || param == "s_yy" || param == "s_zz"
-                || param == "s_xy" || param == "s_xz" || param == "s_yz")
-        {
+                || param == "s_xy" || param == "s_xz" || param == "s_yz") {
             m_saveparam_scale.push_back(std::pair<std::string, double>(param, m_E0));
             m_neededProperties.push_back(pair<string, int>("stress", m_updateFrquency));
         }
         else if(   param == "e_xx" || param == "e_yy" || param == "e_zz"
-                || param == "e_xy" || param == "e_xz" || param == "e_yz")
-        {
+                || param == "e_xy" || param == "e_xz" || param == "e_yz") {
             m_saveparam_scale.push_back(std::pair<std::string, double>(param, 1));
             m_neededProperties.push_back(pair<string, int>("strain", m_updateFrquency));
         }
-        else
-        {
-            if(!m_particles->hasParameter(param))
-            {
+        else {
+            if(!m_particles->hasParameter(param)) {
                 cerr << "ERROR: In savePdData. Particles does not containt the "
                      << "parameter '" << param << "' and param is not a "
                      << "calculabel type.";
@@ -134,15 +128,12 @@ void SavePdData::initialize()
     }
 
     // Adding the stress parameters
-    if(computeStress)
-    {
-        if(m_dim == 1)
-        {
+    if(computeStress) {
+        if(m_dim == 1) {
             m_saveParameters.push_back("s_xx");
             m_saveparam_scale.push_back(std::pair<std::string, double>("s_xx", m_E0));
         }
-        if(m_dim == 2)
-        {
+        if(m_dim == 2) {
             m_saveParameters.push_back("s_xx");
             m_saveParameters.push_back("s_yy");
             m_saveParameters.push_back("s_xy");
@@ -150,8 +141,7 @@ void SavePdData::initialize()
             m_saveparam_scale.push_back(std::pair<std::string, double>("s_yy", m_E0));
             m_saveparam_scale.push_back(std::pair<std::string, double>("s_xy", m_E0));
         }
-        if(m_dim == 3)
-        {
+        if(m_dim == 3) {
             m_saveParameters.push_back("s_xx");
             m_saveParameters.push_back("s_yy");
             m_saveParameters.push_back("s_xy");
@@ -172,11 +162,9 @@ void SavePdData::initialize()
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(unsigned int i=0; i<m_particles->nParticles(); i++)
-    {
+    for(unsigned int i=0; i<m_particles->nParticles(); i++) {
         const int id = colToId(i);
-        for(ComputeProperty *computeProperty:m_computeProperties)
-        {
+        for(ComputeProperty *computeProperty:m_computeProperties) {
             computeProperty->init(id, i);
         }
     }
@@ -191,14 +179,9 @@ void SavePdData::evaluate(double t, int i)
     (void) i;
 
     const ivec &colToId = m_particles->colToId();
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
-    for(unsigned int i=0; i<m_particles->nParticles(); i++)
-    {
+    for(unsigned int i=0; i<m_particles->nParticles(); i++) {
         const int id = colToId(i);
-        for(ComputeProperty *computeProperty:m_computeProperties)
-        {
+        for(ComputeProperty *computeProperty:m_computeProperties) {
             computeProperty->update(id, i);
         }
     }

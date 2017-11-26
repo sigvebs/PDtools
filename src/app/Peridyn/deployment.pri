@@ -1,13 +1,9 @@
 unix {
-#    isEmpty(target.path) {
-##        target.path = /usr/local/bin
-#        target.path = /home/sigve/Documents/SLETT/bin
-#        export(target.path)
-#    }
-
     isEmpty(DESTDIR) {
-#        target.path = /usr/local/bin
-        target.path = /home/sigve/Documents/SLETT/bin
+        target.path = /usr/local/bin
+        CONFIG(sbsPGP) {
+            target.path = /home/sigve/usr/bin/
+        }
         export(target.path)
     } else {
         target.path = $$DESTDIR
@@ -16,5 +12,4 @@ unix {
     INSTALLS += target
 }
 
-message(DESTDIR: $$DESTDIR)
 export(INSTALLS)

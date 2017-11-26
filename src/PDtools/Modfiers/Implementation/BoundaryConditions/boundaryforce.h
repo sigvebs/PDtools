@@ -10,16 +10,15 @@ class boundaryForce : public Modifier
 {
 public:
     boundaryForce(double appliedForce, double forceOrientation,
-                     pair<double, double> boundary, int boundaryOrientation, int steps, double delta);
-    ~boundaryForce();
+                     pair<double, double> boundary, int boundaryOrientation, int steps, double delta, int incremental, int scaled=0);
 
+    virtual void registerParticleParameters();
     virtual void evaluateStepOne();
     virtual void evaluateStepTwo();
     virtual void initialize();
     virtual void staticEvaluation();
 
 private:
-    vector<pair<int, int>> m_boundaryParticles;
     double m_forceDensity;
     int m_forceOritentation;
     pair<double, double> m_boundary;
@@ -31,6 +30,7 @@ private:
     double m_incrementalForce;
     int m_inceremental;
     double m_delta;
+    int m_scale = 0;
 };
 //------------------------------------------------------------------------------
 }

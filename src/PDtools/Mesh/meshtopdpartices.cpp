@@ -64,7 +64,7 @@ PD_Particles convertMshToPdParticles(int dim, int interpolationDegree,
     // Initializing particles
     //--------------------------------------------------------------------------
     double h = 1.;
-    if(dim = 2) {
+    if(dim == 2) {
         const vector<pair<double, double>> &bondunary = grid.boundary();
         h = bondunary[2].second - bondunary[2].first;
     }

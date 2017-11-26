@@ -16,6 +16,11 @@ int Force::getCalulateStress() const
     return m_calulateStress;
 }
 //------------------------------------------------------------------------------
+void Force::evaluateStepOne()
+{
+
+}
+//------------------------------------------------------------------------------
 bool Force::getHasStepOneModifier() const
 {
     return m_hasStepOneModifier;
@@ -69,6 +74,10 @@ Force::Force(PD_Particles &particles, string _type):
     m_data(m_particles.data()),
     m_idToCol(m_particles.idToCol()),
     m_colToId(m_particles.colToId()),
+    m_idToElement(m_particles.getIdToElement()),
+    m_triElements(m_particles.getTriElements()),
+    m_quadElements(m_particles.getQuadElements()),
+    m_dim(m_particles.dim()),
     name(_type)
 {
 }
