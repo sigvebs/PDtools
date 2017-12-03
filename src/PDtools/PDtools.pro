@@ -109,7 +109,8 @@ HEADERS += \
     Force/PdForces/LPSS/pd_lpss.h \
     Force/PdForces/LPSS/pd_lpss_g.h \
     Force/PdForces/LPSS/pd_lpss_opt.h \
-    Force/PdForces/LPS/pd_lps2.h
+    Force/PdForces/LPS/pd_lps2.h \
+    config.h
 
 SOURCES += \
     Grid/grid.cpp \
