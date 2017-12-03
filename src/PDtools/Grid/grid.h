@@ -143,10 +143,8 @@ private:
 //------------------------------------------------------------------------------
 class Grid
 {
-public:
-    int m_dim;
-
 private:
+    int m_dim;
     double m_gridspacing;
     int m_myRank = 0;
     int m_nCores = 1;
