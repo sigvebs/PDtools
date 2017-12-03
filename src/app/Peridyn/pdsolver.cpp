@@ -14,12 +14,13 @@
 #include <armadillo>
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.h>
-#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #ifdef USE_MPI
 #include <mpi.h>
 #endif
+
 
 using namespace PDtools;
 using namespace libconfig;
@@ -123,7 +124,7 @@ int PdSolver::initialize() {
   try {
     Setting &cfg_periodic = m_cfg.lookup("periodic");
     for (int d = 0; d < M_DIM; d++) {
-      periodicBoundaries(d) = (int)cfg_periodic[d];
+      periodicBoundaries(d) = static_cast<int>(cfg_periodic[d]);
     }
   } catch (libconfig::SettingNotFoundException s) {
     if (m_myRank == 0)
@@ -470,8 +471,8 @@ int PdSolver::initialize() {
       cfg_forces[i].lookupValue("C", C);
       forces.push_back(new DemForce(m_particles, T, C));
     } else if (boost::iequals(type, "contact force")) {
-      double interactionRadius = 0.95;
-      double interactionScaling = 15;
+//      double interactionRadius = 0.95;
+//      double interactionScaling = 15;
       int updateFrquency = 10;
       cfg_forces[i].lookupValue("verletUpdateFrq", updateFrquency);
       forces.push_back(
@@ -590,6 +591,7 @@ int PdSolver::initialize() {
   if (isRoot) {
     cout << "Setting modifiers:" << endl;
   }
+
 
   vector<Modifier *> boundaryModifiers;
   vector<Modifier *> spModifiers;

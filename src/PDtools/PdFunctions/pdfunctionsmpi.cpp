@@ -109,6 +109,7 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
 
         // Storing the received ghost data
 //        for(int i=0; i<nReceiveParticles; i++)
+        double l_r[3] = {0,0,0};
         unsigned int j = 0;
         while(j < nRecieveElements) {
 //            int j = i*nGhostparams;
@@ -137,7 +138,9 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
             nGhostParticles++;
 
             // Adding to the ghost particle to the correct grid point
-            const vec3 &l_r = r.row(col).t();
+            l_r[0] = r(col, 0);
+            l_r[1] = r(col, 1);
+            l_r[2] = r(col, 2);
             const int gId = grid.gridId(l_r);
             const pair<int, int> id_pos(id, col);
             GridPoint & gp = gridpoints[gId];
@@ -307,9 +310,13 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
     unordered_map<int, int>  & idToCol = particles.idToCol();
     unordered_map<int, GridPoint> & gridpoints = grid.gridpoints();
 
+    double r_i[3] = {0,0,0};
+
     for(unsigned int i=0; i<particles.nParticles(); i++) {
         const int id_i = colToId.at(i);
-        const vec3 &r_i = r.row(i).t();
+        r_i[0] = r(i, 0);
+        r_i[1] = r(i, 1);
+        r_i[2] = r(i, 2);
         const int gId = grid.gridId(r_i);
 #ifdef USE_MPI
         const int belongsTo = grid.belongsTo(gId);
@@ -548,7 +555,9 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
 
     for(unsigned int i=0; i<particles.nParticles(); i++) {
         const int id = colToId.at(i);
-        const vec3 &r_i = r.row(i).t();
+        r_i[0] = r(i, 0);
+        r_i[1] = r(i, 1);
+        r_i[2] = r(i, 2);
         const int gId = grid.gridId(r_i);
         const pair<int, int> id_pos(id, i);
         const int belongsTo = grid.belongsTo(gId);
@@ -694,12 +703,15 @@ void exchangeInitialPeriodicBoundaryParticles(Grid &grid, PD_Particles &particle
         const vector<pair<int,int>> & l_p = id_toRank.second;
         vector<double> sendData;
 
+        double r_i[3] = {0,0,0};
         for(const auto &id_col:l_p) {
             const int id_i = id_col.first;
             const int i = id_col.second;
 
             // Getting the shift
-            const vec3 &r_i = r.row(i).t();
+            r_i[0] = r(i, 0);
+            r_i[1] = r(i, 1);
+            r_i[2] = r(i, 2);
             const int gId = grid.gridId(r_i);
             const GridPoint & gridPoint = gridpoints.at(gId);
             const vector<double> &shift = gridPoint.periodicShift();
@@ -708,7 +720,7 @@ void exchangeInitialPeriodicBoundaryParticles(Grid &grid, PD_Particles &particle
             // Collecting send data
             sendData.push_back(id_i);
             for(int d=0; d<M_DIM; d++) {
-                sendData.push_back(r(i, d) + shift[d]);
+                sendData.push_back(r_i[d] + shift[d]);
             }
             for(int d=0; d<M_DIM; d++) {
                 sendData.push_back(r0(i, d) + shift[d]);
@@ -748,6 +760,7 @@ void exchangeInitialPeriodicBoundaryParticles(Grid &grid, PD_Particles &particle
 
         // Storing the received ghost data
         unsigned int j = 0;
+        double l_r[3] = {0,0,0};
         while(j < nRecieveElements) {
             const int col = nParticles + nGhostParticles;
             const int id = recieveData[j++];
@@ -781,7 +794,9 @@ void exchangeInitialPeriodicBoundaryParticles(Grid &grid, PD_Particles &particle
             nGhostParticles++;
 
             // Adding to the ghost particles to the correct grid point
-            const vec3 &l_r = r.row(col).t();
+            l_r[0] = r(col, 0);
+            l_r[1] = r(col, 1);
+            l_r[2] = r(col, 2);
             const int gId = grid.gridId(l_r);
             const pair<int, int> id_pos(id, col);
 

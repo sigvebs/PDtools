@@ -52,10 +52,10 @@ Grid::Grid(const vector<pair<double, double>> &boundary, double gridspacing):
     m_boundary(boundary),
     m_originalBoundary(boundary)
 {
-    for(int d=0; d<m_dim; d++)
-    {
+    for(int d=0; d<m_dim; d++) {
         m_boundaryLength.push_back(m_boundary[d].second - m_boundary[d].first);
-    }
+        m_boundary2.push_back({boundary[d].first, boundary[d].second});
+    }    
 }
 //------------------------------------------------------------------------------
 Grid::Grid(const vector<pair<double, double> > &boundary, double gridspacing,
@@ -248,7 +248,29 @@ int Grid::gridId(const vec3 &r) const
     int i[M_DIM];
 
     for(int d=0; d<M_DIM; d++) {
-        i[d] = int((r(d) - m_boundary[d].first)/m_gridSpacing(d));
+        i[d] = int((r(d) - m_boundary2[d][0])/m_gridSpacing(d));
+
+        // Handling the boundary extremals
+        if(i[d] >= m_nGrid[d]) {
+            i[d]  = m_nGrid[d] - 1;
+        }
+        else if(i[d]  < 0) {
+            i[d]  = 0;
+        }
+    }
+
+#if M_DIM == 2
+    return i[X] + m_nGrid[X]*i[Y];
+#else
+    return i[X] + m_nGrid[X]*i[Y] + m_nGrid[X]*m_nGrid[Y]*i[Z];
+#endif
+}//------------------------------------------------------------------------------
+int Grid::gridId(const double (&r)[M_DIM]) const
+{
+    int i[M_DIM];
+
+    for(int d=0; d<M_DIM; d++) {
+        i[d] = int((r[d] - m_boundary2[d][0])/m_gridSpacing(d));
 
         // Handling the boundary extremals
         if(i[d] >= m_nGrid[d]) {

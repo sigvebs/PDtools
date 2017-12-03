@@ -160,6 +160,7 @@ private:
     std::vector<int> m_neighbouringCores;
     std::vector<double> m_boundaryLength;
     std::vector<pair<double, double>> m_boundary;
+    std::vector<std::array<double, 2>> m_boundary2;
     std::vector<pair<double, double>> m_originalBoundary;
     arma::ivec3 m_periodicBoundaries = {0, 0, 0};
     int m_counter = 0;
@@ -181,6 +182,7 @@ public:
     void createGrid();
     void setNeighbours();
     int  gridId(const vec3 & r) const;
+    int  gridId(const double (&r)[M_DIM]) const;
     int  gridIdN(const vector<int> &nId) const;
     int  particlesBelongsTo(const vec3 & r) const;
     void update();
