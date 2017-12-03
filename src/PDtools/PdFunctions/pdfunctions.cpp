@@ -28,7 +28,7 @@ void setPdConnections(PD_Particles & particles,
 #if USE_EXTENDED_RANGE_LC == 0
     (void) lc;
 #endif
-    const unordered_map<int, GridPoint*> &gridpoints = grid.gridpoints();
+    const unordered_map<int, GridPoint> &gridpoints = grid.gridpoints();
     const vector<int> &mygridPoints = grid.myGridPoints();
     const mat & R = particles.r();
     const mat &data  = particles.data();
@@ -47,7 +47,7 @@ void setPdConnections(PD_Particles & particles,
     for(unsigned int i=0; i<mygridPoints.size(); i++) {
         double dx, dy, dz;
         int gridId = mygridPoints.at(i);
-        const GridPoint & gridPoint = *gridpoints.at(gridId);
+        const GridPoint & gridPoint = gridpoints.at(gridId);
 
         for(const pair<int, int> & idCol_i:gridPoint.particles()) {
             int id_i = idCol_i.first;

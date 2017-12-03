@@ -13,17 +13,15 @@ void setPdElementConnections(PD_Particles & discretization,
                              Grid & grid,
                              const double delta)
 {
-    const unordered_map<int, GridPoint*> & gridpoints = grid.gridpoints();
+    const unordered_map<int, GridPoint> & gridpoints = grid.gridpoints();
     const vector<int> & mygridPoints = grid.myGridPoints();
     const mat & R = discretization.r();
-//    const mat & data  = discretization.data();
     const unordered_map<int, int> & idToCol = discretization.idToCol();
     const vector<PD_quadElement> & quadElements = discretization.getQuadElements();
 
     // The order is important!
     discretization.registerPdParameter("connected");
     discretization.registerPdParameter("overlap");
-//    const size_t iGroupId = discretization.getParamId("groupId");
     vector<size_t> pCols;
     pCols.reserve(4);
 
@@ -35,28 +33,21 @@ void setPdElementConnections(PD_Particles & discretization,
 #ifdef USE_OPENMP
 #pragma omp parallel for private(pCols)
 #endif
-    for(size_t i=0; i<mygridPoints.size(); i++)
-    {
+    for(size_t i=0; i<mygridPoints.size(); i++) {
         double dx, dy;
         const size_t gridId = mygridPoints.at(i);
-        const GridPoint & gridPoint = *gridpoints.at(gridId);
+        const GridPoint & gridPoint = gridpoints.at(gridId);
 
-        for(const pair<int, int> & idCol_i:gridPoint.particles())
-        {
+        for(const pair<int, int> & idCol_i:gridPoint.particles()) {
             int id_i = idCol_i.first;
             int col_i = idCol_i.second;
             unordered_map<int, vector<double>> connections;
             vector<pair<int, vector<double>>> connectionsVector;
 
-//            const polygon_2d interactionPolygon_i = translatePolygon(baseCicle,
-//                                            point_2d(R(col_i, 0), R(col_i, 1)));
-
             int totoalNumberPolygons = 0;
             int intersectingPolygons = 0;
-            double tot_area = 0;
 
-            for(const array<size_t, 2> & idCol_j:gridPoint.elements())
-            {
+            for(const array<size_t, 2> & idCol_j:gridPoint.elements()) {
                 const int j = idCol_j[1];
                 const PD_quadElement & quadElement = quadElements[j];
                 const array<size_t, 4> & pIds = quadElement.verticeIds();
@@ -88,42 +79,13 @@ void setPdElementConnections(PD_Particles & discretization,
                 connections[element_id] = connectionData;
                 connectionsVector.push_back(pair<int, vector<double>>(element_id, connectionData) );
                 intersectingPolygons++;
-
-                /*
-                polygon_2d polygon_j;
-                polygon_j.outer().push_back(point_2d(R(pCols[0], 0), R(pCols[0], 1)));
-                polygon_j.outer().push_back(point_2d(R(pCols[3], 0), R(pCols[3], 1)));
-                polygon_j.outer().push_back(point_2d(R(pCols[2], 0), R(pCols[2], 1)));
-                polygon_j.outer().push_back(point_2d(R(pCols[1], 0), R(pCols[1], 1)));
-                polygon_j.outer().push_back(point_2d(R(pCols[0], 0), R(pCols[0], 1)));
-
-                std::deque<polygon_2d> output;
-                boost::geometry::intersection(interactionPolygon_i, polygon_j, output);
-                if(output.size() > 0) {
-                    const int element_id = idCol_j[0];
-                    const polygon_2d & intersection = output[0];
-                    const double area_intersection = bg::area(intersection);
-                    const double area_p = bg::area(polygon_j);
-                    const double overlap = area_intersection/area_p;
-
-                    vector<double> connectionData;
-                    connectionData.push_back(1.0); // Connected
-                    connectionData.push_back(overlap); // Overlap factor
-                    connections[element_id] = connectionData;
-                    connectionsVector.push_back(pair<int, vector<double>>(element_id, connectionData) );
-                    intersectingPolygons++;
-                    tot_area += area_intersection;
-                }
-                */
                 totoalNumberPolygons++;
             }
 
             // Neighbouring cells
             const vector<GridPoint*> & neighbours = gridPoint.neighbours();
-            for(const GridPoint *neighbour:neighbours)
-            {
-                for(const array<size_t, 2> & idCol_j:neighbour->elements())
-                {
+            for(const GridPoint *neighbour:neighbours) {
+                for(const array<size_t, 2> & idCol_j:neighbour->elements()) {
                     const int j = idCol_j[1];
                     const PD_quadElement & quadElement = quadElements[j];
                     const array<size_t, 4> & pIds = quadElement.verticeIds();

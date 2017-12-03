@@ -127,7 +127,7 @@ public:
 
     vector<array<size_t, 2> > elements() const;
 
-protected:
+private:
     int m_id;
     vector<int> m_nGridId;
     int m_ownedBy = 0;
@@ -146,16 +146,15 @@ class Grid
 public:
     int m_dim;
 
-protected:
+private:
     double m_gridspacing;
     int m_myRank = 0;
     int m_nCores = 1;
-    int m_nGrid[3];
-//  int m_nGrid[M_DIM];
+    int m_nGrid[M_DIM];
     arma::ivec3 m_nGridArma;
     arma::ivec6 m_nGrid_with_boundary;
     arma::vec3 m_gridSpacing;
-    std::unordered_map<int, GridPoint*> m_gridpoints;
+    std::unordered_map<int, GridPoint> m_gridpoints;
     std::vector<int> m_myGridPoints;
     std::vector<int> m_ghostGridIds;
     std::vector<int> m_periodicSendGridIds;
@@ -198,7 +197,7 @@ public:
     int belongsTo(const int gId) const;
     const vector<int> & myGridPoints() const {return m_myGridPoints;}
 
-    unordered_map<int, GridPoint*> & gridpoints() {return m_gridpoints;}
+    unordered_map<int, GridPoint> & gridpoints() {return m_gridpoints;}
 
     void setOwnership();
     int myRank() {return m_myRank;}

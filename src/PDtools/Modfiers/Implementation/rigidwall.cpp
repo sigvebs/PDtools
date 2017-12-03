@@ -39,7 +39,7 @@ void RigidWall::initialize()
     // Finding the gridpoints the beolngs to the wall
     // Assumes that the gridpoints are constant during the simulation
     const int me = m_grid.myRank();
-    unordered_map<int, GridPoint*> & gridpoints = m_grid.gridpoints();
+    unordered_map<int, GridPoint> & gridpoints = m_grid.gridpoints();
     const arma::ivec3 nGrid = m_grid.nGrid();
     const int nx = nGrid(0);
     const int ny = nGrid(1);
@@ -49,13 +49,10 @@ void RigidWall::initialize()
         topOrBottom = nGrid(m_orientationAxis) - 1;
 
 
-    for(int i=0; i < nGrid(otherAxis[0]); i++)
-    {
-        for(int j=0; j < nGrid(otherAxis[1]); j++)
-        {
+    for(int i=0; i < nGrid(otherAxis[0]); i++) {
+        for(int j=0; j < nGrid(otherAxis[1]); j++) {
             int x, y, z;
-            switch (m_orientationAxis)
-            {
+            switch (m_orientationAxis) {
             case 0:
                 x = topOrBottom;
                 y = i;
@@ -77,9 +74,8 @@ void RigidWall::initialize()
             const int gridId = x + nx*y + nx*ny*z;
             const int belongsTo = m_grid.belongsTo(gridId);
 
-            if(belongsTo == me)
-            {
-                m_gridpoints.push_back(gridpoints.at(gridId));
+            if(belongsTo == me) {
+                m_gridpoints.push_back(&gridpoints.at(gridId));
                 cout << "gridId:" << gridId << endl;
             }
         }

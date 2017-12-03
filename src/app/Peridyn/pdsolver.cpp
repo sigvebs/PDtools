@@ -54,6 +54,7 @@ PdSolver::PdSolver(string cfgPath, int myRank, int nMpiNodes):
 //------------------------------------------------------------------------------
 PdSolver::~PdSolver()
 {
+    delete solver;
 }
 //------------------------------------------------------------------------------
 int PdSolver::initialize()
@@ -569,65 +570,7 @@ int PdSolver::initialize()
             m_particles.addGhostParameter(param);
         }
     }
-    /*
-    if(isRoot)
-        cout << "Initializing forces" << endl;
 
-    // Initializing forces
-    for(Force* force:forces) {
-        force->numericalInitialization(calculateMicromodulus);
-        force->initialize(E, nu, delta, dim, h, lc);
-        const auto & needed = force->getNeededProperties();
-
-        for(auto prop:needed) {
-            neededProperties.push_back(prop);
-        }
-    }
-
-    if(isRoot) {
-        cout << "Forces set: ";
-        for(string f:forcesSet)
-            cout << f << ", ";
-        cout << endl;
-    }
-    */
-    //--------------------------------------------------------------------------
-    // Recalculating particle properties
-    //--------------------------------------------------------------------------
-    /*
-    if(isRoot)
-        cout << "Recalcuating particle properties" << endl;
-    int applySurfaceCorrection = 0;
-    m_cfg.lookupValue("applySurfaceCorrection", applySurfaceCorrection);
-    if(applySurfaceCorrection) {
-        for(Force* force:forces) {
-            const int nSurfaceCorrections = 20;
-            bool hasSurfaceCorrection = force->initializeSurfaceCorrection();
-
-            if(!hasSurfaceCorrection)
-                continue;
-#if USE_MPI
-            vector<string> additionGhostParameters = force->getSurfaceCorrectionGhostParameters();
-            for(const string &param:additionGhostParameters) {
-                m_particles.addGhostParameter(param);
-            }
-
-            m_grid.clearParticles();
-            updateGrid(m_grid, m_particles);
-            exchangeGhostParticles(m_grid, m_particles);
-#endif
-            for(int i=0; i<nSurfaceCorrections; i++) {
-                force->applySurfaceCorrectionStep1(0.001);
-#if USE_MPI
-                m_grid.clearParticles();
-                updateGrid(m_grid, m_particles);
-                exchangeGhostParticles(m_grid, m_particles);
-#endif
-                force->applySurfaceCorrectionStep2();
-            }
-        }
-    }
-    */
     if(!useS0fromCfg) {
         /*
         switch(dim)
@@ -855,35 +798,7 @@ int PdSolver::initialize()
 //            appliedStress /= (E0/pow(L0, 4));
 //            appliedStress /= (a1 - a0);
             appliedStress /= delta;
-
             boundaryModifiers.push_back(new boundaryForce(appliedStress, stressAxis, area, axis, steps, delta, incremental));
-            /*
-            double appliedStress;
-            int axis, stressAxis;
-            int steps = -1;
-            double a0 = cfg_modifiers[i]["area"][0];
-            double a1 = cfg_modifiers[i]["area"][1];
-            a0 /= L0;
-            a1 /= L0;
-
-            pair<double, double> area(a0, a1);
-            cfg_modifiers[i].lookupValue("steps", steps);
-
-            if (!cfg_modifiers[i].lookupValue("appliedStress", appliedStress) ||
-                    !cfg_modifiers[i].lookupValue("axis", axis) ||
-                    !cfg_modifiers[i].lookupValue("stressAxis", stressAxis)) {
-                cerr << "Error reading the parameters for modifier '"
-                     << type << "'" << endl;
-                exit(EXIT_FAILURE);
-            }
-            appliedStress /= E0;
-
-            if(boost::iequals(solverType, "ADR")) {
-                boundaryModifiers.push_back(new BoundaryStress(appliedStress, stressAxis, area, axis, steps, delta));
-            } else {
-                boundaryModifiers.push_back(new BoundaryStress(appliedStress, stressAxis, area, axis, steps, delta));
-            }
-            */
         } else if(boost::iequals(type, "PMB fracture")) {
             double alpha;
 

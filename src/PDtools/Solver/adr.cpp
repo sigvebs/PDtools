@@ -95,10 +95,11 @@ void ADR::iterate(int maxNumberOfSteps)
 {
     //    int nFractureRelaxationSteps = m_maxStepsFracture;
     //    int nFractureRelaxationSteps = 2*minSteps;
-    const ivec &colToId = m_particles->colToId();
-//    int minSteps = 500;
+    //    const ivec &colToId = m_particles->colToId();
+    //    int minSteps = 500;
+    //        int nRelaxSteps = 30;
     const int minSteps = m_minSteps;
-    int nRelaxSteps = 30;
+
     int counter = 0;
     int steps = 0;
     int relaxSteps = minSteps;
@@ -211,19 +212,19 @@ void ADR::iterate(int maxNumberOfSteps)
 //------------------------------------------------------------------------------
 void ADR::integrateStepOne()
 {
-//    ivec & colToId = m_particles->colToId();
+    //    ivec & colToId = m_particles->colToId();
+    //    const arma::imat & isStatic = m_particles->isStatic();
     using namespace arma;
 
     const double alpha = (2.*m_dt)/(2. + m_c*m_dt);
     const double beta = (2. - m_c*m_dt)/(2. + m_c*m_dt);
 
-    const arma::imat & isStatic = m_particles->isStatic();
     const vec & stableMass = m_particles->stableMass();
     mat & r = m_particles->r();
     mat & v = m_particles->v();
     mat & F = m_particles->F();
     mat & Fold = m_particles->Fold();
-    mat & r0 = m_particles->r0();
+    //    mat & r0 = m_particles->r0();
 
     const int nParticles = m_particles->nParticles();
 
@@ -252,11 +253,6 @@ void ADR::integrateStepOne()
     double * Foldy =  Fold.colptr(1);
     double * Foldz =  Fold.colptr(2);
     const double * sm =  stableMass.colptr(0);
-
-
-//    const ivec &colToId = m_particles->colToId(); // TMP
-//    typedef std::numeric_limits< double > dbl; // TMP
-    //    cout.precision(dbl::max_digits10+2);  // TMP
 
     if(m_dim == 3) {
         for(int i=0; i<nParticles; i++) {

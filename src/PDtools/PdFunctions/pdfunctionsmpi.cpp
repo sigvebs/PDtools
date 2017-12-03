@@ -26,12 +26,12 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
     // Collecting the boundary particles
     map<int, vector<pair<int, int>>> toNeighbours;
     const vector<int> boundaryGridPoints = grid.boundaryGridPoints();
-    unordered_map<int, GridPoint*> & gridpoints = grid.gridpoints();
+    unordered_map<int, GridPoint> & gridpoints = grid.gridpoints();
 
     for(int gId:boundaryGridPoints) {
-        const GridPoint * gridPoint = gridpoints.at(gId);
-        const vector<int> & neighbourRanks = gridPoint->neighbourRanks();
-        const vector<pair<int,int>> l_particles = gridPoint->particles();
+        const GridPoint & gridPoint = gridpoints.at(gId);
+        const vector<int> & neighbourRanks = gridPoint.neighbourRanks();
+        const vector<pair<int,int>> l_particles = gridPoint.particles();
 
         for(const int nRank:neighbourRanks) {
             vector<pair<int,int>> & l_p = toNeighbours[nRank];
@@ -140,7 +140,8 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
             const vec3 &l_r = r.row(col).t();
             const int gId = grid.gridId(l_r);
             const pair<int, int> id_pos(id, col);
-            gridpoints[gId]->addParticle(id_pos);
+            GridPoint & gp = gridpoints[gId];
+            gp.addParticle(id_pos);
         }
     }
     particles.nGhostParticles(nGhostParticles);
@@ -155,12 +156,12 @@ void exchangeInitialGhostParticles_boundary(Grid &grid, PD_Particles &particles)
     // Collecting the boundary particles
     map<int, vector<pair<int, int>>> toNeighbours;
     const vector<int> boundaryGridPoints = grid.boundaryGridPoints();
-    unordered_map<int, GridPoint*> & gridpoints = grid.gridpoints();
+    unordered_map<int, GridPoint> & gridpoints = grid.gridpoints();
 
     for(int gId:boundaryGridPoints) {
-        const GridPoint * gridPoint = gridpoints.at(gId);
-        const vector<int> & neighbourRanks = gridPoint->neighbourRanks();
-        const vector<pair<int,int>> l_particles = gridPoint->particles();
+        const GridPoint & gridPoint = gridpoints.at(gId);
+        const vector<int> & neighbourRanks = gridPoint.neighbourRanks();
+        const vector<pair<int,int>> l_particles = gridPoint.particles();
 
         for(const int nRank:neighbourRanks) {
             vector<pair<int,int>> & l_p = toNeighbours[nRank];
@@ -270,7 +271,8 @@ void exchangeInitialGhostParticles_boundary(Grid &grid, PD_Particles &particles)
             const vec3 &l_r = r.row(col).t();
             const int gId = grid.gridId(l_r);
             const pair<int, int> id_pos(id, col);
-            gridpoints[gId]->addParticle(id_pos);
+            GridPoint &gp = gridpoints[gId];
+            gp.addParticle(id_pos);
         }
     }
 
@@ -303,7 +305,7 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
     mat & r0 = particles.r0();
     ivec & colToId = particles.colToId();
     unordered_map<int, int>  & idToCol = particles.idToCol();
-    unordered_map<int, GridPoint*> & gridpoints = grid.gridpoints();
+    unordered_map<int, GridPoint> & gridpoints = grid.gridpoints();
 
     for(unsigned int i=0; i<particles.nParticles(); i++) {
         const int id_i = colToId.at(i);
@@ -316,9 +318,9 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
         }
 
         // Adding to periodic boundary points for later removal
-        const GridPoint * gridPoint = gridpoints.at(gId);
-        if(gridPoint->isGhost() && belongsTo == me) {
-            gridpoints[gId]->addParticle(pair<int,int>(id_i, i));
+        GridPoint & gridPoint = gridpoints.at(gId);
+        if(gridPoint.isGhost() && belongsTo == me) {
+            gridPoint.addParticle(pair<int,int>(id_i, i));
         }
 #else
         const pair<int, int> id_pos(id_i, i);
@@ -332,10 +334,10 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
     const vector<int> boundaryGridPoints = grid.periodicReceiveGridIds();
 
     for(int gId:boundaryGridPoints) {
-        const GridPoint * gridPoint = gridpoints.at(gId);
-        const int belongsTo = gridPoint->periodicNeighbourRank();
-        const vector<pair<int,int>> l_particles = gridPoint->particles();
-        const vector<double> &shift = gridPoint->periodicShift();
+        const GridPoint & gridPoint = gridpoints.at(gId);
+        const int belongsTo = gridPoint.periodicNeighbourRank();
+        const vector<pair<int,int>> l_particles = gridPoint.particles();
+        const vector<double> &shift = gridPoint.periodicShift();
 
         for(const auto &idCol:l_particles) {
             const int id_i = idCol.first;
@@ -552,7 +554,8 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
         const int belongsTo = grid.belongsTo(gId);
 
         if(belongsTo == me) {
-            gridpoints[gId]->addParticle(id_pos);
+            GridPoint & gp = gridpoints[gId];
+            gp.addParticle(id_pos);
         } else {
             cerr << me <<" DOES NOT BELONG TO ME: " << id << endl;
             cerr << r_i << endl;
@@ -664,13 +667,12 @@ void exchangeInitialPeriodicBoundaryParticles(Grid &grid, PD_Particles &particle
     // Collecting the boundary particles
     map<int, vector<pair<int, int>>> toRanks;
     const vector<int> boundaryGridPoints = grid.periodicSendGridIds();
-    unordered_map<int, GridPoint*> & gridpoints = grid.gridpoints();
+    unordered_map<int, GridPoint> & gridpoints = grid.gridpoints();
 
-    for(int gId:boundaryGridPoints)
-    {
-        const GridPoint * gridPoint = gridpoints.at(gId);
-        const int nRank = gridPoint->periodicNeighbourRank();
-        const vector<pair<int,int>> l_particles = gridPoint->particles();
+    for(int gId:boundaryGridPoints) {
+        const GridPoint & gridPoint = gridpoints.at(gId);
+        const int nRank = gridPoint.periodicNeighbourRank();
+        const vector<pair<int,int>> l_particles = gridPoint.particles();
         vector<pair<int,int>> & l_p = toRanks[nRank];
         l_p.insert(l_p.end(), l_particles.begin(), l_particles.end());
     }
@@ -699,8 +701,8 @@ void exchangeInitialPeriodicBoundaryParticles(Grid &grid, PD_Particles &particle
             // Getting the shift
             const vec3 &r_i = r.row(i).t();
             const int gId = grid.gridId(r_i);
-            const GridPoint * gridPoint = gridpoints.at(gId);
-            const vector<double> &shift = gridPoint->periodicShift();
+            const GridPoint & gridPoint = gridpoints.at(gId);
+            const vector<double> &shift = gridPoint.periodicShift();
             const auto & pd_connections = particles.pdConnections(id_i);
 
             // Collecting send data
@@ -782,7 +784,9 @@ void exchangeInitialPeriodicBoundaryParticles(Grid &grid, PD_Particles &particle
             const vec3 &l_r = r.row(col).t();
             const int gId = grid.gridId(l_r);
             const pair<int, int> id_pos(id, col);
-            gridpoints[gId]->addParticle(id_pos);
+
+            GridPoint & gp = gridpoints[gId];
+            gp.addParticle(id_pos);
         }
     }
     particles.nGhostParticles(nGhostParticles);
@@ -798,13 +802,12 @@ void exchangePeriodicBoundaryParticles(Grid &grid, PD_Particles &particles)
     // Collecting the boundary particles
     map<int, vector<pair<int, int>>> toRanks;
     const vector<int> boundaryGridPoints = grid.periodicSendGridIds();
-    unordered_map<int, GridPoint*> & gridpoints = grid.gridpoints();
+    unordered_map<int, GridPoint> & gridpoints = grid.gridpoints();
 
-    for(int gId:boundaryGridPoints)
-    {
-        const GridPoint * gridPoint = gridpoints.at(gId);
-        const int nRank = gridPoint->periodicNeighbourRank();
-        const vector<pair<int,int>> l_particles = gridPoint->particles();
+    for(int gId:boundaryGridPoints) {
+        const GridPoint & gridPoint = gridpoints.at(gId);
+        const int nRank = gridPoint.periodicNeighbourRank();
+        const vector<pair<int,int>> l_particles = gridPoint.particles();
         vector<pair<int,int>> & l_p = toRanks[nRank];
         l_p.insert(l_p.end(), l_particles.begin(), l_particles.end());
     }
@@ -837,13 +840,13 @@ void exchangePeriodicBoundaryParticles(Grid &grid, PD_Particles &particles)
             // Getting the shift
             const vec3 &r_i = r.row(i).t();
             const int gId = grid.gridId(r_i);
-            const GridPoint * gridPoint = gridpoints.at(gId);
-            const vector<double> &shift = gridPoint->periodicShift();
+            const GridPoint & gridPoint = gridpoints.at(gId);
+            const vector<double> &shift = gridPoint.periodicShift();
 
             const vec3 &r0_i = r0.row(i).t();
             const int gId0 = grid.gridId(r0_i);
-            const GridPoint * gridPoint0 = gridpoints.at(gId0);
-            const vector<double> &shift0 = gridPoint0->periodicShift();
+            const GridPoint & gridPoint0 = gridpoints.at(gId0);
+            const vector<double> &shift0 = gridPoint0.periodicShift();
 
             // Collecting send data
             sendData.push_back(id_i);
@@ -915,7 +918,9 @@ void exchangePeriodicBoundaryParticles(Grid &grid, PD_Particles &particles)
             const vec3 &l_r = r.row(col).t();
             const int gId = grid.gridId(l_r);
             const pair<int, int> id_pos(id, col);
-            gridpoints[gId]->addParticle(id_pos);
+
+            GridPoint & gp = gridpoints[gId];
+            gp.addParticle(id_pos);
         }
     }
     particles.nGhostParticles(nGhostParticles);

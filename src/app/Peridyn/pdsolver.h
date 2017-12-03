@@ -3,6 +3,7 @@
 
 #include <PDtools.h>
 #include <libconfig.h++>
+#include <memory>
 
 using namespace std;
 
