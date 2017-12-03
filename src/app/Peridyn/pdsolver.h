@@ -4,28 +4,28 @@
 #include <PDtools.h>
 #include <libconfig.h++>
 #include <memory>
-
-using namespace std;
+#include <string>
 
 //------------------------------------------------------------------------------
-class PdSolver
-{
+class PdSolver {
 public:
-    PdSolver(string configPath, int myRank, int nMpiNodes);
-    ~PdSolver();
+  PdSolver(std::string configPath, int myRank, int nMpiNodes);
+  ~PdSolver();
 
-    int initialize();
-    void solve();
+  int initialize();
+  void solve();
 
-protected:
-    const string m_configPath;
-    const int m_myRank;
-    const int m_nCores;
-    bool isRoot = 0;
-    libconfig::Config m_cfg;
-    PDtools::PD_Particles m_particles;
-    PDtools::Grid m_grid;
-    PDtools::Solver *solver;
+private:
+  void setDomain();
+
+  const std::string m_configPath;
+  const int m_myRank;
+  const int m_nCores;
+  bool isRoot = 0;
+  libconfig::Config m_cfg;
+  PDtools::PD_Particles m_particles;
+  PDtools::Grid m_grid;
+  PDtools::Solver *solver;
 };
 //------------------------------------------------------------------------------
 #endif // PDSOLVER_H
