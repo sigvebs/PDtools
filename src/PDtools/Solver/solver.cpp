@@ -47,11 +47,34 @@ Solver::Solver()
 }
 //------------------------------------------------------------------------------
 Solver::~Solver()
-{     
+{
     for(Force *force:m_oneBodyForces) {
       delete force;
-    } 
+    }
     m_oneBodyForces.clear();
+
+    for(Modifier *spModifier:m_spModifiers) {
+      delete spModifier;
+    }
+    m_spModifiers.clear();
+
+    for(Modifier *boundaryModifier:m_boundaryModifiers) {
+      delete boundaryModifier;
+    }
+    m_boundaryModifiers.clear();
+
+    for(Modifier *qsModifier:m_qsModifiers) {
+        delete qsModifier;
+    }
+    m_qsModifiers.clear();
+
+    for(CalculateProperty *calcProperty:m_properties) {
+        delete calcProperty;
+    }
+    m_qsModifiers.clear();
+
+    delete m_ADR_fracture;
+    delete m_domain;
 }
 //------------------------------------------------------------------------------
 void Solver::applyBoundaryConditions()
