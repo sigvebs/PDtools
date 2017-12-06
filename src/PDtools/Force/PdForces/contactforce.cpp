@@ -106,12 +106,8 @@ void ContactForce::calculateForces(const int id_i, const int i)
             if(isPdConnected)
                 continue;
 
-//            double c1 = contactDistance;
             if(hasBeenPdConnected) {
                 contactDistance = min(contactDistance*m_scaling, dr0*m_scaling_dr0);
-//                contactDistance = dr0*m_scaling_dr0;
-//                if(drSquared > contactDistance*contactDistance)
-//                    continue;
             }
             if(drSquared > contactDistance*contactDistance)
                 continue;
@@ -119,8 +115,6 @@ void ContactForce::calculateForces(const int id_i, const int i)
             const double vol_j = m_data(j, m_indexVolume);
             const double c_j = m_data(j, m_indexMicromodulus);
             const double c_ij = 0.5*(c_i + c_j);
-//            cout << "connected: " << id_i << " " << id_j << " c:" << c_ij << " cd:" << contactDistance << " cd0:" << c1 << endl;
-//            cout << "connected: " << id_i << " " << id_j << " \tc:" << c_ij << " \tcontact_d:" << contactDistance;
 
             double drLen = sqrt(drSquared);
             // To avoid roundoff errors
@@ -130,14 +124,11 @@ void ContactForce::calculateForces(const int id_i, const int i)
             contact = true;
             const double ds = (drLen - contactDistance)/contactDistance;
             const double fbond = m_forceScaling*c_ij*ds*vol_j/drLen;
-//            cout << "ds: " << ds << " \tdrLen:" << drLen << " \tfbond: " ;
 
             for(int d=0; d<m_dim; d++) {
-//                cout << dr_ij[d]*fbond << " ";
                 m_F(i, d) += dr_ij[d]*fbond;
                 m_v *= m_velocityScaling;
             }
-//            cout << endl;
         }
     }
 
@@ -151,6 +142,9 @@ void ContactForce::calculateForces(const int id_i, const int i)
 void ContactForce::calculateStress(const int id_i, const int i,
                                    const int (&indexStress)[6])
 {
+    (void) id_i;
+    (void) i;
+    (void) indexStress;
     /*
     const double c_i = m_data(i, m_indexMicromodulus);
     const double radius_i =  m_data(i, m_indexRadius);

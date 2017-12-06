@@ -76,15 +76,11 @@ void setPdConnections(PD_Particles & particles,
 
 #if USE_EXTENDED_RANGE_RADIUS
                 const double radius_j = data(col_j, indexRadius);
-//                const double l_delta = delta + 0.5*(radius_i + radius_j);
 #elif USE_EXTENDED_RANGE_LC
-//                const double l_delta = delta + 0.5*lc;
                 const double radius_j = 0.5*lc;
 #else
                 const double radius_j = 0.;
-                //                const double l_delta = delta;
 #endif
-//                const double deltaSquared = pow(l_delta, 2);
 
                 const vec & r_j = R.row(col_j).t();
                 dx = r_i(0) - r_j(0);
@@ -94,10 +90,8 @@ void setPdConnections(PD_Particles & particles,
                 const double drSquared = dx*dx + dy*dy + dz*dz;
                 const double dr = sqrt(drSquared);
 
-//                if(drSquared <= deltaSquared)
                 if(delta >= dr - radius_i && delta >= dr - radius_j) {
                     vector<double> connectionData;
-//                    const double dr = sqrt(drSquared);
 
                     connectionData.push_back(dr);
                     connectionData.push_back(1.0); // Connected
@@ -123,9 +117,7 @@ void setPdConnections(PD_Particles & particles,
                 const double radius_j = 0.5*lc;
 #else
                     const double radius_j = 0.;
-//                const double l_delta = delta;
 #endif
-//                    const double deltaSquared = pow(l_delta, 2);
 
                     const vec & r_j = R.row(col_j).t();
                     dx = r_i(0) - r_j(0);
@@ -135,11 +127,9 @@ void setPdConnections(PD_Particles & particles,
                     const double drSquared = dx*dx + dy*dy + dz*dz;
                     const double dr = sqrt(drSquared);
 
-//                    if(drSquared <= deltaSquared)
                     if(delta >= dr - radius_i && delta >= dr - radius_j) {
                         int id_j = idCol_j.first;
                         vector<double> connectionData;
-//                        const double dr = sqrt(drSquared);
                         connectionData.push_back(dr);
                         connectionData.push_back(1.0); // Connected
                         connections[id_j] = connectionData;
@@ -169,7 +159,7 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
     const unordered_map<int, int> &idToCol = particles.idToCol();
     const ivec &colToId = particles.colToId();
     const int indexDr0 = particles.getPdParamId("dr0");
-    const int indexRadius = particles.getParamId("radius");
+//    const int indexRadius = particles.getParamId("radius");
     const int indexVolumeScaling = particles.getPdParamId("volumeScaling");
     const int indexVolume = particles.getParamId("volume");
 
@@ -190,7 +180,6 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
 
             vector<pair<int, vector<double>>> & PDconnections = particles.pdConnections(id_i);
             double vol_delta = 0;
-            const double rc_i = delta - r_i;
 
             for(auto &con:PDconnections) {
                 const double dr = con.second[indexDr0];
@@ -200,17 +189,12 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
                 const double r_j = data(col_j, indexRadius);
 #elif USE_EXTENDED_RANGE_LC
                 const double r_j = 0.5*lc;
-//                const double radius_j = data(col_j, indexRadius);
 #else
                 const double r_j = 0.;
-//                const double r_j = data(col_j, indexRadius);
 #endif
                 const double rc_j = delta - r_j;
 
                 double v1 = 1.;
-                double v2 = 1.;
-//                double b1 = 1.;
-//                double b2 = 1.;
 
                 if(dr > rc_j) {
                     const double d = dr;
@@ -226,35 +210,14 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc, int
                     const double A_a = M_PI*r*r;
 
                     v1 = A/A_a;
-//                    b2 = 0.5*(delta + r_i - dr)/r_i;
-//                    b1 = 0.5*(delta + r_j - dr)/r_j;
-                }
-                if(dr > rc_i)
-                {
-                    const double d = dr;
-                    const double R = delta;
-                    const double r = r_i;
-
-                    const double d1 = 0.5*(d*d - r*r + R*R)/d;
-                    const double d2 = 0.5*(d*d + r*r - R*R)/d;
-                    const double A1 = R*R * acos(d1/R) - d1*sqrt(R*R - d1*d1);
-                    const double A2 = r*r * acos(d2/r) - d2*sqrt(r*r - d2*d2);
-
-//                    const double A = A1 + A2;
-//                    const double A_a = M_PI*r*r;
-//                    v2 = A/A_a;
-//                    b2 = 0.5*(delta + r_i - dr)/r_i;
                 }
 
                 double volumeCorrection = 1.0;
                 volumeCorrection = v1;
-//                volumeCorrection = 0.5*(v1 + v2);
 
                 con.second[indexVolumeScaling] = volumeCorrection;
                 const double vol_i = data(i, indexVolume);
                 vol_delta += vol_i*volumeCorrection;
-                //                volumeCorrection = 0.5*(v1 + v2);//b1*b2;
-                //                volumeCorrection = b1;
             }
         }
     } else if(dim == 3) {

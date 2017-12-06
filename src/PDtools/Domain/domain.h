@@ -15,31 +15,27 @@ public:
     const int dim;
 
     Domain(int dim, vector <pair<double, double>> boundaries);
+    ~Domain() {}
 
     void setBoundaries(vector <pair<double, double>> boundaries);
 
-    const vector <pair<double, double>> & boundaries()
-    {
+    const vector <pair<double, double>> & boundaries() {
         return m_boundaries;
     }
 
-    void periodicBoundaries(arma::ivec3 pb)
-    {
+    void periodicBoundaries(arma::ivec3 pb) {
         m_periodicBoundaries = pb;
     }
 
-    const arma::ivec3 & periodicBoundaries() const
-    {
+    const arma::ivec3 & periodicBoundaries() const {
         return m_periodicBoundaries;
     }
 
-    const vector <double> boundaryLength() const
-    {
+    const vector <double> boundaryLength() const {
         return m_boundaryLength;
     }
 
-    const vector <pair<double, double>> boundaries() const
-    {
+    const vector <pair<double, double>> boundaries() const {
         return m_boundaries;
     }
 

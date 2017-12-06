@@ -20,7 +20,7 @@ class Force
 protected:
     PD_Particles &m_particles;
     bool m_numericalInitialization = false;
-    int m_dim = 3;
+    int m_dim;
     double m_E;
     double m_nu;
     double m_h;
@@ -40,8 +40,8 @@ protected:
 
     // Element based Pd (EPD)
     unordered_map<int, int> &m_idToElement;
-    vector<PD_triElement> &m_triElements;
     vector<PD_quadElement> &m_quadElements;
+    vector<PD_triElement> &m_triElements;
 
     enum enum_coordinates{X, Y, Z};
     static constexpr double THRESHOLD = 2.2204e-016;

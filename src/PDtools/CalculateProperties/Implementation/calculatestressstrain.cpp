@@ -131,10 +131,10 @@ void CalculateStressStrain::update2d()
     double dr0_ij[m_dim];
 
     bool use_local_E = false;
-    int iE = 0;
+//    int iE = 0;
     if(m_particles->hasParameter("E_local")) {
         use_local_E = true;
-        iE = m_particles->getParamId("E_local");
+//        iE = m_particles->getParamId("E_local");
     }
 
     double E = m_E;

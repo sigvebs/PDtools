@@ -31,8 +31,6 @@ void VelocityVerletIntegrator::integrateStepOne()
     const double dtRhoHalf = 0.5*m_dt;
     const arma::imat & isStatic = m_particles->isStatic();
 
-    const ivec &colToId = m_particles->colToId();
-
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif

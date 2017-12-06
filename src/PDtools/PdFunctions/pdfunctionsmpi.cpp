@@ -105,12 +105,12 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
                 MPI_COMM_WORLD, &status);
 
         //        cout << myRank << " received from " << toNode << endl;
-        const int nReceiveParticles = nRecieveElements/nGhostparams;
+//        const int nReceiveParticles = nRecieveElements/nGhostparams;
 
         // Storing the received ghost data
 //        for(int i=0; i<nReceiveParticles; i++)
         double l_r[3] = {0,0,0};
-        unsigned int j = 0;
+        size_t j = 0;
         while(j < nRecieveElements) {
 //            int j = i*nGhostparams;
             const int col = nParticles + nGhostParticles;
@@ -154,8 +154,6 @@ void exchangeGhostParticles_boundary(Grid &grid, PD_Particles &particles)
 void exchangeInitialGhostParticles_boundary(Grid &grid, PD_Particles &particles)
 {
 #ifdef USE_MPI
-    const int myRank = MPI::COMM_WORLD.Get_rank( );
-
     // Collecting the boundary particles
     map<int, vector<pair<int, int>>> toNeighbours;
     const vector<int> boundaryGridPoints = grid.boundaryGridPoints();
@@ -180,9 +178,9 @@ void exchangeInitialGhostParticles_boundary(Grid &grid, PD_Particles &particles)
     mat & r0 = particles.r0();
     mat & data = particles.data();
 
-    // Sending the ghost particles to the other cpus
-    const int nParticles = particles.nParticles();
-    int nGhostParticles = particles.nGhostParticles();
+    // Sending the ghost particles to the other CPU's
+    const size_t nParticles = particles.nParticles();
+    size_t nGhostParticles = particles.nGhostParticles();
 
     for(const auto& id_toNeighbours:toNeighbours) {
         const int toNode = id_toNeighbours.first;
@@ -312,7 +310,7 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
 
     double r_i[3] = {0,0,0};
 
-    int nParticles = particles.nParticles();
+    size_t nParticles = particles.nParticles();
     for(unsigned int i=0; i<nParticles; i++) {
         const int id_i = colToId.at(i);
         r_i[0] = r(i, 0);
@@ -760,7 +758,7 @@ void exchangeInitialPeriodicBoundaryParticles(Grid &grid, PD_Particles &particle
                 MPI_COMM_WORLD, &status);
 
         // Storing the received ghost data
-        unsigned int j = 0;
+        int j = 0;
         double l_r[3] = {0,0,0};
         while(j < nRecieveElements) {
             const int col = nParticles + nGhostParticles;
@@ -904,7 +902,7 @@ void exchangePeriodicBoundaryParticles(Grid &grid, PD_Particles &particles)
                 MPI_COMM_WORLD, &status);
 
         // Storing the received ghost data
-        unsigned int j = 0;
+        int j = 0;
         while(j < nRecieveElements) {
             const int col = nParticles + nGhostParticles;
             const int id = recieveData[j++];

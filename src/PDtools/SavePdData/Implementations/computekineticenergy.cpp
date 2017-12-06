@@ -21,13 +21,13 @@ ComputeKineticEnergy::~ComputeKineticEnergy()
 //------------------------------------------------------------------------------
 void ComputeKineticEnergy::update(const int id_i, const int i)
 {
+    (void) id_i;
     double rho = (*m_data)(i, m_indexRho);
     double volume = (*m_data)(i, m_indexVolume);
     double mass = rho*volume;
 
     double v_squared = 0;
-    for(int d=0; d<m_dim; d++)
-    {
+    for(int d=0; d<m_dim; d++) {
         v_squared += (*m_v)(i, d)*(*m_v)(i, d);
     }
 

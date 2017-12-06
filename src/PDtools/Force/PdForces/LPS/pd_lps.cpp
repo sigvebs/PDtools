@@ -84,7 +84,7 @@ void PD_LPS::calculateForces(const int id, const int i)
         for(int k=0; k<6; k++)
              m_stress[k][i] =  0;
         //----------------------------------
-        for(int l_j=0; l_j<nConnections; l_j++) {
+        for(int l_j=0; l_j<nConnections; ++l_j) {
             auto &con = PDconnections[l_j];
             const int id_j = con.first;
             const int j = m_idToCol.at(id_j);
@@ -170,7 +170,7 @@ void PD_LPS::calculateForces(const int id, const int i)
             m_Fy[i] += dr_ij[1]*bond;
 
             con_data[m_iStretch] = ds/dr0;
-            nConnected++;
+            ++nConnected;
             //----------------------------------
             // TMP - standard stres calc from MD
             m_stress[0][i] += 0.5*dr_ij[0]*dr_ij[0]*bond;;

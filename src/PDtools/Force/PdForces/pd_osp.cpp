@@ -310,193 +310,10 @@ void PD_OSP::initialize(double E, double nu, double delta, int dim, double h, do
 void PD_OSP::applySurfaceCorrectionStep1(double mu, double nu, int dim, double strain)
 {
     (void) nu;
-    arma::vec3 strainFactor;
-    arma::mat gd = arma::zeros(m_particles.nParticles(), dim); // Dilation correction
-    arma::mat gb = arma::zeros(m_particles.nParticles(), dim); // Bond correction
-
+    (void) mu;
+    (void) strain;
     cerr << "TODO: fix the PD_OSP::applySurfaceCorrectionStep1" << endl;
     exit(1);
-    /*
-    //--------------------------------------------------------------------------
-    // Apllying correction to the dilation term
-    //--------------------------------------------------------------------------
-    // Stretching all particle in the x, y and z-direction
-    strainFactor(0) = strain;
-    strainFactor(1) = 0;
-    strainFactor(2) = 0;
-
-    for(int a=0; a<dim; a++)
-    {
-        if(a == 1)
-            strainFactor.swap_rows(0,1);
-        else if(a == 2)
-            strainFactor.swap_rows(1,2);
-
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
-        // Applying uniaxial stretch
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
-        {
-            pair<int, int> idCol(i, i);
-            int col_i = idCol.second;
-
-            for(int d=0; d<dim; d++)
-            {
-                m_r(col_i, d) = (1 + strainFactor(d))*m_r(col_i, d);
-            }
-        }
-
-        double dilation_term = strain;
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
-        // Calculating the elastic energy density
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
-        {
-            pair<int, int> idCol(i, i);
-            int col_i = idCol.second;
-            double theta_i = calculateDilationTerm(idCol);
-            double factor =  dilation_term/theta_i;
-            gd(col_i, a) = factor;
-        }
-
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
-        // Resetting the positions
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
-        {
-            pair<int, int> idCol(i, i);
-            int col_i = idCol.second;
-
-            for(int d=0; d<dim; d++)
-            {
-                m_r(col_i, d) = m_r(col_i, d)/(1 + strainFactor(d));
-            }
-        }
-    }
-
-    //--------------------------------------------------------------------------
-    // Applying correction to the bond term
-    //--------------------------------------------------------------------------
-    // Performing a simple shear of all particle in the x, y and z-direction
-    arma::ivec3 axis;
-    strainFactor(0) = 0.5*strain;
-    strainFactor(1) = 0.*strain;
-    strainFactor(2) = 0;
-    axis(0) = 1;
-    axis(1) = 0;
-    axis(2) = 0;
-
-    for(int a=0; a<dim; a++)
-    {
-        if(a == 1)
-        {
-            strainFactor.swap_rows(1,2);
-            strainFactor.swap_rows(0,1);
-            axis(0) = 0;
-            axis(1) = 2;
-            axis(2) = 1;
-        }
-        else if(a == 2)
-        {
-            strainFactor.swap_rows(2,0);
-            strainFactor.swap_rows(1,2);
-            axis(0) = 2;
-            axis(1) = 0;
-            axis(2) = 0;
-        }
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
-        // Applying uniaxial stretch
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
-        {
-            pair<int, int> idCol(i, i);
-            int col_i = idCol.second;
-
-            for(int d=0; d<dim; d++)
-            {
-                double shear = strainFactor(d)*m_r(axis(d), col_i);
-                m_r(col_i, d) = m_r(col_i, d) + shear;
-//                m_r(col_i, d) = m_r(col_i, d) + strainFactor(d)*m_r(axis(d), col_i);
-//                m_r(col_i, d) = (1 + strainFactor(d))*m_r(col_i, d);
-            }
-        }
-
-        double dilation_term = 0.5*mu*strain*strain;
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
-        // Calculating the elastic energy density
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
-        {
-            pair<int, int> idCol(i, i);
-            int col_i = idCol.second;
-            double bond_i = calculateBondPotential(idCol);
-            double factor =  dilation_term/bond_i;
-            gb(col_i, a) = factor;
-        }
-
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
-        // Resetting the positions
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
-        {
-            pair<int, int> idCol(i, i);
-            int col_i = idCol.second;
-
-            for(int d=0; d<dim; d++)
-            {
-                m_r(col_i, d) = m_r(col_i, d) - strainFactor(d)*m_r(axis(d), col_i);
-//                m_r(col_i, d) = m_r(col_i, d)/(1 + strainFactor(d));
-            }
-        }
-    }
-
-    //--------------------------------------------------------------------------
-    // Calculating the scaling
-    //--------------------------------------------------------------------------
-//#ifdef USE_OPENMP
-//# pragma omp parallel for
-//#endif
-    for(unsigned int i=0; i<m_particles.nParticles(); i++)
-    {
-        pair<int, int> idCol(i, i);
-        int pId = idCol.first;
-        int col_i = idCol.second;
-
-        vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(pId);
-
-        for(auto &con:PDconnections)
-        {
-            int id_j = con.first;
-            int col_j = m_idToCol.at(id_j);
-
-            double dr0Len = con.second[m_indexDr0];
-            arma::vec3 n = (m_r.col(col_i) - m_r.col(col_j))/dr0Len;
-
-            arma::vec3 gd_mean;
-            arma::vec3 gb_mean;
-            double Gd = 0;
-            double Gb = 0;
-            for(int d=0; d<dim; d++)
-            {
-                gd_mean(d) = 0.5*(gd(col_i, d) + gd(col_j, d));
-                gb_mean(d) = 0.5*(gb(col_i, d) + gb(col_j, d));
-                Gd += pow(n(d)/gd_mean(d), 2);
-                Gb += pow(n(d)/gb_mean(d), 2);
-            }
-
-            Gd = pow(Gd, -0.5);
-            Gb = pow(Gb, -0.5);
-            con.second[m_indexForceScalingDilation] *= Gd;
-            con.second[m_indexForceScalingBond] *= Gb;
-        }
-    }
-    */
 }
 //------------------------------------------------------------------------------
 double PD_OSP::calculateDilationTerm(const int id_i, const int i)
@@ -508,8 +325,7 @@ double PD_OSP::calculateDilationTerm(const int id_i, const int i)
     double dr_ij[3];
 
     double theta_i = 0;
-    for(int l_j=0; l_j<nConnections; l_j++)
-    {
+    for(int l_j=0; l_j<nConnections; l_j++) {
         auto &con = PDconnections[l_j];
         if(con.second[m_indexConnected] <= 0.5)
             continue;
@@ -526,8 +342,7 @@ double PD_OSP::calculateDilationTerm(const int id_i, const int i)
         double dr2 = 0;
         double A_ij = 0; // The lambda-factor
 
-        for(int d=0; d<m_dim; d++)
-        {
+        for(int d=0; d<m_dim; d++) {
             dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
             A_ij += dr_ij[d]*(m_r0(d, j) - m_r0(i, d));
@@ -557,8 +372,7 @@ double PD_OSP::calculateBondPotential(const int id_i, const int i)
     double dr_ij[3];
 
     double bond_i = 0;
-    for(int l_j=0; l_j<nConnections; l_j++)
-    {
+    for(int l_j=0; l_j<nConnections; l_j++) {
         auto &con = PDconnections[l_j];
         if(con.second[m_indexConnected] <= 0.5)
             continue;
@@ -573,8 +387,7 @@ double PD_OSP::calculateBondPotential(const int id_i, const int i)
         const double b_ij = 0.5*(b_i + b_j);
 
         double dr2 = 0;
-        for(int d=0; d<m_dim; d++)
-        {
+        for(int d=0; d<m_dim; d++) {
             dr_ij[d] = m_r(j, d) - m_r(i, d);
             dr2 += dr_ij[d]*dr_ij[d];
         }

@@ -193,8 +193,7 @@ void Force::applyStrainCorrection(double strain)
     scaleFactor(2) = 0;
 
     double W_bulk = 0; // Analytical bulk energy
-    switch(m_dim)
-    {
+    switch(m_dim) {
     case 3:
         W_bulk = 0.6*m_E*pow(strain, 2);
         break;
@@ -206,8 +205,7 @@ void Force::applyStrainCorrection(double strain)
         break;
     }
 
-    for(int a=0; a<m_dim; a++)
-    {
+    for(int a=0; a<m_dim; a++) {
         if(a == 1)
             scaleFactor.swap_rows(0, 1);
         else if(a == 2)
@@ -217,10 +215,8 @@ void Force::applyStrainCorrection(double strain)
 # pragma omp parallel for
 #endif
         // Loading the geometry
-        for(int i=0; i<nParticlesAndGhosts; i++)
-        {
-            for(int d=0; d<m_dim; d++)
-            {
+        for(int i=0; i<nParticlesAndGhosts; i++) {
+            for(int d=0; d<m_dim; d++) {
                 m_r(i, d) = (1 + scaleFactor(d))*m_r(i, d);
             }
         }
@@ -229,26 +225,18 @@ void Force::applyStrainCorrection(double strain)
 # pragma omp parallel for
 #endif
         // Calculating the elastic energy density
-        for(int i=0; i<nParticles; i++)
-        {
+        for(int i=0; i<nParticles; i++) {
             const int id_i = colToId(i);
             const double W = this->calculatePotentialEnergyDensity(id_i, i);
             m_data(i, m_g(a)) = W_bulk/W;
-
-//            if(id_i == 820){
-//                cout << nParticles << " " << m_particles.nGhostParticles() << endl;
-//                cout << "id_i: " << id_i << " " << i << " " <<  W << endl;
-//            }
         }
 
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
         // Resetting the positions
-        for(unsigned int i=0; i<nParticlesAndGhosts; i++)
-        {
-            for(int d=0; d<m_dim; d++)
-            {
+        for(unsigned int i=0; i<nParticlesAndGhosts; i++) {
+            for(int d=0; d<m_dim; d++) {
                 m_r(i, d) = m_r(i, d)/(1 + scaleFactor(d));
             }
         }
@@ -266,13 +254,11 @@ void Force::applySurfaceCorrectionStep2()
 #ifdef USE_OPENMP
 # pragma omp parallel for
 #endif
-    for(int i=0; i<nParticles; i++)
-    {
+    for(int i=0; i<nParticles; i++) {
         const int id_i = colToId(i);
         vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
 
-        for(auto &con:PDconnections)
-        {
+        for(auto &con:PDconnections) {
             const int id_j = con.first;
             const int j = m_idToCol.at(id_j);
 
@@ -281,8 +267,7 @@ void Force::applySurfaceCorrectionStep2()
 
             arma::vec3 g_mean;
             double G = 0;
-            for(int d=0; d<m_dim; d++)
-            {
+            for(int d=0; d<m_dim; d++) {
                 const double g_i = m_data(i, m_g(d));
                 const double g_j = m_data(j, m_g(d));
                 g_mean(d) = 0.5*(g_i + g_j);
@@ -312,18 +297,14 @@ void Force::applyShearCorrection(double shear)
 
     const double W_s = 0.5*m_mu*shear*shear; // Analytical solution
 
-    for(int a=0; a<m_dim; a++)
-    {
-        if(a == 1)
-        {
+    for(int a=0; a<m_dim; a++) {
+        if(a == 1) {
             strainFactor.swap_rows(1,2);
             strainFactor.swap_rows(0,1);
             axis(0) = 2;
             axis(1) = 0;
             axis(2) = 1;
-        }
-        else if(a == 2)
-        {
+        } else if(a == 2) {
             strainFactor.swap_rows(2,0);
             strainFactor.swap_rows(1,2);
             axis(0) = 2;
@@ -348,8 +329,7 @@ void Force::applyShearCorrection(double shear)
 # pragma omp parallel for
 #endif
         // Calculating the elastic energy density
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
-        {
+        for(unsigned int i=0; i<m_particles.nParticles(); i++) {
             const int id_i = colToId(i);
             double W = this->calculatePotentialEnergyDensity(id_i, i);
             m_data(i, m_g(a)) = W_s/W;
@@ -359,10 +339,8 @@ void Force::applyShearCorrection(double shear)
 # pragma omp parallel for
 #endif
         // Resetting the positions
-        for(unsigned int i=0; i<m_particles.nParticles(); i++)
-        {
-            for(int d=0; d<m_dim; d++)
-            {
+        for(unsigned int i=0; i<m_particles.nParticles(); i++) {
+            for(int d=0; d<m_dim; d++) {
                 m_r(i, d) = m_r0(i, d); // Tmp
             }
         }
