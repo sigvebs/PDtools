@@ -49,6 +49,7 @@ protected:
     double * m_theta_new;
 
     int m_indexStress[6];
+    vector<double*> m_stress;
 
     //       double weightFunction(const double dr0) const {return 1.;}
 //           double weightFunction(const double dr0) const {return 1.0/dr0;}

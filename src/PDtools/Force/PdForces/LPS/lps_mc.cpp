@@ -56,19 +56,6 @@ void LPS_mc::initialize(double E, double nu, double delta, int dim, double h, do
         break;
     case 2:
         m_nStressStrainElements = 3;
-//        m_ghostParameters.push_back("s_xx");
-//        m_ghostParameters.push_back("s_yy");
-//        m_ghostParameters.push_back("s_xy");
-//        m_indexK[0] = m_particles.registerParameter("K_x");
-//        m_indexK[1] = m_particles.registerParameter("K_y");
-//        m_indexK[2] = m_particles.registerParameter("K_xy");
-//        m_indexStress[0] = m_particles.registerParameter("s_xx");
-//        m_indexStress[1] = m_particles.registerParameter("s_yy");
-//        m_indexStress[2] = m_particles.registerParameter("s_xy");
-//        m_indexStrain[0] = m_particles.registerParameter("e_xx");
-//        m_indexStrain[1] = m_particles.registerParameter("e_yy");
-//        m_indexStrain[2] = m_particles.registerParameter("e_xy");
-
         m_ghostParameters.push_back("s2_xx");
         m_ghostParameters.push_back("s2_yy");
         m_ghostParameters.push_back("s2_xy");
@@ -140,12 +127,6 @@ void LPS_mc::calculateForces(const int id, const int i)
     double thetaNew = 0;
     int nConnected = 0;
 
-    //----------------------------------
-    // TMP - standard stres calc from
-//    m_data(i, m_indexStress[0]) = 0;
-//    m_data(i, m_indexStress[1]) = 0;
-//    m_data(i, m_indexStress[2]) = 0;
-    //----------------------------------
     for(int l_j=0; l_j<nConnections; l_j++) {
         auto &con = PDconnections[l_j];
 
@@ -176,8 +157,8 @@ void LPS_mc::calculateForces(const int id, const int i)
         const double dr = sqrt(dr2);
         const double dsdt = drdv/(dr);
         const double ds = dr - dr0 + m_dampCoeff*dsdt;
-        double bond = m_c*(theta_i/m_i + theta_j/m_j)*dr0;
-        bond += m_alpha*(1./m_i + 1./m_j)*ds;
+        double bond = m_c*(theta_i*m_i + theta_j*m_j)*dr0;
+        bond += m_alpha*(m_i + m_j)*ds;
         bond *= w*vol/dr;
         thetaNew += w*dr0*ds*vol;
 
@@ -189,13 +170,6 @@ void LPS_mc::calculateForces(const int id, const int i)
             }
         }
 
-        //----------------------------------
-        // TMP - standard stres calc from
-//        m_data(i, m_indexStress[0]) += 0.5*dr_ij[0]*dr_ij[0]*bond;
-//        m_data(i, m_indexStress[1]) += 0.5*dr_ij[1]*dr_ij[1]*bond;
-//        m_data(i, m_indexStress[2]) += 0.5*dr_ij[0]*dr_ij[1]*bond;
-        //----------------------------------
-
         nConnected++;
     }
 
@@ -203,7 +177,7 @@ void LPS_mc::calculateForces(const int id, const int i)
         m_data(i, m_iThetaNew) = 0;
     }
     else
-        m_data(i, m_iThetaNew) = m_dim/m_i*thetaNew;
+        m_data(i, m_iThetaNew) = m_dim*m_i*thetaNew;
 
     //----------------------------------
     // TMP - standard stres calc from

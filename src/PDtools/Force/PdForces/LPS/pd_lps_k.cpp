@@ -377,7 +377,7 @@ double PD_LPS_K::calculateStableMass(const int id_a, const int a, double dt)
             // Check this
             const double dr0Len2 = pow(dr0Len, 2);
 //            double C = m_dim*m_c*(Vb/pow(m_a,2) + Va/pow(m_b,2)) + m_alpha*(1./m_a + 1./m_b);
-            double C =  m_alpha*(1./m_a + 1./m_b);
+            double C =  m_alpha*(m_a + m_b);
 //            double C = m_dim*m_c*(1./pow(m_a,2) + 1./pow(m_b,2)) + m_alpha*(1./m_a + 1./m_b);
             C *= w*Vb/dr0Len2;
 
@@ -500,7 +500,7 @@ void PD_LPS_K::updateWeightedVolume(int id_i, int i)
         }else {
             m = 2.*m_h*M_PI/3.*pow(m_delta, 4); // For w = d/dr0
         }
-        m_data(i, m_iMass) = m;
+        m_data(i, m_iMass) = 1./m;
         m_data(i, m_iMicromodulus) = m_delta*m_alpha/m;
 
         K = eye(m_dim, m_dim);

@@ -57,8 +57,8 @@ void PD_LPS2::calculateForces(const int id, const int i)
 
             const double dr = sqrt(dr2);
             const double ds = dr - dr0;
-            double bond = m_c*(theta_i/m_i + theta_j/m_j)*dr0;
-            bond += m_alpha*(1./m_i + 1./m_j)*ds;
+            double bond = m_c*(theta_i*m_i + theta_j*m_j)*dr0;
+            bond += m_alpha*(m_i + m_j)*ds;
             bond *= w*volume/dr;
 
             m_Fx[i] += dr_ij[0]*bond;
@@ -106,8 +106,8 @@ void PD_LPS2::calculateForces(const int id, const int i)
 
             const double dr = sqrt(dr2);
             const double ds = dr - dr0;
-            double bond = m_c*(theta_i/m_i + theta_j/m_j)*dr0;
-            bond += m_alpha*(1./m_i + 1./m_j)*ds;
+            double bond = m_c*(theta_i*m_i + theta_j*m_j)*dr0;
+            bond += m_alpha*(m_i + m_j)*ds;
             bond *= w*volume/dr;
 
             m_Fx[i] += dr_ij[0]*bond;
@@ -162,7 +162,7 @@ void PD_LPS2::evaluateStepOne()
         if(nConnected <= 3) {
             m_theta[i] = 0;
         } else {
-            theta =  m_t*theta/m_i;
+            theta =  m_t*theta*m_i;
             m_theta[i] = theta;
         }
     }

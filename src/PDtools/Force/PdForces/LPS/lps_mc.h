@@ -23,9 +23,6 @@ public:
     void
     computeK(int id, int i);
 
-    void
-    updateWeightedMass(int id, int i);
-
     virtual void
     evaluateStepTwo(int id, int i);
 protected:

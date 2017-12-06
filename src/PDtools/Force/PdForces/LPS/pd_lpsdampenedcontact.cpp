@@ -52,8 +52,8 @@ void PD_lpsDampenedContact::calculateForces(const int id, const int i)
         const double dr = sqrt(dr2);
         const double dsdt = drdv/(dr);
         const double ds = dr - dr0 + m_dampCoeff*dsdt;
-        double bond = m_c*(theta_i/m_i + theta_j/m_j)*dr0;
-        bond += m_alpha*(1./m_i + 1./m_j)*ds;
+        double bond = m_c*(theta_i*m_i + theta_j*m_j)*dr0;
+        bond += m_alpha*(m_i + m_j)*ds;
         bond *= w*vol_j*volumeScaling/dr;
         thetaNew += w*dr0*ds*vol_j*volumeScaling;
 
@@ -67,7 +67,7 @@ void PD_lpsDampenedContact::calculateForces(const int id, const int i)
     if(nConnections <= 3)
         m_data(i, m_iThetaNew) = 0;
     else
-        m_data(i, m_iThetaNew) = m_dim/m_i*thetaNew;
+        m_data(i, m_iThetaNew) = m_dim*m_i*thetaNew;
 }
 //------------------------------------------------------------------------------
 double PD_lpsDampenedContact::calculatePotentialEnergyDensity(const int id_i, const int i)

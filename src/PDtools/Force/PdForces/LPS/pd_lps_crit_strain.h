@@ -24,7 +24,6 @@ protected:
 
     // Material dampening
     double m_dampCoeff;
-
     int m_iUnbreakable;
 };
 //------------------------------------------------------------------------------

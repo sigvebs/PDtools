@@ -30,13 +30,6 @@ void PD_LPS_adrmc::calculateForces(const int id, const int i)
     double thetaNew = 0;
     int nConnected = 0;
 
-    //----------------------------------
-    // TMP - standard stress calc from
-//    m_data(i, m_indexStress[0]) = 0;
-//    m_data(i, m_indexStress[1]) = 0;
-//    m_data(i, m_indexStress[2]) = 0;
-    //----------------------------------
-
     for(int l_j=0; l_j<nConnections; l_j++) {
         auto &con = PDconnections[l_j];
 
@@ -64,8 +57,8 @@ void PD_LPS_adrmc::calculateForces(const int id, const int i)
 
         const double dr = sqrt(dr2);
         const double ds = dr - dr0;
-        double bond = m_c*(theta_i/m_i + theta_j/m_j)*dr0;
-        bond += m_alpha*(1./m_i + 1./m_j)*ds;
+        double bond = m_c*(theta_i*m_i + theta_j*m_j)*dr0;
+        bond += m_alpha*(m_i + m_j)*ds;
         bond *= w*vol/dr;
         thetaNew += w*dr0*ds*vol;
 
@@ -78,27 +71,15 @@ void PD_LPS_adrmc::calculateForces(const int id, const int i)
         }
 
         con.second[m_iStretch] = ds/dr0;
-        //----------------------------------
-        // TMP - standard stres calc from
-//        m_data(i, m_indexStress[0]) += 0.5*dr_ij[0]*dr_ij[0]*bond;
-//        m_data(i, m_indexStress[1]) += 0.5*dr_ij[1]*dr_ij[1]*bond;
-//        m_data(i, m_indexStress[2]) += 0.5*dr_ij[0]*dr_ij[1]*bond;
-        //----------------------------------
         nConnected++;
     }
 
     if(nConnections <= 3) {
         m_data(i, m_iThetaNew) = 0;
     } else {
-        m_data(i, m_iThetaNew) = m_dim/m_i*thetaNew;
+        m_data(i, m_iThetaNew) = m_dim*m_i*thetaNew;
     }
 
-    //----------------------------------
-    // TMP - standard stres calc from
-    //----------------------------------
-//    if(nConnected > 5) {
-//        computeStress(id, i, nConnected);
-//    }
     computeStress(id, i, nConnected);
     //--------------------
     m_continueState = false;
