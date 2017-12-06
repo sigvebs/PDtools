@@ -43,7 +43,6 @@ void EPD_bondForce::calculateForces(const int id_i, const int i)
             continue;
 
         const int polygon_id = con.first;
-        const double overlap = con.second[m_iOverlap];
         const int polygon_i = m_idToElement.at(polygon_id);
 
         PD_quadElement & element = m_quadElements[polygon_i];
@@ -70,6 +69,7 @@ void EPD_bondForce::calculateForces(const int id_i, const int i)
             }
 
 #if OVERLAP
+            const double overlap = con.second[m_iOverlap];
             const double dr0 = sqrt(dr2_0);
             const double dr = sqrt(dr2);
             const double ds = dr - dr0;
@@ -244,24 +244,20 @@ void EPD_bondForce::computeMicromodulus()
     const double dimScaling = 2.*k*pow(m_dim, 2.);
     double dr0_ij[m_dim];
     const ivec & colToId = m_particles.colToId();
-    double c_anal = 12*k/(m_h*M_PI*pow(m_delta, 3));
 
-    for(unsigned int i=0; i<m_particles.nParticles(); i++)
-    {
+    for(unsigned int i=0; i<m_particles.nParticles(); i++) {
         const int id_i = colToId(i);
         vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
 
         const int nConnections = PDconnections.size();
         double m_i = 0;
 
-        for(int l_j=0; l_j<nConnections; l_j++)
-        {
+        for(int l_j=0; l_j<nConnections; l_j++) {
             auto &con = PDconnections[l_j];
             if(con.second[m_iConnected] <= 0.5)
                 continue;
 
             const int polygon_id = con.first;
-            const double overlap = con.second[m_iOverlap];
             const int polygon_i = m_idToElement.at(polygon_id);
 
             PD_quadElement & element = m_quadElements[polygon_i];
@@ -281,6 +277,7 @@ void EPD_bondForce::computeMicromodulus()
                 }
 
 #if OVERLAP
+                const double overlap = con.second[m_iOverlap];
                 const double dr0 = sqrt(dr2_0);
                 m_i += overlap*dr0*weightFunction(dr0)*w_j;
 #else
@@ -292,10 +289,9 @@ void EPD_bondForce::computeMicromodulus()
             }
         }
 
-        const double c = m_data(i, m_indexMicromodulus);
         const double c_i = dimScaling/m_i;
-
         m_data(i, m_indexMicromodulus) =  0.9*c_i;
+        //        const double c = m_data(i, m_indexMicromodulus);
         //        m_data(i, m_indexMicromodulus) =  c;
     }
 }

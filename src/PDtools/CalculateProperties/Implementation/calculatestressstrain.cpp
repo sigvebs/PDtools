@@ -109,11 +109,8 @@ void CalculateStressStrain::update2d()
     double * d_indexBrokenNow =  data.colptr(m_indexBrokenNow);
     const double * m_x =  r.colptr(0);
     const double * m_y =  r.colptr(1);
-    const double * m_z =  r.colptr(2);
     const double * m_x0 =  r0.colptr(0);
     const double * m_y0 =  r0.colptr(1);
-    const double * m_z0 =  r0.colptr(2);
-
 
     mat F = zeros(m_dim, m_dim);
     mat K = zeros(m_dim, m_dim);
@@ -145,13 +142,12 @@ void CalculateStressStrain::update2d()
     double mu = m_mu;
     const double nu = m_nu;
 
-    const double E1 = 1./E;
-    const double G = E/(2*(1+nu));
-    const double G1 = 0.5/G;
-
     for(int i=0; i<nParticles; i++) {
 
 #if 0
+        const double G = E/(2*(1+nu));
+        const double E1 = 1./E;
+        const double G1 = 0.5/G;
         P(0,0) = d_stress[0][i];
         P(1,1) = d_stress[1][i];
         P(0,1) = d_stress[2][i];
@@ -323,12 +319,12 @@ void CalculateStressStrain::update3d()
     double mu = m_mu;
     double nu = m_nu;
 
-    double E1 = 1./E;
-    double G = E/(2*(1+nu));
-    double G1 = 0.5/G;
 
     for(int i=0; i<nParticles; i++) {
 #if 0
+        double E1 = 1./E;
+        double G = E/(2*(1+nu));
+        double G1 = 0.5/G;
         P(0,0) = d_stress[0][i];
         P(1,1) = d_stress[1][i];
         P(0,1) = d_stress[2][i];

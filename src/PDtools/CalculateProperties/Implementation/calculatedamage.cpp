@@ -41,11 +41,8 @@ void CalculateDamage::initialize()
             const int id_j = con.first;
             const int j = idToCol.at(id_j);
 
-            const double dr0 = con.second[m_iDr0];
             const double vol_j = data(j, m_iVolume);
             const double volumeScaling = con.second[m_iVolumeScaling];
-            const double w = weightFunction(dr0);
-//            initialWeight += w*vol_j*volumeScaling;
             initialWeight += vol_j*volumeScaling;
         }
         if(initialWeight == 0)
@@ -84,16 +81,12 @@ void CalculateDamage::update()
                 const double dr0 = con.second[m_iDr0];
                 const double vol_j = data(j, m_iVolume);
                 const double volumeScaling = con.second[m_iVolumeScaling];
-                const double w = weightFunction(dr0);
 
-//                over += w*vol_j*volumeScaling;
                 over += vol_j*volumeScaling;
             }
         }
 
         data(i, m_iDamage) = 1. - over/under;
-//        data(i, m_indexDamage) = 1. - tot/maxConnections;
-        //    data(i, m_indexDamage) = over;
     }
 }
 //------------------------------------------------------------------------------

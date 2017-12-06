@@ -277,7 +277,6 @@ double PD_LPS_K::calculatePotentialEnergyDensity(const int id_i, const int i)
 //------------------------------------------------------------------------------
 double PD_LPS_K::computeDilation(const int id_i, const int i)
 {
-    const double m_i = m_data(i, m_iMass);
     double dr_ij[m_dim];
 
     vector<pair<int, vector<double>>> & PDconnections = m_particles.pdConnections(id_i);
@@ -370,7 +369,7 @@ double PD_LPS_K::calculateStableMass(const int id_a, const int a, double dt)
             const double m_b = m_data(b, m_iMass);
             const double vol_b = m_data(b, m_iVolume);
             const double volumeScaling = con.second[m_iVolumeScaling];
-            const double Va = vol_a*volumeScaling;
+//            const double Va = vol_a*volumeScaling;
             const double Vb = vol_b*volumeScaling;
             const double w = weightFunction(dr0Len);
 

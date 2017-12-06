@@ -21,7 +21,6 @@
 #include <mpi.h>
 #endif
 
-
 using namespace PDtools;
 using namespace libconfig;
 //------------------------------------------------------------------------------
@@ -375,9 +374,9 @@ int PdSolver::initialize() {
     else if (boost::iequals(type, "LPS")) {
       int analyticalM = false;
       cfg_forces[i].lookupValue("analyticalM", analyticalM);
-      forces.push_back(new PD_LPS2(m_particles, planeStress, analyticalM));
-      //            forces.push_back(new PD_LPS(m_particles, planeStress,
-      //            analyticalM));
+//      forces.push_back(new PD_LPS2(m_particles, planeStress, analyticalM));
+      forces.push_back(new PD_LPS(m_particles, planeStress,
+                                  analyticalM));
     } else if (boost::iequals(type, "LPS SHEAR")) {
       double G0;
       if (!cfg_forces[i].lookupValue("G0", G0)) {
@@ -591,8 +590,6 @@ int PdSolver::initialize() {
   if (isRoot) {
     cout << "Setting modifiers:" << endl;
   }
-
-
   vector<Modifier *> boundaryModifiers;
   vector<Modifier *> spModifiers;
   vector<Modifier *> qsModifiers;

@@ -321,7 +321,7 @@ double PD_LPS::calculateStableMass(const int id_a, const int a, double dt)
             const double m_b = m_mass[b];
             const double vol_b = m_data(b, m_iVolume);
             const double volumeScaling = con.second[m_iVolumeScaling];
-            const double Va = vol_a*volumeScaling;
+//            const double Va = vol_a*volumeScaling;
             const double Vb = vol_b*volumeScaling;
             const double w = weightFunction(dr0Len);
 
@@ -364,8 +364,6 @@ void PD_LPS::initialize(double E, double nu, double delta, int dim, double h, do
     m_mu = 0.5*E/(1 + nu);
     m_k = E/(3.*(1. - 2.*nu));
 
-    double k  = E/(2.*(1. - nu));
-
     if(dim == 3) {
         m_t = 3.;
         m_c = (3.*m_k - 5.*m_mu);
@@ -388,6 +386,7 @@ void PD_LPS::initialize(double E, double nu, double delta, int dim, double h, do
 
     calculateWeightedVolume();
 /*
+    double k  = E/(2.*(1. - nu));
     if(dim == 3)
     {
         m_k = E/(3.*(1. - 2.*nu));

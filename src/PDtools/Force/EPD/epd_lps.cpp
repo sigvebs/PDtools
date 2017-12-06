@@ -50,23 +50,19 @@ void EPD_LPS::calculateForces(const int id, const int i)
             continue;
 
         const int polygon_id = con.first;
-        const double overlap = con.second[m_iOverlap];
         const int polygon_i = m_idToElement.at(polygon_id);
 
         PD_quadElement & element = m_quadElements[polygon_i];
         const mat & gaussPoints_initial = element.guassianQuadraturePoints_initial();
         const mat & gaussPoints = element.guassianQuadraturePoints();
-        const vec & gaussWeights = element.guassianQuadratureWeights();
+//        const vec & gaussWeights = element.guassianQuadratureWeights();
 
         const int nIntegrationPoints = gaussPoints.n_cols;
 
         for(int j=0; j<nIntegrationPoints; j++) {
-            const double w_j = gaussWeights[j];
-
             double dr2 = 0;
             double dr2_0 = 0;
-            for(int d=0; d<m_dim; d++)
-            {
+            for(int d=0; d<m_dim; d++) {
                 dr_ij[d] = gaussPoints(j, d) - m_r(j, d);
                 dr2 += dr_ij[d]*dr_ij[d];
                 dr0_ij[d] = gaussPoints_initial(j, d) - m_r0(j, d);
@@ -198,23 +194,19 @@ double EPD_LPS::calculateStableMass(const int id_a, const int a, double dt)
 
     double k[m_dim];
 
-    for(int i=0; i<m_dim; i++)
-    {
-        for(int d=0; d<m_dim; d++)
-        {
+    for(int i=0; i<m_dim; i++) {
+        for(int d=0; d<m_dim; d++) {
             k[d] = 0;
         }
 
-        for(auto &con:PDconnections)
-        {
+        for(auto &con:PDconnections) {
             if(con.second[m_iConnected] <= 0.5)
                 continue;
 
             const int id_b = con.first;
             const int b = m_idToCol.at(id_b);
 
-            for(int d=0; d<m_dim; d++)
-            {
+            for(int d=0; d<m_dim; d++) {
                 dr0[d] = R0(a, d) - R0(b, d);
             }
 
@@ -233,8 +225,7 @@ double EPD_LPS::calculateStableMass(const int id_a, const int a, double dt)
 
             double sum = 0;
 
-            for(int j=0; j<m_dim; j++)
-            {
+            for(int j=0; j<m_dim; j++) {
                 sum += fabs(dr0[j]);
             }
 
@@ -245,10 +236,8 @@ double EPD_LPS::calculateStableMass(const int id_a, const int a, double dt)
 
     double stiffness = 0;
 
-    for(int d=0;d<m_dim; d++)
-    {
-        if(m[d]>stiffness)
-        {
+    for(int d=0;d<m_dim; d++) {
+        if(m[d]>stiffness) {
             stiffness = m[d];
         }
     }

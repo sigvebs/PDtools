@@ -150,7 +150,6 @@ void CalculateStressStrainEPD::update()
                 continue;
 
             const int polygon_id = con_i.first;
-            const double overlap = con_i.second[m_iOverlap];
             const int polygon_i = idToElement.at(polygon_id);
 
             PD_quadElement & element = quadElements[polygon_i];
@@ -171,6 +170,7 @@ void CalculateStressStrainEPD::update()
                 }
 
 #if OVERLAP
+                const double overlap = con_i.second[m_iOverlap];
                 dr0 = sqrt(dr0);
                 const double w = overlap*weightFunction(dr0);
 #else

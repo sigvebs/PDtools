@@ -312,7 +312,8 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
 
     double r_i[3] = {0,0,0};
 
-    for(unsigned int i=0; i<particles.nParticles(); i++) {
+    int nParticles = particles.nParticles();
+    for(unsigned int i=0; i<nParticles; i++) {
         const int id_i = colToId.at(i);
         r_i[0] = r(i, 0);
         r_i[1] = r(i, 1);
@@ -363,7 +364,7 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
     for(const auto &string_id:particles.parameters()) {
         parameterIds.push_back(string_id.second);
     }
-    int nParticles = particles.nParticles();
+    nParticles = particles.nParticles();
     const int nVerletLists = particles.getVerletSize();
     mat & v = particles.v();
     mat & F = particles.F();
@@ -553,7 +554,7 @@ void updateGrid(Grid &grid, PD_Particles &particles, const bool ADR)
 //     MPI_Barrier(MPI_COMM_WORLD);
     //-----------------------------------------------------------------------------
 
-    for(unsigned int i=0; i<particles.nParticles(); i++) {
+    for(unsigned int i=0; i<nParticles; i++) {
         const int id = colToId.at(i);
         r_i[0] = r(i, 0);
         r_i[1] = r(i, 1);
