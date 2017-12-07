@@ -22,6 +22,7 @@ protected:
   ivec m_colToId;
   ivec m_isStatic;
   unordered_map<int, int> m_idToCol;
+  ivec m_idToCol_v;
 
   // General properties
   unordered_map<string, int> m_parameters;
@@ -60,6 +61,7 @@ public:
   mat &r();
   mat &v();
   unordered_map<int, int> &idToCol();
+  ivec &getIdToCol_v();
 
   ivec &colToId();
 
@@ -111,17 +113,5 @@ inline void Particles::maxParticles(int mp) { m_maxParticles = mp; }
 inline void Particles::totParticles(int mp) { m_totParticles = mp; }
 
 inline unsigned int Particles::totParticles() const { return m_totParticles; }
-
-inline mat &Particles::r() { return m_r; }
-
-inline mat &Particles::v() { return m_v; }
-
-inline unordered_map<int, int> &Particles::idToCol() { return m_idToCol; }
-
-inline ivec &Particles::colToId() { return m_colToId; }
-
-inline mat &Particles::data() { return m_data; }
-
-inline ivec &Particles::isStatic() { return m_isStatic; }
 }
 #endif // PARTICLES_H

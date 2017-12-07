@@ -1,4 +1,6 @@
 #include "computeaveragestretch.h"
+#include "PDtools/Particles/pd_particles.h"
+
 namespace PDtools
 {
 //------------------------------------------------------------------------------

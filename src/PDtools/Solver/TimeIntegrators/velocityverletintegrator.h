@@ -3,17 +3,15 @@
 
 #include "PDtools/Solver/timeintegrator.h"
 
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-class VelocityVerletIntegrator : public TimeIntegrator
-{
+class VelocityVerletIntegrator : public TimeIntegrator {
 public:
-    VelocityVerletIntegrator();
-    ~VelocityVerletIntegrator();
+  VelocityVerletIntegrator();
+  ~VelocityVerletIntegrator();
 
-    virtual void integrateStepOne();
-    virtual void integrateStepTwo();
+  virtual void integrateStepOne();
+  virtual void integrateStepTwo();
 };
 //------------------------------------------------------------------------------
 }

@@ -1,11 +1,10 @@
 #ifndef BOOSTGEOMETRY_SETTINGS_H
 #define BOOSTGEOMETRY_SETTINGS_H
 
-#include <boost/geometry/geometry.hpp>
+#include <boost/geometry/geometries/adapted/c_array.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
-#include <boost/geometry/geometries/adapted/c_array.hpp>
-//#include <boost/geometry/geometries/multi_polygon.hpp>
+#include <boost/geometry/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
 
 #include <boost/geometry/strategies/transform.hpp>
@@ -24,11 +23,12 @@ typedef bg::model::box<point_2d> box_2d;
 typedef bg::model::segment<point_2d> segment_2d;
 typedef bg::model::linestring<point_2d> linestring_2d;
 
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-polygon_2d createCircle(const point_2d &p, const double radius, const int nPoints=32);
-polygon_2d translatePolygon(const polygon_2d &p, const point_2d translate_point);
+polygon_2d createCircle(const point_2d &p, const double radius,
+                        const int nPoints = 32);
+polygon_2d translatePolygon(const polygon_2d &p,
+                            const point_2d translate_point);
 //------------------------------------------------------------------------------
 }
 #endif // BOOSTGEOMETRY_SETTINGS_H

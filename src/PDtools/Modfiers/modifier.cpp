@@ -1,148 +1,88 @@
 #include "modifier.h"
 
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-std::vector<pair<string, int> > Modifier::neededProperties() const
-{
-    return m_neededProperties;
+std::vector<pair<string, int>> Modifier::neededProperties() const {
+  return m_neededProperties;
 }
 //------------------------------------------------------------------------------
-int Modifier::dim() const
-{
-    return m_dim;
+int Modifier::dim() const { return m_dim; }
+//------------------------------------------------------------------------------
+void Modifier::setDim(int dim) { m_dim = dim; }
+//------------------------------------------------------------------------------
+void Modifier::setGrid(Grid *grid) { m_grid = grid; }
+//------------------------------------------------------------------------------
+bool Modifier::hasStepOne() const { return m_hasStepOne; }
+//------------------------------------------------------------------------------
+bool Modifier::hasStepTwo() const { return m_hasStepTwo; }
+//------------------------------------------------------------------------------
+bool Modifier::hasUpdateOne() const { return m_hasUpdateOne; }
+//------------------------------------------------------------------------------
+Modifier::Modifier() {}
+//------------------------------------------------------------------------------
+Modifier::~Modifier() {}
+//------------------------------------------------------------------------------
+void Modifier::registerParticleParameters() {}
+//------------------------------------------------------------------------------
+void Modifier::evaluateStepOne(const int id, const int i) {
+  (void)id;
+  (void)i;
+  return;
 }
 //------------------------------------------------------------------------------
-void Modifier::setDim(int dim)
-{
-    m_dim = dim;
+void Modifier::updateStepOne(const int id, const int i) {
+  (void)id;
+  (void)i;
 }
 //------------------------------------------------------------------------------
-void Modifier::setGrid(Grid *grid)
-{
-    m_grid = grid;
+void Modifier::evaluateStepTwo(const int id, const int i) {
+  (void)id;
+  (void)i;
+  return;
 }
 //------------------------------------------------------------------------------
-bool Modifier::hasStepOne() const
-{
-    return m_hasStepOne;
-}
+void Modifier::evaluateStepOne() {}
 //------------------------------------------------------------------------------
-bool Modifier::hasStepTwo() const
-{
-    return m_hasStepTwo;
-}
+void Modifier::evaluateStepOnePost() {}
 //------------------------------------------------------------------------------
-bool Modifier::hasUpdateOne() const
-{
-    return m_hasUpdateOne;
-}
+void Modifier::evaluateStepTwo() {}
 //------------------------------------------------------------------------------
-Modifier::Modifier()
-{
-    
-}
+void Modifier::staticEvaluation() { return; }
 //------------------------------------------------------------------------------
-Modifier::~Modifier()
-{
+void Modifier::initialize() { return; }
 
+void Modifier::setParticles(PD_Particles &particles) {
+  m_particles = &particles;
 }
 //------------------------------------------------------------------------------
-void Modifier::registerParticleParameters()
-{
+bool Modifier::state() { return m_state; }
+//------------------------------------------------------------------------------
+const std::vector<string> &Modifier::initalGhostDependencies() {
+  return m_initialGhostParameters;
+}
+//------------------------------------------------------------------------------
+const std::vector<string> &Modifier::ghostDependencies() {
+  return m_ghostParameters;
+}
+//------------------------------------------------------------------------------
+void Modifier::addToList(int id) { m_localParticleIds.push_back(id); }
+//------------------------------------------------------------------------------
+bool Modifier::removeFromList(const int id) {
+  bool found = false;
+  int counter = -1;
 
-}
-//------------------------------------------------------------------------------
-void Modifier::evaluateStepOne(const int id, const int i)
-{
-    (void) id;
-    (void) i;
-    return;
-}
-//------------------------------------------------------------------------------
-void Modifier::updateStepOne(const int id, const int i)
-{
-    (void) id;
-    (void) i;
-}
-//------------------------------------------------------------------------------
-void Modifier::evaluateStepTwo(const int id, const int i)
-{
-    (void) id;
-    (void) i;
-    return;
-}
-//------------------------------------------------------------------------------
-void Modifier::evaluateStepOne()
-{
-
-}
-//------------------------------------------------------------------------------
-void Modifier::evaluateStepOnePost()
-{
-
-}
-//------------------------------------------------------------------------------
-void Modifier::evaluateStepTwo()
-{
-
-}
-//------------------------------------------------------------------------------
-void Modifier::staticEvaluation()
-{
-    return;
-}
-//------------------------------------------------------------------------------
-void Modifier::initialize()
-{
-    return;
-}
-
-void Modifier::setParticles(PD_Particles &particles)
-{
-    m_particles = &particles;
-}
-//------------------------------------------------------------------------------
-bool Modifier::state()
-{
-    return m_state;
-}
-//------------------------------------------------------------------------------
-const std::vector<string> &Modifier::initalGhostDependencies()
-{
-    return m_initialGhostParameters;
-}
-//------------------------------------------------------------------------------
-const std::vector<string> &Modifier::ghostDependencies()
-{
-    return m_ghostParameters;
-}
-//------------------------------------------------------------------------------
-void Modifier::addToList(int id)
-{
-    m_localParticleIds.push_back(id);
-}
-//------------------------------------------------------------------------------
-bool Modifier::removeFromList(const int id)
-{
-    bool found = false;
-    int counter = -1;
-
-    for(const int &l_id:m_localParticleIds)
-    {
-        counter++;
-        if(l_id == id)
-        {
-            found = true;
-            break;
-        }
+  for (const int &l_id : m_localParticleIds) {
+    counter++;
+    if (l_id == id) {
+      found = true;
+      break;
     }
-    if(found)
-    {
-        m_localParticleIds.erase(m_localParticleIds.begin() + counter);
-    }
+  }
+  if (found) {
+    m_localParticleIds.erase(m_localParticleIds.begin() + counter);
+  }
 
-    return found;
+  return found;
 }
 //------------------------------------------------------------------------------
 }

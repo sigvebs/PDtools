@@ -13,7 +13,6 @@ HEADERS += \
     Grid/grid.h \
     Domain/domain.h \
     Solver/solver.h \
-    data/pdshareddata.h \
     Particles/saveparticles.h \
     Particles/loadparticles.h \
     Particles/loadpdparticles.h \
@@ -121,7 +120,6 @@ SOURCES += \
     Solver/staticsolver.cpp \
     Solver/timeintegrator.cpp \
     Solver/TimeIntegrators/velocityverletintegrator.cpp \
-    data/pdshareddata.cpp \
     Particles/saveparticles.cpp \
     Particles/loadparticles.cpp \
     Particles/loadpdparticles.cpp \

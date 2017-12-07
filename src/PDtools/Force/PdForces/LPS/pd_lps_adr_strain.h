@@ -1,24 +1,18 @@
 #ifndef PD_LPS_ADR_STRAIN_H
 #define PD_LPS_ADR_STRAIN_H
 
-#include<armadillo>
 #include "PDtools/Force/PdForces/LPS/pd_lps_crit_strain.h"
 
-using namespace arma;
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-class PD_LPS_ADR_STRAIN : public PD_LPS_CRIT_STRAIN
-{
+class PD_LPS_ADR_STRAIN : public PD_LPS_CRIT_STRAIN {
 public:
-    PD_LPS_ADR_STRAIN(PD_Particles &particles, double c, double stretchCrit, double shearCrit,
-                      bool planeStress=false, bool analyticalM=false);
+  PD_LPS_ADR_STRAIN(PD_Particles &particles, double c, double stretchCrit,
+                    double shearCrit, bool planeStress = false,
+                    bool analyticalM = false);
 
-    virtual void
-    evaluateStatic(int id, int i);
-
-    virtual void
-    evaluateStepTwo(int id, int i);
+  virtual void evaluateStatic(int id, int i);
+  virtual void evaluateStepTwo(int id, int i);
 };
 //------------------------------------------------------------------------------
 }

@@ -1,3 +1,3 @@
 TEMPLATE = subdirs
-SUBDIRS = Peridyn PDinit Peridyn_element
+SUBDIRS = Peridyn Peridyn_element
 CONFIG += ordered

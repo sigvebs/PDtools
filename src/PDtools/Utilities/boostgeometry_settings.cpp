@@ -5,6 +5,7 @@ namespace PDtools
 //------------------------------------------------------------------------------
 polygon_2d createCircle(const point_2d &p, const double radius, const int nPoints)
 {
+    (void) p;
     polygon_2d r;
     const double dtheta = 2.*M_PI/nPoints;
 

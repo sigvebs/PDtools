@@ -2,31 +2,25 @@
 #define CALCULATESTRESS_H
 
 #include "PDtools/CalculateProperties/calculateproperty.h"
-#include <vector>
 
-namespace PDtools
-{
+namespace PDtools {
 class Force;
 //------------------------------------------------------------------------------
 
-class CalculateStress : public CalculateProperty
-{
+class CalculateStress : public CalculateProperty {
 public:
-    CalculateStress(vector<Force *> &forces);
+  CalculateStress(vector<Force *> &forces);
 
-    virtual void
-    initialize();
+  virtual void initialize();
 
-    virtual void
-    clean();
+  virtual void clean();
 
-    virtual void
-    update();
+  virtual void update();
 
 private:
-    vector<Force *> m_forces;
-    int m_indexStress[6];
-    int m_nStressElements;
+  vector<Force *> m_forces;
+  int m_indexStress[6];
+  int m_nStressElements;
 };
 //------------------------------------------------------------------------------
 }

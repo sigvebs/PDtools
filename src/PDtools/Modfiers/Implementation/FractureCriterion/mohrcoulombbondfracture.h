@@ -1,7 +1,6 @@
 #ifndef MOHRCOULOMBBONDFRACTURE_H
 #define MOHRCOULOMBBONDFRACTURE_H
 
-#include <unordered_map>
 #include "PDtools/Modfiers/modifier.h"
 
 namespace PDtools

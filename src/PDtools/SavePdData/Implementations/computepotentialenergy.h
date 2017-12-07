@@ -4,22 +4,20 @@
 #include "PDtools/SavePdData/savepddata.h"
 
 //------------------------------------------------------------------------------
-namespace PDtools
-{
+namespace PDtools {
 class Force;
 
-//------------------------------------------------------------------------------
-class ComputePotentialEnergy: public ComputeProperty
-{
+class ComputePotentialEnergy : public ComputeProperty {
 public:
-    ComputePotentialEnergy(PD_Particles &particles, vector<Force*> &forces);
-    ~ComputePotentialEnergy();
+  ComputePotentialEnergy(PD_Particles &particles, vector<Force *> &forces);
+  ~ComputePotentialEnergy();
 
-    virtual void update(const int id_i, const int i);
+  virtual void update(const int id_i, const int i);
+
 private:
-    vector<Force *> &m_forces;
-    arma::mat &m_data;
-    int m_indexPotential;
+  vector<Force *> &m_forces;
+  arma::mat &m_data;
+  int m_indexPotential;
 };
 //------------------------------------------------------------------------------
 }

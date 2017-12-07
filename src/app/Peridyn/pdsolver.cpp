@@ -11,29 +11,23 @@
 #include "Mesh/meshtopdpartices.h"
 #include "Mesh/pdmesh.h"
 
-#include <armadillo>
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.h>
-#include <utility>
-#include <vector>
 
 #ifdef USE_MPI
 #include <mpi.h>
 #endif
 
-
-using namespace PDtools;
-using namespace libconfig;
 //------------------------------------------------------------------------------
-PdSolver::PdSolver(string cfgPath, int myRank, int nMpiNodes)
+PdSolver::PdSolver(std::string cfgPath, int myRank, int nMpiNodes)
     : m_configPath(cfgPath), m_myRank(myRank), m_nCores(nMpiNodes) {
   // Reading configuration file
   try {
     m_cfg.readFile(cfgPath.c_str());
-  } catch (const FileIOException &fioex) {
+  } catch (const libconfig::FileIOException &fioex) {
     std::cerr << "I/O error while reading the configuration file." << std::endl;
     exit(EXIT_FAILURE);
-  } catch (const ParseException &pex) {
+  } catch (const libconfig::ParseException &pex) {
     std::cerr << "Parse error at " << pex.getFile() << ":" << pex.getLine()
               << " - " << pex.getError() << std::endl;
     exit(EXIT_FAILURE);
@@ -49,6 +43,7 @@ PdSolver::~PdSolver() { delete solver; }
 int PdSolver::initialize() {
   // The entire program is initilized from the configuration file.
   // TODO(SBS): split the initialization into smaller functions.
+  using namespace PDtools;
   arma::wall_clock timer;
   timer.tic();
 
@@ -100,7 +95,7 @@ int PdSolver::initialize() {
     cerr << "'domain' must be set in the configuration file" << endl;
     exit(EXIT_FAILURE);
   }
-  Setting &cfg_domain = m_cfg.lookup("domain");
+  libconfig::Setting &cfg_domain = m_cfg.lookup("domain");
 
   if (cfg_domain.getLength() != 6) {
     cerr << "'domain' must be set on the form ";
@@ -122,7 +117,7 @@ int PdSolver::initialize() {
   arma::ivec3 periodicBoundaries = {0, 0, 0};
 
   try {
-    Setting &cfg_periodic = m_cfg.lookup("periodic");
+    libconfig::Setting &cfg_periodic = m_cfg.lookup("periodic");
     for (int d = 0; d < M_DIM; d++) {
       periodicBoundaries(d) = static_cast<int>(cfg_periodic[d]);
     }
@@ -328,7 +323,7 @@ int PdSolver::initialize() {
 
   vector<string> forcesSet;
   vector<Force *> forces;
-  Setting &cfg_forces = m_cfg.lookup("forces");
+  libconfig::Setting &cfg_forces = m_cfg.lookup("forces");
 
   for (int i = 0; i < cfg_forces.getLength(); i++) {
     const char *tmpType;
@@ -375,9 +370,9 @@ int PdSolver::initialize() {
     else if (boost::iequals(type, "LPS")) {
       int analyticalM = false;
       cfg_forces[i].lookupValue("analyticalM", analyticalM);
-//      forces.push_back(new PD_LPS2(m_particles, planeStress, analyticalM));
-      forces.push_back(new PD_LPS(m_particles, planeStress,
-                                  analyticalM));
+      //      forces.push_back(new PD_LPS2(m_particles, planeStress,
+      //      analyticalM));
+      forces.push_back(new PD_LPS(m_particles, planeStress, analyticalM));
     } else if (boost::iequals(type, "LPS SHEAR")) {
       double G0;
       if (!cfg_forces[i].lookupValue("G0", G0)) {
@@ -471,8 +466,8 @@ int PdSolver::initialize() {
       cfg_forces[i].lookupValue("C", C);
       forces.push_back(new DemForce(m_particles, T, C));
     } else if (boost::iequals(type, "contact force")) {
-//      double interactionRadius = 0.95;
-//      double interactionScaling = 15;
+      //      double interactionRadius = 0.95;
+      //      double interactionScaling = 15;
       int updateFrquency = 10;
       cfg_forces[i].lookupValue("verletUpdateFrq", updateFrquency);
       forces.push_back(
@@ -524,7 +519,9 @@ int PdSolver::initialize() {
            !boost::iequals(solverType, "ADR")) ||
           !cfg_forces[i].lookupValue("mu", mu) ||
           !cfg_forces[i].lookupValue("C", C) ||
-          !cfg_forces[i].lookupValue("T", T)) {
+          !cfg_forces[i].lookupValue("T", T) ||
+          !cfg_forces[i].lookupValue("m", m) ||
+          !cfg_forces[i].lookupValue("b", b)) {
         cerr << "The dampening parameter 'c' must be set " << endl;
         cerr << "The fracture parameters 'mu', 'C' and 'T' must be set for "
              << endl;
@@ -596,7 +593,7 @@ int PdSolver::initialize() {
   vector<Modifier *> qsModifiers;
   vector<string> modifiersSet;
 
-  Setting &cfg_modifiers = m_cfg.lookup("modifiers");
+  libconfig::Setting &cfg_modifiers = m_cfg.lookup("modifiers");
   for (int i = 0; i < cfg_modifiers.getLength(); i++) {
     const char *tmpType;
     cfg_modifiers[i].lookupValue("type", tmpType);
@@ -1199,7 +1196,8 @@ int PdSolver::initialize() {
   //--------------------------------------------------------------------------
   vector<string> intialConditionsSet;
   if (m_cfg.exists("initialConditions")) {
-    Setting &cfg_initialConditions = m_cfg.lookup("initialConditions");
+    libconfig::Setting &cfg_initialConditions =
+        m_cfg.lookup("initialConditions");
 
     for (int i = 0; i < cfg_initialConditions.getLength(); i++) {
       const char *tmpType;
@@ -1310,7 +1308,8 @@ int PdSolver::initialize() {
 
   vector<string> saveParameters;
   if (m_cfg.exists("saveParameters")) {
-    const Setting &cfg_saveParameters = m_cfg.lookup("saveParameters");
+    const libconfig::Setting &cfg_saveParameters =
+        m_cfg.lookup("saveParameters");
     for (int i = 0; i < cfg_saveParameters.getLength(); i++) {
       saveParameters.push_back(cfg_saveParameters[i].c_str());
     }

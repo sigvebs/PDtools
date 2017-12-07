@@ -39,6 +39,8 @@ int Particles::getNeedGhostR0() const { return m_needGhostR0; }
 //------------------------------------------------------------------------------
 void Particles::setNeedGhostR0(int needGhostR0) { m_needGhostR0 = needGhostR0; }
 //------------------------------------------------------------------------------
+ivec &Particles::getIdToCol_v() { return m_idToCol_v; }
+//------------------------------------------------------------------------------
 Particles::Particles() {}
 //------------------------------------------------------------------------------
 Particles::~Particles() {}
@@ -55,6 +57,7 @@ void Particles::initializeMatrices() {
   m_colToId = ivec(PARTICLE_BUFFER * m_maxParticles);
   m_isStatic = zeros<ivec>(PARTICLE_BUFFER * m_maxParticles);
   m_newId = m_maxParticles;
+  m_idToCol_v = zeros<ivec>(PARTICLE_BUFFER * m_maxParticles);
 }
 //------------------------------------------------------------------------------
 const string &Particles::type() const { return m_type; }
@@ -194,5 +197,17 @@ void Particles::scaleParameter(const string &paramId, double value) {
   }
 }
 //------------------------------------------------------------------------------
+
+mat &Particles::r() { return m_r; }
+
+mat &Particles::v() { return m_v; }
+
+unordered_map<int, int> &Particles::idToCol() { return m_idToCol; }
+
+ivec &Particles::colToId() { return m_colToId; }
+
+mat &Particles::data() { return m_data; }
+
+ivec &Particles::isStatic() { return m_isStatic; }
 }
 //------------------------------------------------------------------------------

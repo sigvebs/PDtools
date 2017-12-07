@@ -3,13 +3,11 @@
 
 #include "PDtools/Modfiers/modifier.h"
 
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-class DumpState : public Modifier
-{
+class DumpState : public Modifier {
 public:
-    DumpState();
+  DumpState();
 };
 //------------------------------------------------------------------------------
 }

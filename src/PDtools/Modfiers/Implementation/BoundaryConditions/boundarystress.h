@@ -3,15 +3,13 @@
 
 #include "PDtools/Modfiers/modifier.h"
 
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-class BoundaryStress : public Modifier
-{
+class BoundaryStress : public Modifier {
 public:
-    BoundaryStress(double appliedStress, double stressOrientation,
-                   pair<double, double> boundary, int boundaryOrientation,
-                   int steps, double delta);
+  BoundaryStress(double appliedStress, double stressOrientation,
+                 pair<double, double> boundary, int boundaryOrientation,
+                 int steps, double delta);
 
   virtual void evaluateStepOne();
   virtual void evaluateStepTwo();
@@ -24,7 +22,7 @@ private:
   pair<double, double> m_boundary;
   int m_boundaryOrientation;
   vector<int> m_otherAxis;
-  int m_indexVolume ;
+  int m_indexVolume;
   int m_steps;
   int m_indexRadius;
   double m_incrementalStress;

@@ -3,22 +3,17 @@
 
 #include "PDtools/Force/PdForces/LPS/pd_lps.h"
 
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-class PD_lpsDampenedContact : public PD_LPS
-{
+class PD_lpsDampenedContact : public PD_LPS {
 public:
-    PD_lpsDampenedContact(PD_Particles &particles, double c, bool planeStress);
+  PD_lpsDampenedContact(PD_Particles &particles, double c, bool planeStress);
 
-    virtual void
-    calculateForces(const int id, const int i);
-
-    virtual double
-    calculatePotentialEnergyDensity(const int id_i, const int i);
+  virtual void calculateForces(const int id, const int i);
+  virtual double calculatePotentialEnergyDensity(const int id_i, const int i);
 
 protected:
-    double m_dampCoeff;
+  double m_dampCoeff;
 };
 //------------------------------------------------------------------------------
 }

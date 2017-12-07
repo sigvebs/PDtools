@@ -3,15 +3,13 @@
 
 #include "PDtools/Solver/adr.h"
 
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-class dynamicADR : public ADR
-{
+class dynamicADR : public ADR {
 public:
-    dynamicADR();
-    virtual void solve();
-    virtual void stepForward(int timeStep);
+  dynamicADR();
+  virtual void solve();
+  virtual void stepForward(int timeStep);
 };
 //------------------------------------------------------------------------------
 }

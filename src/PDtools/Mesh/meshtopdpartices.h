@@ -1,17 +1,14 @@
 #ifndef MESHTOPDPARTICES_H
 #define MESHTOPDPARTICES_H
 
-#include "Mesh/pdmesh.h"
-#include "Particles/pd_particles.h"
-#include "Utilities/gaussianquadrature.h"
+#include "PDtools/Mesh/pdmesh.h"
 
-namespace PDtools
-{
+namespace PDtools {
 class Grid;
-
+class PD_Particles;
 //------------------------------------------------------------------------------
-PD_Particles convertMshToPdParticles(int dim, int interpolationDegree, const PdMesh &mesh, Grid &grid);
+PD_Particles convertMshToPdParticles(int dim, int interpolationDegree,
+                                     const PdMesh &mesh, Grid &grid);
 double areaTriangle(const mat &vertices);
-
 }
 #endif // MESHTOPDPARTICES_H

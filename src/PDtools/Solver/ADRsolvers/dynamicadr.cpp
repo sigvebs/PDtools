@@ -1,58 +1,43 @@
 #include "dynamicadr.h"
 
-//#include "PDtools/Particles/pd_particles.h"
-//#include "PDtools/Force/force.h"
-//#include "PDtools/Modfiers/modifier.h"
-//#include "PDtools/SavePdData/savepddata.h"
-using namespace arma;
-
 namespace PDtools
 //------------------------------------------------------------------------------
 {
-dynamicADR::dynamicADR()
-{
+dynamicADR::dynamicADR() {}
+//------------------------------------------------------------------------------
+void dynamicADR::solve() {
+  initialize();
+  checkInitialization();
+  calculateForces(0);
+  updateProperties(0);
+  save(0);
 
+  // Looping over all time, particles and components.
+  for (int i = 0; i < m_steps; i++) {
+    stepForward(i);
+  }
 }
 //------------------------------------------------------------------------------
-void dynamicADR::solve()
-{
-    initialize();
-    checkInitialization();
-    calculateForces(0);
-    updateProperties(0);
-    save(0);
+void dynamicADR::stepForward(int timeStep) {
+  integrateStepOne();
+  updateGridAndCommunication();
 
-    // Looping over all time, particles and components.
-    for (int i = 0; i < m_steps; i++)
-    {
-        stepForward(i);
-    }
+  modifiersStepOne();
+  updateGridAndCommunication();
 
-}
-//------------------------------------------------------------------------------
-void dynamicADR::stepForward(int timeStep)
-{
-    integrateStepOne();
-    updateGridAndCommunication();
+  updateProperties(timeStep + 1);
+  updateGridAndCommunication();
 
-    modifiersStepOne();
-    updateGridAndCommunication();
+  save(timeStep + 1);
+  //----------------------------------------------------------------------
+  zeroForces();
+  calculateForces(timeStep + 1);
+  //----------------------------------------------------------------------
 
-    updateProperties(timeStep + 1);
-    updateGridAndCommunication();
+  modifiersStepTwo();
+  integrateStepTwo();
 
-    save(timeStep + 1);
-    //----------------------------------------------------------------------
-    zeroForces();
-    calculateForces(timeStep+1);
-    //----------------------------------------------------------------------
-
-    modifiersStepTwo();
-    integrateStepTwo();
-
-    m_t += m_dt;
+  m_t += m_dt;
 }
 //------------------------------------------------------------------------------
 }
-
-

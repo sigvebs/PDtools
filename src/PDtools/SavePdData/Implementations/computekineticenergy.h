@@ -4,25 +4,22 @@
 #include "PDtools/SavePdData/savepddata.h"
 
 //------------------------------------------------------------------------------
-namespace PDtools
-{
+namespace PDtools {
 
-//------------------------------------------------------------------------------
-class ComputeKineticEnergy: public ComputeProperty
-{
+class ComputeKineticEnergy : public ComputeProperty {
 public:
-    ComputeKineticEnergy(PD_Particles &particles);
-    ~ComputeKineticEnergy();
+  ComputeKineticEnergy(PD_Particles &particles);
+  ~ComputeKineticEnergy();
 
-    virtual void update(const int id_i, const int i);
+  virtual void update(const int id_i, const int i);
 
 private:
-    const int m_dim = 3;
-    int m_indexKE;
-    int m_indexVolume;
-    int m_indexRho;
-    arma::mat *m_v;
-    arma::mat *m_data;
+  const int m_dim = 3;
+  int m_indexKE;
+  int m_indexVolume;
+  int m_indexRho;
+  arma::mat *m_v;
+  arma::mat *m_data;
 };
 //------------------------------------------------------------------------------
 }

@@ -1,10 +1,9 @@
 #ifndef PDSOLVER_H
 #define PDSOLVER_H
 
+#include "config.h"
 #include <PDtools.h>
 #include <libconfig.h++>
-#include <memory>
-#include <string>
 
 //------------------------------------------------------------------------------
 class PdSolver {

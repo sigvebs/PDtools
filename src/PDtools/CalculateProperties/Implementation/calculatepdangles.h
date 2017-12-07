@@ -3,24 +3,21 @@
 
 #include "PDtools/CalculateProperties/calculateproperty.h"
 
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-class CalculatePdAngles : public CalculateProperty
-{
+class CalculatePdAngles : public CalculateProperty {
 public:
-    CalculatePdAngles();
-    ~CalculatePdAngles();
+  CalculatePdAngles();
+  ~CalculatePdAngles();
 
-    virtual void
-    initialize();
+  virtual void initialize();
 
-    virtual void
-    update();
+  virtual void update();
+
 protected:
-    int m_indexTheta;
-    int m_indexTheta0;
-    int m_indexConnected;
+  int m_indexTheta;
+  int m_indexTheta0;
+  int m_indexConnected;
 };
 //------------------------------------------------------------------------------
 }

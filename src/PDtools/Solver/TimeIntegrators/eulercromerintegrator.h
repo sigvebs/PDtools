@@ -1,20 +1,17 @@
 #ifndef EULERCROMERINTEGRATOR_H
 #define EULERCROMERINTEGRATOR_H
 
-
 #include "PDtools/Solver/timeintegrator.h"
 
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-class EulerCromerIntegrator : public TimeIntegrator
-{
+class EulerCromerIntegrator : public TimeIntegrator {
 public:
-    EulerCromerIntegrator();
-    ~EulerCromerIntegrator();
+  EulerCromerIntegrator();
+  ~EulerCromerIntegrator();
 
-    virtual void integrateStepOne();
-    virtual void integrateStepTwo();
+  virtual void integrateStepOne();
+  virtual void integrateStepTwo();
 };
 //------------------------------------------------------------------------------
 }

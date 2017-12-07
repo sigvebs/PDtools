@@ -4,26 +4,18 @@
 #include "PDtools/Modfiers/Implementation/FractureCriterion/mohrcoulombmaxfractureweighted.h"
 
 //------------------------------------------------------------------------------
-namespace PDtools
-{
+namespace PDtools {
 //------------------------------------------------------------------------------
-class MohrCoulombMaxFractureWeightedAdr : public MohrCoulombMaxFractureWeighted
-{
+class MohrCoulombMaxFractureWeightedAdr
+    : public MohrCoulombMaxFractureWeighted {
 public:
-    MohrCoulombMaxFractureWeightedAdr(double mu, double C, double T, double Wc, double Bc);
+  MohrCoulombMaxFractureWeightedAdr(double mu, double C, double T, double Wc,
+                                    double Bc);
 
-    virtual void
-    evaluateStepOne();
-
-    virtual void
-    evaluateStepOne(const int id_i, const int i);
-
-
-    virtual void
-    evaluateStepTwo(const int id_i, const int i);
-
-    virtual void
-    evaluateStepTwoPost();
+  virtual void evaluateStepOne();
+  virtual void evaluateStepOne(const int id_i, const int i);
+  virtual void evaluateStepTwo(const int id_i, const int i);
+  virtual void evaluateStepTwoPost();
 };
 //------------------------------------------------------------------------------
 }
