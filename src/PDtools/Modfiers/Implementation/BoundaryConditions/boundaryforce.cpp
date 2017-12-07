@@ -34,11 +34,11 @@ void boundaryForce::registerParticleParameters() {
 }
 //------------------------------------------------------------------------------
 void boundaryForce::evaluateStepOne() {
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   arma::mat &F = m_particles->F();
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
+    const int i = idToCol[id];
     const double f = m_incrementalForce;
     F(i, m_forceOritentation) += f;
   }
@@ -99,12 +99,11 @@ void boundaryForce::evaluateStepTwo() {
 }
 //------------------------------------------------------------------------------
 void boundaryForce::staticEvaluation() {
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   arma::mat &F = m_particles->F();
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
-
+    const int i = idToCol[id];
     const double f = m_incrementalForce;
     F(i, m_forceOritentation) += f;
   }

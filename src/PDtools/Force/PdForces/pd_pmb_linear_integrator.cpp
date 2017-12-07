@@ -25,7 +25,7 @@ void PD_PMB_LINEAR_INTEGRATOR::calculateForces(const int id, const int i) {
       continue;
 
     const int id_j = con_i.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double c_j = m_data(j, m_indexMicromodulus);
     double vol_j = m_data(j, m_indexVolume);

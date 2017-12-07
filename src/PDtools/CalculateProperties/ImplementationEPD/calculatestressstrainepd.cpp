@@ -90,7 +90,6 @@ void CalculateStressStrainEPD::clean() {}
 //------------------------------------------------------------------------------
 void CalculateStressStrainEPD::update() {
   const ivec &colToId = m_particles->colToId();
-//  const auto &idToCol = m_particles->idToCol();
   const int nParticles = m_particles->nParticles();
   const mat &r = m_particles->r();
   const mat &r0 = m_particles->r0();

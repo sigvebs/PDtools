@@ -23,7 +23,7 @@ private:
   double m_tan2_theta;
 
   arma::mat *m_data;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
 
   int m_indexStress[6];
   int m_indexUnbreakable;

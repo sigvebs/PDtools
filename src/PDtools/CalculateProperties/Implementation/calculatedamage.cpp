@@ -16,7 +16,7 @@ void CalculateDamage::initialize() {
   m_iDr0 = m_particles->getPdParamId("dr0");
 
   const ivec &colToId = m_particles->colToId();
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   const int nParticles = m_particles->nParticles();
   mat &data = m_particles->data();
 
@@ -34,7 +34,7 @@ void CalculateDamage::initialize() {
     for (const auto &con : PDconnections) {
 
       const int id_j = con.first;
-      const int j = idToCol.at(id_j);
+      const int j = idToCol[id_j];
 
       const double vol_j = data(j, m_iVolume);
       const double volumeScaling = con.second[m_iVolumeScaling];
@@ -51,7 +51,7 @@ void CalculateDamage::update() {
   const ivec &colToId = m_particles->colToId();
   const int nParticles = m_particles->nParticles();
   mat &data = m_particles->data();
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
 
   // Updating single particle states
   for (int i = 0; i < nParticles; i++) {
@@ -72,7 +72,7 @@ void CalculateDamage::update() {
     for (const auto &con : PDconnections) {
       if (con.second[m_indexConnected] > 0.5) {
         const int id_j = con.first;
-        const int j = idToCol.at(id_j);
+        const int j = idToCol[id_j];
         const double vol_j = data(j, m_iVolume);
         const double volumeScaling = con.second[m_iVolumeScaling];
 

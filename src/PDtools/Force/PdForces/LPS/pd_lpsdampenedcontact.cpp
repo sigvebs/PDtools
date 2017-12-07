@@ -26,7 +26,7 @@ void PD_lpsDampenedContact::calculateForces(const int id, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double m_j = m_data(j, m_iMass);
     const double theta_j = m_data(j, m_iTheta);
@@ -81,7 +81,7 @@ double PD_lpsDampenedContact::calculatePotentialEnergyDensity(const int id_i,
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];

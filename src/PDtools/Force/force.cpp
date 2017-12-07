@@ -38,11 +38,11 @@ bool Force::getHasStaticModifier() const { return m_hasStaticModifier; }
 //------------------------------------------------------------------------------
 bool Force::getHasUpdateState() const { return m_hasUpdateState; }
 //------------------------------------------------------------------------------
-
 Force::Force(PD_Particles &particles, string _type)
     : m_particles(particles), m_r(m_particles.r()), m_v(m_particles.v()),
       m_r0(m_particles.r0()), m_F(m_particles.F()), m_data(m_particles.data()),
-      m_idToCol(m_particles.idToCol()), m_colToId(m_particles.colToId()),
+      m_idToCol_v(m_particles.getIdToCol_v()),
+      m_colToId(m_particles.colToId()),
       m_idToElement(m_particles.getIdToElement()),
       m_triElements(m_particles.getTriElements()),
       m_quadElements(m_particles.getQuadElements()), m_dim(m_particles.dim()),
@@ -207,7 +207,7 @@ void Force::applySurfaceCorrectionStep2() {
 
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       const double dr0Len = con.second[iDr0];
       const arma::vec3 &n = (m_r.row(i).t() - m_r.row(j).t()) / dr0Len;

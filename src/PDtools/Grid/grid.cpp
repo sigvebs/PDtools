@@ -150,6 +150,7 @@ void Grid::createGrid() {
   m_nGridArma = {0, 0, 0};
   for (int d = 0; d < M_DIM; d++) {
     m_nGridArma(d) = m_nGrid[d];
+    m_invGridSpacing[d] = 1./m_gridSpacing(d);
   }
 }
 //------------------------------------------------------------------------------
@@ -241,7 +242,7 @@ int Grid::gridId(const double (&r)[M_DIM]) const {
   int i[M_DIM];
 
   for (int d = 0; d < M_DIM; d++) {
-    i[d] = int((r[d] - m_boundary2[d][0]) / m_gridSpacing(d));
+    i[d] = int((r[d] - m_boundary2[d][0]) * m_invGridSpacing[d]);
 
     // Handling the boundary extremals
     if (i[d] >= m_nGrid[d]) {
@@ -381,7 +382,7 @@ void Grid::setMyGridpoints() {
         // Only picking the uniqe ids
         sort(neighbourRanks.begin(), neighbourRanks.end());
         neighbourRanks.erase(
-            unique(neighbourRanks.begin(), neighbourRanks.end()),
+            std::unique(neighbourRanks.begin(), neighbourRanks.end()),
             neighbourRanks.end());
 
         boundaryGridPoints.push_back(id);

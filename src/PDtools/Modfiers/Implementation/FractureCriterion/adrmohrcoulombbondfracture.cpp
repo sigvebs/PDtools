@@ -14,7 +14,7 @@ void AdrMohrCoulombBondFracture::initialize() {
   m_data = &m_particles->data();
   m_indexUnbreakable = m_particles->getParamId("unbreakable");
   m_indexConnected = m_particles->getPdParamId("connected");
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
 
   m_state = false;
@@ -121,22 +121,6 @@ void AdrMohrCoulombBondFracture::evaluateStepTwo(const int id_i, const int i) {
         con.second[m_indexConnected] = 0;
         m_maxPId = pair<int, int>(id_i, counter);
         data(i, m_indexBrokenNow) = 1;
-        /*
-        const double theta_b = atan(dr_ij[1]/ dr_ij[0]);
-        const double theta_p = 0.5*atan(2*sxy/(sx - sy));
-        const double first = 0.5*(sx + sy);
-        const double second = sqrt(0.25*(sx - sy)*(sx - sy) + sxy*sxy);
-        const double s1 = first + second;
-        const double s2 = first - second;
-
-        if(fabs(theta_b * theta_p)*180/M_PI > 30)
-        {
-        cout << id_i << " > " << id_j << " " << endl
-             << s_n << "\t"<< s_s << "\t:" << theta_b*180/M_PI << endl
-             << s1 << "\t" << 0.5*(s1 + s2) << "\t:" << theta_p*180/M_PI <<
-        endl;
-        }
-        */
       }
       counter++;
     }

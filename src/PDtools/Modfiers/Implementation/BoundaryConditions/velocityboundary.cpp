@@ -38,7 +38,7 @@ void VelocityBoundary::evaluateStepOne() {
   if (fabs(m_v) < fabs(m_velAmplitude)) {
     m_v += m_dv;
   }
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   arma::mat &v = m_particles->v();
   arma::mat &r = m_particles->r();
   arma::mat &F = m_particles->F();
@@ -47,8 +47,7 @@ void VelocityBoundary::evaluateStepOne() {
   const double v_dt = m_v * m_dt;
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
-
+    const int i = idToCol[id];
     v(i, m_velOritentation) = m_v;
     F(i, m_velOritentation) = 0;
     if (isStatic(i)) {
@@ -58,13 +57,13 @@ void VelocityBoundary::evaluateStepOne() {
 }
 //------------------------------------------------------------------------------
 void VelocityBoundary::evaluateStepTwo() {
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   arma::mat &v = m_particles->v();
   arma::mat &F = m_particles->F();
   arma::imat &isStatic = m_particles->isStatic();
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
+    const int i = idToCol[id];
 
     v(i, m_velOritentation) = m_v;
     F(i, m_velOritentation) = 0;

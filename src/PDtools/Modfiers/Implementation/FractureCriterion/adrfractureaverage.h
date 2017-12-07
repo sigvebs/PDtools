@@ -25,7 +25,7 @@ private:
   int m_indexS00;
   int m_indexS_avg;
   arma::mat *m_data;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
 };
 //------------------------------------------------------------------------------
 }

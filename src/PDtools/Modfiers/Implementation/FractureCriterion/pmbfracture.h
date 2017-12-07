@@ -27,7 +27,7 @@ private:
   arma::mat *m_data;
   double *m_broken;
   double *m_s_tmp;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
 };
 //------------------------------------------------------------------------------
 }

@@ -23,7 +23,7 @@ void MohrCoulombWeightedAverage::registerParticleParameters() {
   m_data = &m_particles->data();
   m_indexUnbreakable = m_particles->registerParameter("unbreakable");
   m_indexConnected = m_particles->registerPdParameter("connected");
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
 
   switch (m_dim) {
   case 1:

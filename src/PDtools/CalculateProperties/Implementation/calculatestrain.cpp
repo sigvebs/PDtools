@@ -64,7 +64,7 @@ void CalculateStrain::clean() {
 //------------------------------------------------------------------------------
 void CalculateStrain::update() {
   const ivec &colToId = m_particles->colToId();
-  const auto &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   const int nParticles = m_particles->nParticles();
   const mat &r = m_particles->r();
   const mat &r0 = m_particles->r0();
@@ -91,7 +91,7 @@ void CalculateStrain::update() {
         continue;
 
       const int id_j = con_i.first;
-      const int j = idToCol.at(id_j);
+      const int j = idToCol[id_j];
 
       const double vol_j = data(j, m_indexVolume);
       const double dr0 = con_i.second[m_indexDr0];
@@ -151,7 +151,7 @@ void CalculateStrain::update() {
 //------------------------------------------------------------------------------
 void CalculateStrain::calulateShapeFunction() {
   const ivec &colToId = m_particles->colToId();
-  const auto &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   const int nParticles = m_particles->nParticles();
   const mat &r0 = m_particles->r0();
   mat &data = m_particles->data();
@@ -172,7 +172,7 @@ void CalculateStrain::calulateShapeFunction() {
         continue;
 
       const int id_j = con_i.first;
-      const int j = idToCol.at(id_j);
+      const int j = idToCol[id_j];
 
       const double vol_j = data(j, m_indexVolume);
       const double dr0 = con_i.second[m_indexDr0];

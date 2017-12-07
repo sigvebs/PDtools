@@ -19,7 +19,7 @@ void MohrCoulombBondFracture::registerParticleParameters() {
   m_indexUnbreakable = m_particles->registerParameter("unbreakable");
   m_indexConnected = m_particles->registerPdParameter("connected");
   m_indexCompute = m_particles->registerPdParameter("compute");
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
 
   switch (m_dim) {
@@ -58,7 +58,6 @@ void MohrCoulombBondFracture::evaluateStepOne(const int id_i, const int i) {
   if ((*m_data)(i, m_indexUnbreakable) >= 1)
     return;
 
-  //    const mat & R = *m_r;
   const mat &R = m_particles->r();
   mat &data = *m_data;
   vector<pair<int, vector<double>>> &PDconnections =
@@ -92,8 +91,7 @@ void MohrCoulombBondFracture::evaluateStepOne(const int id_i, const int i) {
 
       double sx = 0.5 * (data(i, m_indexStress[0]) + data(j, m_indexStress[0]));
       double sy = 0.5 * (data(i, m_indexStress[1]) + data(j, m_indexStress[1]));
-      double sxy =
-          0.5 * (data(i, m_indexStress[2]) + data(j, m_indexStress[2]));
+      double sxy = 0.5 * (data(i, m_indexStress[2]) + data(j, m_indexStress[2]));
       //            double sx = max(fabs(data(i, m_indexStress[0])),
       //            fabs(data(j, m_indexStress[0])));
       //            double sy = max(fabs(data(i, m_indexStress[1])),
@@ -129,29 +127,12 @@ void MohrCoulombBondFracture::evaluateStepOne(const int id_i, const int i) {
         }
       } else if (s_n < 0) {
         if (fabs(s_s) >= m_C - m_d * s_n) {
-          //                    cout << id_i << " -> (" << id_j << ") " << sx <<
-          //                    " "<< sy << endl;
-          //                    cout << "sx:" << sx << " sy:" << sy << " sxy:"
-          //                    << sxy  << endl;
           con.second[m_indexConnected] = 0;
           data(i, m_indexBrokenNow) = 1;
         }
       }
 
-      //            if(id_i == 425)
-      //            {
-      //                cout << "(" << id_j << ") cos:" << cos(theta) << ", "<<
-      //                c
-      //                     << " sin:" << sin(theta) << ", " << s << endl;
-      //            }
-
       //            sy =  sx*s2 + sy*c2 - 2*sxy*cs;
-
-      //            if(id_i == 1087)
-      //            {
-      //                cout << "(" << id_j << ") " << sx_i << " "<< sx_j << "
-      //                t:" << theta_i*180/M_PI << " ";
-      //            }
 
       //            if(sxy > fabs(-m_C + m_d*s_compressive))
       //            {
@@ -164,10 +145,6 @@ void MohrCoulombBondFracture::evaluateStepOne(const int id_i, const int i) {
       //                << data(j, m_indexStress[1]) << endl;
       //            }
     }
-    //        if(id_i == 1087)
-    //        {
-    //            cout << endl;
-    //        }
 
   } else if (m_dim == 3) {
   }

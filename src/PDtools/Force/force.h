@@ -29,7 +29,7 @@ protected:
   arma::mat &m_r0;
   arma::mat &m_F;
   arma::mat &m_data;
-  unordered_map<int, int> &m_idToCol;
+  const ivec & m_idToCol_v;
   arma::ivec &m_colToId;
   int m_calulateStress = false;
 

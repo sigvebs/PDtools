@@ -23,7 +23,7 @@ private:
   double m_d;
   double m_phi;
   arma::mat *m_data;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
   unordered_map<int, vector<int>> m_brokenParticles;
 
   int m_indexStress[6];

@@ -80,7 +80,7 @@ void PD_PMB::calculateForces(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
     const double dr0 = con.second[m_indexDr0];
 
     // compute force density, add to PD equation of motion
@@ -175,7 +175,7 @@ double PD_PMB::calculatePotentialEnergyDensity(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_indexVolume);
     const double dr0Len = con.second[m_indexDr0];
@@ -254,7 +254,7 @@ void PD_PMB::calculateStress(const int id_i, const int i,
     if (con.second[m_indexConnected] <= 0.5)
       continue;
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
     const double dr0 = con.second[m_indexDr0];
 
     // compute force density, add to PD equation of motion
@@ -341,7 +341,7 @@ double PD_PMB::calculateStableMass(const int id_a, const int a, double dt) {
 
     for (auto &con : PDconnections) {
       int id_b = con.first;
-      int b = m_idToCol.at(id_b);
+      int b = m_idToCol_v[id_b];
 
       dR0[X] = x_a - matR0(b, X);
       dR0[Y] = y_a - matR0(b, Y);
@@ -398,7 +398,7 @@ void PD_PMB::initialize(double E, double nu, double delta, int dim, double h,
         m_particles.pdConnections(pId);
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int col_j = m_idToCol.at(id_j);
+      const int col_j = m_idToCol_v[id_j];
       const double s0_j = m_data(col_j, m_indexS0);
       const double s0 = 0.5 * (s0_i + s0_j);
       con.second[m_indexS00] = s0;
@@ -448,10 +448,10 @@ void PD_PMB::initialize(double E, double nu, double delta, int dim, double h,
         m_particles.pdConnections(pId);
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int col_j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
       const double dr0Len = con.second[m_indexDr0];
 
-      dRvolume += dr0Len * m_data(col_j, m_indexVolume);
+      dRvolume += dr0Len * m_data(j, m_indexVolume);
       //            double volumeScaling = con.second[m_indexVolumeScaling];
       //            dRvolume += dr0Len*data(col_j, indexVolume)*volumeScaling;
     }

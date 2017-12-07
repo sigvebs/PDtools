@@ -30,7 +30,7 @@ protected:
   double m_G;
   double m_h;
   arma::mat *m_data;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
 };
 //------------------------------------------------------------------------------
 }

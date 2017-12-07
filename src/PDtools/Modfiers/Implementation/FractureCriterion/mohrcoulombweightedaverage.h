@@ -19,7 +19,7 @@ private:
   double m_d;
   double m_phi;
   arma::mat *m_data;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
   double m_weights[2];
 
   int m_indexStress[6];

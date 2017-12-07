@@ -87,7 +87,7 @@ PD_Particles convertMshToPdParticles(int dim, int interpolationDegree,
   particles.initializeMatrices();
   particles.dim(dim);
 
-  unordered_map<int, int> &idToCol = particles.idToCol();
+  ivec &idToCol = particles.getIdToCol_v();
   arma::ivec &get_id = particles.colToId();
   arma::mat &r0 = particles.r0();
   arma::mat &r = particles.r();

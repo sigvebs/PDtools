@@ -38,7 +38,7 @@ void PD_bondforceGaussian::calculateForces(const int id, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
 #if USE_N3L
     if (j < i)
@@ -98,7 +98,7 @@ double PD_bondforceGaussian::calculatePotentialEnergyDensity(const int id_i,
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_indexVolume);
     const double dr0 = con.second[m_indexDr0];
@@ -135,9 +135,8 @@ PD_bondforceGaussian::calculateBondEnergy(const int id_i, const int i,
   // PD_bond
   (void)id_i;
   const double c_i = m_data(i, m_indexMicromodulus);
-
   const int id_j = con.first;
-  const int j = m_idToCol.at(id_j);
+  const int j = m_idToCol_v[id_j];
 
   const double vol_j = m_data(j, m_indexVolume);
   const double dr0Len = con.second[m_indexDr0];
@@ -186,7 +185,7 @@ void PD_bondforceGaussian::calculateStress(const int id_i, const int i,
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double c_j = m_data(j, m_indexMicromodulus);
     const double vol_j = m_data(j, m_indexVolume);
@@ -272,7 +271,7 @@ double PD_bondforceGaussian::calculateStableMass(const int id_a, const int a,
         continue;
 
       const int id_b = con.first;
-      const int b = m_idToCol.at(id_b);
+      const int b = m_idToCol_v[id_b];
 
       double sum = 0;
       for (int d = 0; d < m_dim; d++) {

@@ -50,7 +50,7 @@ void PD_OSP::calculateForces(const int id, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double a_j = m_data(j, m_indexA);
     const double b_j = m_data(j, m_indexB);
@@ -122,7 +122,7 @@ double PD_OSP::calculatePotentialEnergyDensity(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double b_j = m_data(j, m_indexB);
     const double d_j = m_data(j, m_indexD);
@@ -185,7 +185,7 @@ void PD_OSP::calculateStress(const int id_i, const int i,
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double a_j = m_data(j, m_indexA);
     const double b_j = m_data(j, m_indexB);
@@ -312,7 +312,7 @@ double PD_OSP::calculateDilationTerm(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double d_j = m_data(j, m_indexD);
     const double vol_j = m_data(j, m_indexVolume);
@@ -359,7 +359,7 @@ double PD_OSP::calculateBondPotential(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double b_j = m_data(j, m_indexD);
     const double vol_j = m_data(j, m_indexVolume);

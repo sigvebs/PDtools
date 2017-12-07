@@ -116,7 +116,7 @@ void PD_LPS_K::calculateForces(const int id, const int i) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       K_j(0, 0) = m_data(j, m_indexK[0]);
       K_j(1, 1) = m_data(j, m_indexK[1]);
@@ -188,7 +188,7 @@ void PD_LPS_K::calculateForces(const int id, const int i) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       K_j(0, 0) = m_data(j, m_indexK[0]);
       K_j(1, 1) = m_data(j, m_indexK[1]);
@@ -252,7 +252,7 @@ double PD_LPS_K::calculatePotentialEnergyDensity(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];
@@ -292,7 +292,7 @@ double PD_LPS_K::computeDilation(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];
@@ -360,7 +360,7 @@ double PD_LPS_K::calculateStableMass(const int id_a, const int a, double dt) {
         continue;
 
       const int id_b = con.first;
-      const int b = m_idToCol.at(id_b);
+      const int b = m_idToCol_v[id_b];
 
       for (int d = 0; d < m_dim; d++) {
         dr0[d] = R0(a, d) - R0(b, d);
@@ -468,7 +468,7 @@ void PD_LPS_K::updateWeightedVolume(int id_i, int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];

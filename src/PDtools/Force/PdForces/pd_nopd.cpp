@@ -164,7 +164,7 @@ void PD_NOPD::updateState(int id, int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];
@@ -256,7 +256,6 @@ void PD_NOPD::calculateForces(const int id, const int i) {
   vector<pair<int, vector<double>>> &PDconnections =
       m_particles.pdConnections(id);
   const int nConnections = PDconnections.size();
-  unordered_map<int, int> &m_idToCol = m_particles.idToCol();
 
   m_PK_i(0, 0) = m_data(i, m_indexPK[0]);
   m_PK_i(1, 1) = m_data(i, m_indexPK[1]);
@@ -279,7 +278,7 @@ void PD_NOPD::calculateForces(const int id, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
     const double volum_j = m_data(j, m_iVolume);
     const double volumeScaling = con.second[m_iVolumeScaling];
     const double vol_j = volum_j * volumeScaling;
@@ -327,7 +326,7 @@ void PD_NOPD::evaluateStepTwo(int id, int i) {
       for(auto &con:PDconnections)
       {
           const int id_j = con.first;
-          const int j = m_idToCol[id_j];
+          const int j = m_idToCol_v[id_j];
 
           if(m_data(j, m_iUnbreakable) >= 1)
               continue;
@@ -384,7 +383,7 @@ void PD_NOPD::computeK(int id, int i) {
       continue;
 
     const int id_j = con_i.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con_i.second[m_iDr0];
@@ -468,7 +467,7 @@ double PD_NOPD::calculateStableMass(const int id_a, const int a, double dt) {
       continue;
 
     const int id_b = con.first;
-    const int b = m_idToCol.at(id_b);
+    const int b = m_idToCol_v[id_b];
 
     double dr0Len = 0;
 
@@ -501,7 +500,7 @@ double PD_NOPD::calculateStableMass(const int id_a, const int a, double dt) {
         continue;
 
       const int id_b = con.first;
-      const int b = m_idToCol.at(id_b);
+      const int b = m_idToCol_v[id_b];
 
       double dr0Len = 0;
 

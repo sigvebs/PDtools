@@ -25,7 +25,7 @@ void PD_dampenedBondForce::calculateForces(const int id_i, const int i) {
       continue;
 
     const int id_j = con_i.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
 #if USE_N3L
     if (j < i)
@@ -95,7 +95,7 @@ void PD_dampenedBondForce::calculateStress(const int id_i, const int i,
       continue;
 
     const int id_j = con_i.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 #if USE_N3L // Already computed
     if (j < i)
       continue;

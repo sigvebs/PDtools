@@ -30,7 +30,7 @@ PD_LPS::PD_LPS(PD_Particles &particles, bool planeStress, bool analyticalM)
   m_analyticalM = analyticalM;
 
   //----------------------------------
-  // TMP - standard stres calc from
+  // TMP - standard stress calc from
   if (m_dim == 2) {
     m_indexStress[0] = m_particles.registerParameter("s_xx");
     m_indexStress[1] = m_particles.registerParameter("s_yy");
@@ -84,7 +84,7 @@ void PD_LPS::calculateForces(const int id, const int i) {
     for (int l_j = 0; l_j < nConnections; ++l_j) {
       auto &con = PDconnections[l_j];
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       vector<double> &con_data = con.second;
       if (con_data[m_iConnected] <= 0.5)
@@ -102,7 +102,7 @@ void PD_LPS::calculateForces(const int id, const int i) {
       dr_ij[0] = m_x[j] - m_x[i];
       dr_ij[1] = m_y[j] - m_y[i];
       dr_ij[2] = m_z[j] - m_z[i];
-      double dr2 =
+      const double dr2 =
           dr_ij[0] * dr_ij[0] + dr_ij[1] * dr_ij[1] + dr_ij[2] * dr_ij[2];
 
       const double dr = sqrt(dr2);
@@ -142,7 +142,7 @@ void PD_LPS::calculateForces(const int id, const int i) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v(id_j);
 
       const double m_j = m_mass[j];
       const double theta_j = m_theta[j];
@@ -155,7 +155,7 @@ void PD_LPS::calculateForces(const int id, const int i) {
 
       dr_ij[0] = m_x[j] - m_x[i];
       dr_ij[1] = m_y[j] - m_y[i];
-      double dr2 = dr_ij[0] * dr_ij[0] + dr_ij[1] * dr_ij[1];
+      const double dr2 = dr_ij[0] * dr_ij[0] + dr_ij[1] * dr_ij[1];
 
       const double dr = sqrt(dr2);
       const double ds = dr - dr0;
@@ -172,7 +172,6 @@ void PD_LPS::calculateForces(const int id, const int i) {
       //----------------------------------
       // TMP - standard stres calc from MD
       m_stress[0][i] += 0.5 * dr_ij[0] * dr_ij[0] * bond;
-      ;
       m_stress[1][i] += 0.5 * dr_ij[1] * dr_ij[1] * bond;
       m_stress[2][i] += 0.5 * dr_ij[0] * dr_ij[1] * bond;
     }
@@ -200,7 +199,7 @@ double PD_LPS::calculatePotentialEnergyDensity(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];
@@ -241,7 +240,7 @@ double PD_LPS::computeDilation(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];
@@ -310,7 +309,7 @@ double PD_LPS::calculateStableMass(const int id_a, const int a, double dt) {
         continue;
 
       const int id_b = con.first;
-      const int b = m_idToCol.at(id_b);
+      const int b = m_idToCol_v(id_b);
 
       for (int d = 0; d < m_dim; d++) {
         dr0[d] = R0(a, d) - R0(b, d);
@@ -424,7 +423,7 @@ void PD_LPS::calculateWeightedVolume() {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
       const double volumeScaling = con.second[m_iVolumeScaling];
       const double vol_j = m_data(j, m_iVolume);
       const double dr0 = con.second[m_iDr0];
@@ -476,7 +475,7 @@ void PD_LPS::updateWeightedVolume(int id_i, int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v(id_j);
     const double volumeScaling = con.second[m_iVolumeScaling];
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];
@@ -525,7 +524,7 @@ void PD_LPS::calculateStress(const int id_i, const int i,
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double m_j = m_mass[j];
     const double theta_j = m_data(j, m_iTheta);

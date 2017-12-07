@@ -28,7 +28,7 @@ void MohrCoulombNodeSplit::registerParticleParameters() {
   m_indexNewConnectionId_2 = m_particles->registerParameter("newConnectionId2");
   m_indexBroken = m_particles->registerParameter("broken", 0);
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
 
   switch (m_dim) {
   case 1:
@@ -517,7 +517,7 @@ m_particles->pdConnections(id_i);
 //------------------------------------------------------------------------------
 void MohrCoulombNodeSplit::copyParticleTo(int id_to, int old_col, int new_col) {
   ivec &colToId = m_particles->colToId();
-  unordered_map<int, int> &idToCol = m_particles->idToCol();
+  ivec &idToCol = m_particles->getIdToCol_v();
   mat &r = m_particles->r();
   mat &r0 = m_particles->r0();
   mat &v = m_particles->v();

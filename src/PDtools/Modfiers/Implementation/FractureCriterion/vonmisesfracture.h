@@ -18,7 +18,7 @@ protected:
   double m_sigma_y;
   double m_sigma_y2;
   arma::mat *m_data;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
 
   int m_indexUnbreakable;
   int m_indexConnected;

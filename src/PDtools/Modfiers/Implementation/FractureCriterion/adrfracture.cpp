@@ -19,7 +19,7 @@ void ADRfracture::registerParticleParameters() {
   m_indexS00 = m_particles->registerPdParameter("s00");
   m_indexConnected = m_particles->registerPdParameter("connected");
   m_indexS_tmp = m_particles->registerParameter("s_tmp");
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
   m_data = &m_particles->data();
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
 

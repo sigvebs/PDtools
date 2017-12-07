@@ -25,7 +25,7 @@ private:
   double m_C0;
 
   arma::mat *m_data;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
 
   int m_indexStress[6];
   int m_indexUnbreakable;

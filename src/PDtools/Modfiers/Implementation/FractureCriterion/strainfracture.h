@@ -19,7 +19,7 @@ protected:
   double m_Evol;
   int m_dim;
   arma::mat *m_data;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
 
   int m_indexUnbreakable;
   int m_indexConnected;

@@ -29,7 +29,7 @@ void MohrCoulombMaxFracture::registerParticleParameters() {
   m_indexBroken = m_particles->registerParameter("broken", 0);
   m_indexDamage = m_particles->registerParameter("damage");
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
 
   switch (m_dim) {
   case 1:
@@ -201,7 +201,7 @@ void MohrCoulombMaxFracture::evaluateStepOnePost() {
 #if USE_MPI
   exchangeBrokenParticlesMPI();
 #endif
-  std::unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   const int nParticles = m_particles->nParticles();
 
   for (auto broken_idList : m_brokenParticles) {
@@ -209,9 +209,6 @@ void MohrCoulombMaxFracture::evaluateStepOnePost() {
     const vector<int> &broken = broken_idList.second;
 
 #if USE_MPI
-    if (!idToCol.count(id_i)) {
-      continue;
-    }
     // Check if the particle is a ghost particle
     if (idToCol.at(id_i) >= nParticles) {
       continue;
@@ -224,7 +221,7 @@ void MohrCoulombMaxFracture::evaluateStepOnePost() {
       for (int id : broken) {
         if (id == id_i) {
           con.second[m_indexConnected] = 0;
-          const int j = idToCol.at(id);
+          const int j = idToCol[id];
           (*m_data)(j, m_indexBrokenNow) = 1;
         }
       }

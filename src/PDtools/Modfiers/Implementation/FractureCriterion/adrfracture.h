@@ -30,7 +30,7 @@ private:
   int m_indexS_tmp;
   int m_indexBrokenNow;
   arma::mat *m_data;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
 };
 //------------------------------------------------------------------------------
 }

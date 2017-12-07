@@ -11,7 +11,6 @@ public:
   ~CalculatePdAngles();
 
   virtual void initialize();
-
   virtual void update();
 
 protected:

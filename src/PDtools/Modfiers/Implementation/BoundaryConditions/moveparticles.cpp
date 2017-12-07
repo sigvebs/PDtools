@@ -26,7 +26,7 @@ void MoveParticles::registerParticleParameters() {
 }
 //------------------------------------------------------------------------------
 void MoveParticles::evaluateStepOne() {
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   mat &r = m_particles->r();
   const double dr = m_time * m_velAmplitude;
   arma::mat &v = m_particles->v();
@@ -34,7 +34,7 @@ void MoveParticles::evaluateStepOne() {
   arma::mat &Fold = m_particles->Fold();
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
+    const int i = idToCol[id];
     r(i, m_velOritentation) += dr;
     v(i, m_velOritentation) = 0.0;
     F(i, m_velOritentation) = 0.0;
@@ -75,14 +75,13 @@ void MoveParticles::initialize() {
 }
 //------------------------------------------------------------------------------
 void MoveParticles::staticEvaluation() {
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   arma::mat &v = m_particles->v();
   arma::mat &F = m_particles->F();
   arma::mat &Fold = m_particles->Fold();
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
-
+    const int i = idToCol[id];
     v(i, m_velOritentation) = 0.0;
     F(i, m_velOritentation) = 0.0;
     Fold(i, m_velOritentation) = 0.0;

@@ -30,7 +30,7 @@ void PD_LPS2::calculateForces(const int id, const int i) {
     for (int l_j = 0; l_j < nConnections; l_j++) {
       auto &con = PDconnections[l_j];
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       vector<double> &con_data = con.second;
       if (con_data[m_iConnected] <= 0.5)
@@ -85,7 +85,7 @@ void PD_LPS2::calculateForces(const int id, const int i) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       const double m_j = m_mass[j];
       const double theta_j = m_theta[j];
@@ -142,7 +142,7 @@ void PD_LPS2::evaluateStepOne() {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       const double vol_j = m_volume[j];
       const double volumeScaling = con_data[m_iVolumeScaling];

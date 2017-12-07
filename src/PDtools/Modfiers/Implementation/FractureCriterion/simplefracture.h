@@ -25,7 +25,7 @@ private:
   int m_indexBrokenNow;
   bool m_broken;
   arma::mat *m_data;
-  std::unordered_map<int, int> *m_idToCol;
+  ivec *m_idToCol;
 };
 //------------------------------------------------------------------------------
 }

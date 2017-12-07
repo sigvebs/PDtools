@@ -21,7 +21,6 @@ protected:
   mat m_data;
   ivec m_colToId;
   ivec m_isStatic;
-  unordered_map<int, int> m_idToCol;
   ivec m_idToCol_v;
 
   // General properties
@@ -60,7 +59,6 @@ public:
   int nGhostParticles();
   mat &r();
   mat &v();
-  unordered_map<int, int> &idToCol();
   ivec &getIdToCol_v();
 
   ivec &colToId();

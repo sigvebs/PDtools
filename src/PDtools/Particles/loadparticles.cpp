@@ -312,8 +312,7 @@ void LoadParticles::loadBody(Particles &particles, std::fstream &rawData,
   //--------------------------------------------------------------------------
   // Creating the data matrix
   particles.initializeMatrices();
-  unordered_map<int, int> &idToCol = particles.idToCol();
-  ivec &idToCol_v = particles.getIdToCol_v();
+  ivec &idToCol = particles.getIdToCol_v();
   arma::ivec &colToId = particles.colToId();
   arma::mat &r = particles.r();
   arma::mat &data = particles.data();
@@ -332,7 +331,6 @@ void LoadParticles::loadBody(Particles &particles, std::fstream &rawData,
       colToId[i] = stoi(lineSplit[idPos]);
     } else {
       idToCol[i] = i;
-      idToCol_v[i] = i;
       colToId[i] = i;
     }
 
@@ -398,8 +396,7 @@ void LoadParticles::loadBinaryBody(Particles &particles, FILE *rawData,
   particles.initializeMatrices();
 
   int nColumns = m_nColumns;
-  unordered_map<int, int> &idToCol = particles.idToCol();
-  ivec &idToCol_v = particles.getIdToCol_v();
+  ivec &idToCol = particles.getIdToCol_v();
   arma::ivec &colToId = particles.colToId();
   arma::mat &r = particles.r();
   arma::mat &data = particles.data();
@@ -415,7 +412,6 @@ void LoadParticles::loadBinaryBody(Particles &particles, FILE *rawData,
       colToId[i] = int(line[idPos]);
     } else {
       idToCol[i] = i;
-      idToCol_v[i] = i;
       colToId[i] = i;
     }
 

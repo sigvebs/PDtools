@@ -14,7 +14,7 @@ void SimpleFracture::initialize() {
   m_indexDr0 = m_particles->getPdParamId("dr0");
   m_indexForceScaling = m_particles->getPdParamId("forceScalingBond");
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
   m_data = &m_particles->data();
 
   m_broken = false;

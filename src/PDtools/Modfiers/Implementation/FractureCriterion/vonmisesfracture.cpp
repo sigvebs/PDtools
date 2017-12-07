@@ -16,7 +16,7 @@ void VonMisesFracture::registerParticleParameters() {
   m_indexCompute = m_particles->registerPdParameter("compute");
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
   m_particles->registerParameter("damage");
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
 
   switch (m_dim) {
   case 1:

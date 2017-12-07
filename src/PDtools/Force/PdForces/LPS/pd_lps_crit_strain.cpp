@@ -23,7 +23,7 @@ void PD_LPS_CRIT_STRAIN::evaluateStepTwo(int id_i, int i) {
 
   for (auto &con : PDconnections) {
     const int id_j = con.first;
-    const int j = m_idToCol[id_j];
+    const int j = m_idToCol_v[id_j];
 
     if (m_data(j, m_iUnbreakable) >= 1)
       continue;

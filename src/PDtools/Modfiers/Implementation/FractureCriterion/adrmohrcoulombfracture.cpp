@@ -23,7 +23,7 @@ void ADRmohrCoulombFracture::initialize() {
   m_indexConnected = m_particles->getPdParamId("connected");
   m_particles->registerParameter("damage");
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
 
   m_state = false;
   m_maxPId = pair<int, int>(-1, -1);

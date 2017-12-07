@@ -122,8 +122,7 @@ void LoadPdParticles::loadBody(PD_Particles &particles, std::fstream &rawData,
   // Creating the data matrix
   particles.initializeMatrices();
 
-  unordered_map<int, int> &idToCol = particles.idToCol();
-  ivec &idToCol_v = particles.getIdToCol_v();
+  ivec &idToCol = particles.getIdToCol_v();
   arma::ivec &get_id = particles.colToId();
   arma::mat &r = particles.r();
   arma::mat &v = particles.v();
@@ -142,7 +141,7 @@ void LoadPdParticles::loadBody(PD_Particles &particles, std::fstream &rawData,
   int j = 0;
   for (unsigned int i = 0; i < particles.nParticles(); i++) {
     vector<string> lineSplit;
-    getline(rawData, line);
+    std::getline(rawData, line);
     boost::trim_if(line, boost::is_any_of("\t "));
     boost::split(lineSplit, line, boost::is_any_of("\t "),
                  boost::token_compress_on);
@@ -168,7 +167,6 @@ void LoadPdParticles::loadBody(PD_Particles &particles, std::fstream &rawData,
       }
     }
     idToCol[id] = j;
-    idToCol_v[id] = j;
     get_id[j] = id;
 
     for (const pair<int, int> &pc : position_config) {
@@ -247,8 +245,7 @@ void LoadPdParticles::loadBinaryBody(PD_Particles &particles, FILE *rawData,
   // Creating the data matrix
   particles.initializeMatrices();
 
-  unordered_map<int, int> &idToCol = particles.idToCol();
-  ivec &idToCol_v = particles.getIdToCol_v();
+  ivec &idToCol = particles.getIdToCol_v();
   arma::ivec &get_id = particles.colToId();
   arma::mat &r = particles.r();
   arma::mat &v = particles.v();
@@ -267,7 +264,6 @@ void LoadPdParticles::loadBinaryBody(PD_Particles &particles, FILE *rawData,
       get_id[i] = int(line[idPos]);
     } else {
       idToCol[i] = i;
-      idToCol_v[i] = i;
       get_id[i] = i;
     }
 

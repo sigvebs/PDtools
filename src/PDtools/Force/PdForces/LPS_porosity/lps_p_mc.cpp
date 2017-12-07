@@ -154,7 +154,7 @@ void LPS_porosity_mc::calculateForces(const int id, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double m_j = m_data(j, m_iMass);
     const double theta_j = m_data(j, m_iTheta);
@@ -228,7 +228,7 @@ void LPS_porosity_mc::evaluateStepTwo(int id_i, int i) {
   if (m_dim == 2) {
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int j = m_idToCol[id_j];
+    const int j = m_idToCol_v[id_j];
 
       if (m_data(j, m_indexUnbreakable) >= 1)
         continue;
@@ -281,7 +281,7 @@ void LPS_porosity_mc::evaluateStepTwo(int id_i, int i) {
 
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int j = m_idToCol[id_j];
+      const int j = m_idToCol_v[id_j];
 
       if (m_data(j, m_indexUnbreakable) >= 1)
         continue;
@@ -472,7 +472,7 @@ void LPS_porosity_mc::computeStress(const int id, const int i,
 }
 //------------------------------------------------------------------------------
 void LPS_porosity_mc::computeK(int id, int i) {
-  const auto &idToCol = m_particles.idToCol();
+  const ivec &idToCol = m_particles.getIdToCol_v();
   const mat &r0 = m_particles.r0();
   mat &data = m_particles.data();
   mat K = zeros(m_dim, m_dim);
@@ -486,7 +486,7 @@ void LPS_porosity_mc::computeK(int id, int i) {
   for (int l_j = 0; l_j < nConnections; l_j++) {
     const auto &con_i = PDconnections_i[l_j];
     const int id_j = con_i.first;
-    const int j = idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double volumeScaling_ij = con_i.second[m_indexVolumeScaling];
     const double vol_j = data(j, m_indexVolume);

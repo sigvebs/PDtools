@@ -85,6 +85,7 @@ private:
   arma::ivec3 m_nGridArma;
   arma::ivec6 m_nGrid_with_boundary;
   arma::vec3 m_gridSpacing;
+  double m_invGridSpacing[3];
   std::unordered_map<int, GridPoint> m_gridpoints;
   std::vector<int> m_myGridPoints;
   std::vector<int> m_ghostGridIds;

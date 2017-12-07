@@ -123,18 +123,16 @@ void StrainBoundary::initialize() {
 }
 //------------------------------------------------------------------------------
 void StrainBoundary::staticEvaluation() {
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   arma::mat &v = m_particles->v();
   arma::mat &F = m_particles->F();
   arma::mat &Fold = m_particles->Fold();
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
-
+    const int i = idToCol[id];
     //        v(i, m_boundaryOrientation) = 0.0;
     //        F(i, m_boundaryOrientation) = 0.0;
     //        Fold(i, m_boundaryOrientation) = 0.0;
-
     for (int d = 0; d < m_dim; d++) {
       v(i, d) = 0.0;
       F(i, d) = 0.0;

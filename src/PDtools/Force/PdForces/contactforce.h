@@ -24,8 +24,6 @@ private:
   int m_iDr0;
   int m_indexConnected;
   int m_dim;
-  std::unordered_map<int, int> *m_idToCol;
-
 public:
   ContactForce(PD_Particles &particles, Grid &grid, double spacing,
                int verletUpdateFrq);

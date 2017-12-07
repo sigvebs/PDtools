@@ -151,8 +151,7 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc,
   (void)lc;
 #endif
   const mat &data = particles.data();
-  const unordered_map<int, int> &idToCol = particles.idToCol();
-  ivec &idToCol_v = particles.getIdToCol_v();
+  const ivec &idToCol = particles.getIdToCol_v();
   const ivec &colToId = particles.colToId();
   const int indexDr0 = particles.getPdParamId("dr0");
   //    const int indexRadius = particles.getParamId("radius");
@@ -182,7 +181,7 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc,
         const double dr = con.second[indexDr0];
 #if USE_EXTENDED_RANGE_RADIUS
         const int id_j = con.first;
-        const int col_j = idToCol.at(id_j);
+        const int col_j = idToCol[id_j];
         const double r_j = data(col_j, indexRadius);
 #elif USE_EXTENDED_RANGE_LC
         const double r_j = 0.5 * lc;
@@ -230,7 +229,7 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc,
         const double dr = con.second[indexDr0];
 #if USE_EXTENDED_RANGE_RADIUS
         const int id_j = con.first;
-        const int col_j = idToCol.at(id_j);
+        const int col_j = idToCol[id_j];
         const double radius_j = data(col_j, indexRadius);
 #elif USE_EXTENDED_RANGE_LC
         const double radius_j = 0.5 * lc;
@@ -253,7 +252,7 @@ void applyVolumeCorrection(PD_Particles &particles, double delta, double lc,
 //------------------------------------------------------------------------------
 void reCalculatePdMicromodulus(PD_Particles &particles, int dim) {
   arma::mat &data = particles.data();
-  const std::unordered_map<int, int> &idToCol = particles.idToCol();
+  const ivec &idToCol = particles.getIdToCol_v();
   const ivec &colToId = particles.colToId();
   const int indexVolume = particles.getParamId("volume");
   const int indexMicromodulus = particles.getParamId("micromodulus");
@@ -272,7 +271,7 @@ void reCalculatePdMicromodulus(PD_Particles &particles, int dim) {
         particles.pdConnections(pId);
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int col_j = idToCol.at(id_j);
+      const int col_j = idToCol[id_j];
       //            double volumeScaling = con.second[indexVolumeScaling];
       const double dr0Len = con.second[indexDr0];
 
@@ -292,7 +291,7 @@ void reCalculatePdFractureCriterion(PD_Particles &particles, double G0,
   const double delta4 = delta * delta * delta * delta;
   const double delta5 = delta4 * delta;
 
-  std::unordered_map<int, int> &idToCol = particles.idToCol();
+  const ivec &idToCol = particles.getIdToCol_v();
   int indexVolume = particles.getParamId("volume");
   int indexVolumeScaling = particles.getPdParamId("volumeScaling");
 
@@ -323,7 +322,7 @@ void reCalculatePdFractureCriterion(PD_Particles &particles, double G0,
           particles.pdConnections(pId);
       for (auto &con : PDconnections) {
         int id_j = con.first;
-        int col_j = idToCol.at(id_j);
+        int col_j = idToCol[id_j];
         double volumeScaling = con.second[indexVolumeScaling];
         v += data(col_j, indexVolume) * volumeScaling;
       }
@@ -383,7 +382,7 @@ void surfaceCorrection(PD_Particles &particles, vector<Force *> &forces,
   const double strain = 0.001;
   vec3 scaleFactor;
   arma::mat &r = particles.r();
-  const std::unordered_map<int, int> &m_idToCol = particles.idToCol();
+  const ivec &idToCol = particles.getIdToCol_v();
   const ivec &colToId = particles.colToId();
   arma::mat g = zeros(particles.nParticles(), dim);
 
@@ -473,7 +472,7 @@ void surfaceCorrection(PD_Particles &particles, vector<Force *> &forces,
 
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int col_j = m_idToCol.at(id_j);
+      const int col_j = idToCol[id_j];
 
       const double dr0Len = con.second[indexDr0];
       vec3 n = (r.row(col_i).t() - r.row(col_j).t()) / dr0Len;
@@ -515,7 +514,7 @@ void setPD_N3L(PD_Particles &particles) {
 #ifdef USE_N3L
   const int indexMyPosistion = particles.registerPdParameter("myPosistion", -1);
   const ivec &colToId = particles.colToId();
-  const std::unordered_map<int, int> &idToCol = particles.idToCol();
+  const ivec &idToCol = particles.getIdToCol_v();
   int n = 0;
   const arma::mat &r = particles.r();
   const int nParticles = particles.nParticles();
@@ -530,7 +529,7 @@ void setPD_N3L(PD_Particles &particles) {
 
     for (auto &con_i : PDconnections_i) {
       const int id_j = con_i.first;
-      const int j = idToCol.at(id_j);
+      const int j = idToCol[id_j];
 
       const vector<pair<int, vector<double>>> &PDconnections_j =
           particles.pdConnections(id_j);
@@ -572,7 +571,7 @@ void removeVoidConnections(PD_Particles &particles, Grid &grid,
   (void)lc;
 
   arma::mat &data = particles.data();
-  std::unordered_map<int, int> &idToCol = particles.idToCol();
+  ivec &idToCol = particles.getIdToCol_v();
   const ivec &colToId = particles.colToId();
 
   const mat &R0 = particles.r0();
@@ -604,7 +603,7 @@ void removeVoidConnections(PD_Particles &particles, Grid &grid,
 
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int col_j = idToCol.at(id_j);
+      const int col_j = idToCol[id_j];
       const double dr0_ij = con.second[indexDr0];
       const vec &r_j = R0.row(col_j).t();
 
@@ -637,7 +636,7 @@ void removeVoidConnections(PD_Particles &particles, Grid &grid,
 
       for (auto &con_b : PDconnections) {
         const int id_b = con_b.first;
-        const int b = idToCol.at(id_b);
+        const int b = idToCol[id_b];
         if (col_j == b)
           continue;
         const vec &r_b = R0.row(b).t();
@@ -708,140 +707,6 @@ void removeVoidConnections(PD_Particles &particles, Grid &grid,
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
   cout << "Void bonds removed due to symmetry = " << nFound << endl;
-  /*
-   * (void) grid;
-  (void) delta;
-  (void) lc;
-
-  arma::mat & data = particles.data();
-  std::unordered_map<int, int> &idToCol = particles.idToCol();
-  const ivec &colToId = particles.colToId();
-
-  const mat & R0 = particles.r0();
-  const int indexDr0 = particles.getPdParamId("dr0");
-  const int indexRadius = particles.getParamId("radius");
-  const int dim = grid.dim();
-  const int m = 15; // Number of sample points
-  const int indexConnected = particles.getPdParamId("connected");
-  double sf = 1.0;
-
-  if(dim == 3)
-      sf = 1.8;
-  if(dim == 2)
-      sf = 1.55;
-
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
-  for(unsigned int i=0; i<particles.nParticles(); i++) {
-      const int pId_i = colToId.at(i);
-      vector<pair<int, vector<double>>> & PDconnections =
-particles.pdConnections(pId_i);
-      const vec & r_i = R0.row(i).t();
-      ivec filled(m);
-      arma::mat filledCenters = arma::zeros(M_DIM, m);
-      const double radius_i = sf*data(i, indexRadius);
-
-      for(auto &con:PDconnections) {
-          const int id_j = con.first;
-          const int col_j = idToCol.at(id_j);
-          const double dr0_ij = con.second[indexDr0];
-          const vec & r_j = R0.row(col_j).t();
-
-          vec start = r_i;
-          vec n_ij = (r_j - r_i)/dr0_ij;
-          if(r_i(0)> r_j(0)) {
-              start = r_j;
-              n_ij = -n_ij;
-          }
-
-          const double radius_j = sf*data(col_j, indexRadius);
-          const double radius_ij = radius_i + radius_j;
-
-          if(radius_ij >= dr0_ij)
-              continue;
-
-          const double spacing = (dr0_ij - radius_ij)/(m + 1);
-
-          for(int k=0; k<m; k++) {
-              filled(k) = 0;
-              filledCenters.col(k) = start + ((k+1)*spacing + radius_i)*n_ij;
-          }
-
-          int nFilled = 0;
-
-          for(auto &con_b:PDconnections) {
-              const int id_b = con_b.first;
-              const int b = idToCol.at(id_b);
-              if(col_j == b)
-                  continue;
-              const vec & r_b = R0.row(b).t();
-              const double radius = sf*data(b, indexRadius);
-              const double radius2 = radius*radius;
-
-              // Distance to each point
-              for(int k=0; k<m; k++) {
-                  const vec & checkPoint = filledCenters.col(k);
-                  const arma::vec& diff = checkPoint - r_b;
-                  double len_sq = 0;
-                  for(int d=0;d<dim; d++) {
-                      len_sq += pow(diff(d), 2);
-                  }
-
-                  if(len_sq <= radius2) {
-                      if(filled(k) < 1) {
-                          nFilled++;
-                      }
-                      filled(k) = 1;
-                  }
-              }
-
-              if(nFilled >= m)
-                  continue;
-          }
-
-          bool remove = false;
-
-          for(int l=0; l<m; l++) {
-              if(filled(l) == 0) {
-                  remove = true;
-              }
-          }
-
-          if(remove) {
-              con.second[indexConnected] = 0;
-          }
-      }
-  }
-
-  // Enforcing symmetry
-  int nFound = 0;
-#ifdef USE_OPENMP
-# pragma omp parallel for
-#endif
-  for(unsigned int i=0; i<particles.nParticles(); i++) {
-      const int id_i = colToId.at(i);
-      const vector<pair<int, vector<double>>> & PDconnections_i =
-particles.pdConnections(id_i);
-
-      for(auto &con_j:PDconnections_i) {
-          const int id_j = con_j.first;
-          const bool connected = con_j.second[indexConnected];
-          if(!connected) {
-              vector<pair<int, vector<double>>> & PDconnections_j =
-particles.pdConnections(id_j);
-              for(auto &con_k:PDconnections_j) {
-                  if(con_k.first == id_i) {
-                      con_k.second[indexConnected] = 0;
-                      nFound++;
-                  }
-              }
-          }
-      }
-  }
-
-  cout << "Void bonds removed due to symmetry = " << nFound << endl;
-  */
 }
 //------------------------------------------------------------------------------
 void cleanUpPdConnections(PD_Particles &particles) {
@@ -883,8 +748,8 @@ void addFractures(PD_Particles &particles,
                   const vector<double> &fracture) {
   //    double error_thres = 2.2204e-016;
   double error_thres = 1.e-10;
-  cout << "Removing custom fractures" << endl;
-  std::unordered_map<int, int> &idToCol = particles.idToCol();
+  cout << "Removing explicit fractures" << endl;
+  const ivec &idToCol = particles.getIdToCol_v();
   const ivec &colToId = particles.colToId();
   const mat &R0 = particles.r0();
   const int indexConnected = particles.getPdParamId("connected");
@@ -903,7 +768,7 @@ void addFractures(PD_Particles &particles,
       double x, y;
 
       const int id_j = con.first;
-      const int j = idToCol.at(id_j);
+      const int j = idToCol[id_j];
       vec r1 = R0.row(j).t();
 
       // Special case where the particles are on top of each other in 3d
@@ -970,13 +835,6 @@ void addFractures(PD_Particles &particles,
 
       if (intersect) {
         con.second[indexConnected] = 0;
-        //                cout << "intersects: " << id_i << " " << id_j << endl;
-        //                cout << "r0 = np.array([" << r0[0] << "," << r0[1]
-        //                <<"])" << endl
-        //                     << "r1 = np.array([" << r1[0] << "," << r1[1]
-        //                     <<"])" << endl;
-        //                cout << "r = np.array([" << x << "," << y <<"])" <<
-        //                endl;
         broken_bonds++;
       }
     }

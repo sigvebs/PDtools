@@ -92,7 +92,7 @@ void CalculateStressStrain::update() {
 //------------------------------------------------------------------------------
 void CalculateStressStrain::update2d() {
   const ivec &colToId = m_particles->colToId();
-  const auto &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   const int nParticles = m_particles->nParticles();
   const mat &r = m_particles->r();
   const mat &r0 = m_particles->r0();
@@ -181,7 +181,7 @@ void CalculateStressStrain::update2d() {
         continue;
 
       const int id_j = con_i.first;
-      const int j = idToCol.at(id_j);
+      const int j = idToCol[id_j];
 
       const double vol_j = d_volume[j];
       const double dr0 = con_i.second[m_indexDr0];
@@ -260,7 +260,7 @@ void CalculateStressStrain::update2d() {
 //------------------------------------------------------------------------------
 void CalculateStressStrain::update3d() {
   const ivec &colToId = m_particles->colToId();
-  const auto &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   const int nParticles = m_particles->nParticles();
   const mat &r = m_particles->r();
   const mat &r0 = m_particles->r0();
@@ -369,8 +369,7 @@ void CalculateStressStrain::update3d() {
         continue;
 
       const int id_j = con_i.first;
-      const int j = idToCol.at(id_j);
-
+      const int j = idToCol[id_j];
       const double vol_j = d_volume[j];
       const double dr0 = con_i.second[m_indexDr0];
       const double volumeScaling_ij = con_i.second[m_indexVolumeScaling];
@@ -450,7 +449,7 @@ void CalculateStressStrain::update3d() {
 //------------------------------------------------------------------------------
 void CalculateStressStrain::computeK(int id, int i) {
   //    cout << "Recomputing K " << id << endl;
-  const auto &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   const mat &r0 = m_particles->r0();
   mat &data = m_particles->data();
   mat K = zeros(m_dim, m_dim);
@@ -471,7 +470,7 @@ void CalculateStressStrain::computeK(int id, int i) {
       continue;
 
     const int id_j = con_i.first;
-    const int j = idToCol.at(id_j);
+    const int j = idToCol[id_j];
 
     const double vol_j = data(j, m_indexVolume);
     const double dr0 = con_i.second[m_indexDr0];
@@ -492,22 +491,10 @@ void CalculateStressStrain::computeK(int id, int i) {
     nConnected++;
   }
 
-  //    const vector<int> ids = {56379, 1145, 1208};
-  //    for(const int id_i:ids) {
-  //        if(id == id_i) {
-  //            cout << "id_i: " << id_i << " nConnections:" << nConnections <<
-  //            endl;
-  //            cout << K << endl;
-  //        }
-  //    }
 
   if (nConnected <= 3) {
     K.zeros();
   } else {
-    //        K = inv_sympd(K);
-    //        cout << "before invert id_i: " << id << " nConnections:" <<
-    //        nConnections << "nConnected " << nConnected << endl;
-    //        cout << K << endl;
     K = inv(K);
   }
 
@@ -538,14 +525,6 @@ void CalculateStressStrain::computeK(int id, int i) {
     //        data(i, m_indexK[7]) = K(1,2);
     //        data(i, m_indexK[8]) = K(2,2);
   }
-
-  //    for(const int id_i:ids) {
-  //        if(id == id_i) {
-  //            cout << "id_i: " << id_i << " nConnections:" << nConnections <<
-  //            endl;
-  //            cout << K << endl;
-  //        }
-  //    }
 }
 //------------------------------------------------------------------------------
 }

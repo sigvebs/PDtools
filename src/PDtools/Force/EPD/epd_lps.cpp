@@ -131,7 +131,7 @@ double EPD_LPS::computeDilation(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];
@@ -194,7 +194,7 @@ double EPD_LPS::calculateStableMass(const int id_a, const int a, double dt) {
         continue;
 
       const int id_b = con.first;
-      const int b = m_idToCol.at(id_b);
+      const int b = m_idToCol_v[id_b];
 
       for (int d = 0; d < m_dim; d++) {
         dr0[d] = R0(a, d) - R0(b, d);
@@ -289,7 +289,7 @@ void EPD_LPS::calculateWeightedVolume() {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
       const double volumeScaling = con.second[m_iOverlap];
       const double vol_j = m_data(j, m_iVolume);
       const double dr0 = con.second[m_iDr0];

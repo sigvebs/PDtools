@@ -140,7 +140,7 @@ void PD_LPSS::calculateForces(const int id, const int i) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       R2[0] = m_data(j, m_iR[0]); // 00
       R2[1] = m_data(j, m_iR[1]); // 10
@@ -219,7 +219,7 @@ void PD_LPSS::calculateForces(const int id, const int i) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       R2[0] = m_data(j, m_iR[0]); // 00
       R2[1] = m_data(j, m_iR[1]); // 10
@@ -348,7 +348,7 @@ for(int i=0; i<nParticles; i++) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       const double vol_j = m_data(j, m_iVolume);
       const double dr0 = con.second[m_iDr0];
@@ -404,7 +404,7 @@ for(int i=0; i<nParticles; i++) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       const double vol_j = m_data(j, m_iVolume);
       const double dr0 = con.second[m_iDr0];
@@ -459,7 +459,7 @@ double PD_LPSS::calculateStableMass(const int id_a, const int a, double dt) {
         continue;
 
       const int id_b = con.first;
-      const int b = m_idToCol.at(id_b);
+      const int b = m_idToCol_v[id_b];
 
       for (int d = 0; d < m_dim; d++) {
         dr0[d] = R0(a, d) - R0(b, d);
@@ -520,7 +520,7 @@ void PD_LPSS::calculateWeightedVolume() {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
       const double volumeScaling = con.second[m_iVolumeScaling];
       const double vol_j = m_volume[j];
       const double vol = vol_j * volumeScaling;
@@ -624,7 +624,7 @@ void PD_LPSS::computeMandK(int id_i, int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
     const double volumeScaling = con.second[m_iVolumeScaling];
     const double vol_j = m_volume[j];
     const double vol = vol_j * volumeScaling;

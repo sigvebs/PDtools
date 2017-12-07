@@ -75,7 +75,7 @@ int Particles::nGhostParticles() { return m_nGhostParticles; }
 void Particles::nGhostParticles(int ngp) { m_nGhostParticles = ngp; }
 //------------------------------------------------------------------------------
 void Particles::deleteParticleById(const int deleteId) {
-  const int deleteCol = m_idToCol.at(deleteId);
+  const int deleteCol = m_idToCol_v[deleteId];
   const int moveCol = m_nParticles - 1;
   const int moveId = m_colToId.at(moveCol);
 
@@ -90,8 +90,7 @@ void Particles::deleteParticleById(const int deleteId) {
   }
 
   m_colToId[deleteCol] = moveId;
-  m_idToCol[moveId] = deleteCol;
-  m_idToCol.erase(deleteId);
+  m_idToCol_v[moveId] = deleteCol;
   m_nParticles--;
   //    cout << "delete: " << deleteId << " col:" << deleteCol;
   //    cout << "move: " << moveId << " col:" << moveCol;
@@ -197,17 +196,10 @@ void Particles::scaleParameter(const string &paramId, double value) {
   }
 }
 //------------------------------------------------------------------------------
-
 mat &Particles::r() { return m_r; }
-
 mat &Particles::v() { return m_v; }
-
-unordered_map<int, int> &Particles::idToCol() { return m_idToCol; }
-
 ivec &Particles::colToId() { return m_colToId; }
-
 mat &Particles::data() { return m_data; }
-
 ivec &Particles::isStatic() { return m_isStatic; }
 }
 //------------------------------------------------------------------------------

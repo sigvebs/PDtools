@@ -91,10 +91,9 @@ void PD_Particles::initializeBodyForces() {
 }
 //------------------------------------------------------------------------------
 void PD_Particles::deleteParticleById(const int deleteId) {
-  const int deleteCol = m_idToCol.at(deleteId);
+  const int deleteCol = m_idToCol_v[deleteId];
   const int moveCol = m_nParticles - 1;
   const int moveId = m_colToId.at(moveCol);
-  m_idToCol.erase(deleteId);
 
   for (int d = 0; d < M_DIM; d++) {
     m_r(deleteCol, d) = m_r(moveCol, d);
@@ -116,7 +115,7 @@ void PD_Particles::deleteParticleById(const int deleteId) {
   m_PdConnections[deleteId] = m_PdConnections[moveId];
   m_colToId[deleteCol] = moveId;
   m_colToId[moveCol] = -1;
-  m_idToCol[moveId] = deleteCol;
+  m_idToCol_v[moveId] = deleteCol;
   m_nParticles--;
   //    cout << " Ferdig: delete:" << deleteId << " delCol:" <<deleteCol << "
   //    moveCol:" << moveCol << endl;

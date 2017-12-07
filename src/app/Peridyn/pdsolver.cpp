@@ -18,6 +18,7 @@
 #include <mpi.h>
 #endif
 
+
 //------------------------------------------------------------------------------
 PdSolver::PdSolver(std::string cfgPath, int myRank, int nMpiNodes)
     : m_configPath(cfgPath), m_myRank(myRank), m_nCores(nMpiNodes) {

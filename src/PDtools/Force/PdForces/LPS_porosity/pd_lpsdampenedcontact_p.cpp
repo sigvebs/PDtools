@@ -29,7 +29,7 @@ void PD_lpsDampenedContact_porosity::calculateForces(const int id,
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double m_j = m_data(j, m_iMass);
     const double theta_j = m_data(j, m_iTheta);
@@ -89,7 +89,7 @@ PD_lpsDampenedContact_porosity::calculatePotentialEnergyDensity(const int id_i,
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];

@@ -26,7 +26,7 @@ void MohrCoulombFracture::registerParticleParameters() {
   m_indexUnbreakable = m_particles->registerParameter("unbreakable");
   m_indexConnected = m_particles->registerPdParameter("connected");
   m_particles->registerParameter("damage");
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
 
   switch (m_dim) {

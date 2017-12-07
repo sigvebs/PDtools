@@ -145,8 +145,7 @@ void StaticSolver::save(int i) {
 void StaticSolver::createStiffnessMatrix() {
   const int nParticles = m_particles->nParticles();
   arma::mat &m_data = m_particles->data();
-  std::unordered_map<int, int> &m_idToCol = m_particles->idToCol();
-
+  const ivec &idToCol = m_particles->getIdToCol_v();
   arma::mat &m_dr0 = m_particles->r0();
 
   const int m_indexVolume = m_particles->getParamId("volume");
@@ -187,7 +186,7 @@ void StaticSolver::createStiffnessMatrix() {
         continue;
 
       const int id_j = con.first;
-      const int b = m_idToCol.at(id_j);
+      const int b = idToCol[id_j];
       const int i_b = b * m_dim;
 
       const double c_j = m_data(b, m_indexMicromodulus);
@@ -270,7 +269,7 @@ void StaticSolver::computeStress() {
   const arma::mat &U = m_particles->u();
   const arma::mat &R = m_particles->r();
   const arma::mat &m_dr0 = m_particles->r0();
-  const std::unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
 
   for (size_t a = 0; a < m_particles->nParticles(); a++) {
     vector<pair<int, vector<double>>> &PDconnections =
@@ -284,7 +283,7 @@ void StaticSolver::computeStress() {
       if (con.second[m_indexConnected] <= 0.5 || !con.second[m_indexCompute])
         continue;
       const int id_b = con.first;
-      const int b = idToCol.at(id_b);
+      const int b = idToCol[id_b];
 
       const double c_j = m_data(b, m_indexMicromodulus);
       const double vol_j = m_data(b, m_indexVolume);

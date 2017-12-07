@@ -97,7 +97,7 @@ void PD_LPS_POROSITY::calculateForces(const int id, const int i) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       const double m_j = m_mass[j];
       const double theta_j = m_theta[j];
@@ -151,7 +151,7 @@ void PD_LPS_POROSITY::calculateForces(const int id, const int i) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       const double m_j = m_mass[j];
       const double theta_j = m_theta[j];
@@ -211,7 +211,7 @@ double PD_LPS_POROSITY::calculatePotentialEnergyDensity(const int id_i,
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];
@@ -252,7 +252,7 @@ double PD_LPS_POROSITY::computeDilation(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];
@@ -317,7 +317,7 @@ double PD_LPS_POROSITY::calculateStableMass(const int id_a, const int a,
         continue;
 
       const int id_b = con.first;
-      const int b = m_idToCol.at(id_b);
+      const int b = m_idToCol_v[id_b];
 
       for (int d = 0; d < m_dim; d++) {
         dr0[d] = R0(a, d) - R0(b, d);
@@ -446,7 +446,7 @@ void PD_LPS_POROSITY::calculateWeightedVolume() {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
       const double volumeScaling = con.second[m_iVolumeScaling];
       const double vol_j = m_data(j, m_iVolume);
       const double dr0 = con.second[m_iDr0];
@@ -485,7 +485,7 @@ void PD_LPS_POROSITY::updateWeightedVolume(int id_i, int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
     const double volumeScaling = con.second[m_iVolumeScaling];
     const double vol_j = m_data(j, m_iVolume);
     const double dr0 = con.second[m_iDr0];
@@ -537,7 +537,7 @@ void PD_LPS_POROSITY::calculateStress(const int id_i, const int i,
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double m_j = m_data(j, m_iMass);
     const double theta_j = m_data(j, m_iTheta);

@@ -15,7 +15,7 @@ void ADRfractureAverage::initialize() {
   m_indexStretch = m_particles->getPdParamId("stretch");
   m_indexS00 = m_particles->registerPdParameter("s00");
   m_indexS_avg = m_particles->registerParameter("s_avg");
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
   m_data = &m_particles->data();
   const ivec &colToId = m_particles->colToId();
 

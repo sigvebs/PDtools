@@ -17,7 +17,7 @@ void MoveParticlesZone::registerParticleParameters() {
 }
 //------------------------------------------------------------------------------
 void MoveParticlesZone::evaluateStepOne() {
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   //  mat &r = m_particles->r();
   const double v_amp = m_time * m_velAmplitude;
   const vec dr = v_amp * m_velocityDirection;
@@ -26,7 +26,7 @@ void MoveParticlesZone::evaluateStepOne() {
   arma::mat &Fold = m_particles->Fold();
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
+    const int i = idToCol[id];
     for (int d = 0; d < m_dim; d++) {
       //            r(i, d) += dr(d);
       v(i, d) = (1. - m_vd_abs(d)) * v(i, d) +
@@ -38,13 +38,13 @@ void MoveParticlesZone::evaluateStepOne() {
 }
 //------------------------------------------------------------------------------
 void MoveParticlesZone::staticEvaluation() {
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   arma::mat &v = m_particles->v();
   arma::mat &F = m_particles->F();
   arma::mat &Fold = m_particles->Fold();
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
+    const int i = idToCol[id];
     for (int d = 0; d < m_dim; d++) {
       v(i, d) = (1 - m_vd_abs(d)) * v(i, d);
       F(i, d) = (1 - m_vd_abs(d)) * F(i, d);

@@ -23,7 +23,7 @@ void BondEnergyFracture::initialize() {
   m_indexConnected = m_particles->getPdParamId("connected");
   m_indexForceScaling = m_particles->getPdParamId("forceScalingBond");
   m_indexMicromodulus = m_particles->getParamId("micromodulus");
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
   m_data = &m_particles->data();
 

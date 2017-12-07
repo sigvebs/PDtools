@@ -22,7 +22,7 @@ void MohrCoulomMaxConnected::registerParticleParameters() {
   m_indexBroken = m_particles->registerParameter("broken", 0);
   m_indexBrokenId = m_particles->registerParameter("brokendId", 0);
   m_indexBrokenNow = m_particles->registerParameter("brokenNow", 0);
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
 
   switch (m_dim) {
   case 1:

@@ -42,7 +42,7 @@ void DemForce::calculateForces(const int id_i, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     double dr2 = 0;
     for (int d = 0; d < m_dim; d++) {
@@ -83,7 +83,7 @@ void DemForce::calculateStress(const int id_i, const int i,
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     double dr2 = 0;
     for (int d = 0; d < m_dim; d++) {

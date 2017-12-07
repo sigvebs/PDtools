@@ -46,7 +46,7 @@ void PD_LPS_porosity_adrmc::calculateForces(const int id, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double m_j = m_data(j, m_iMass);
     const double theta_j = m_data(j, m_iTheta);
@@ -123,7 +123,7 @@ void PD_LPS_porosity_adrmc::evaluateStatic(int id, int i) {
   if (m_dim == 2) {
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int j = m_idToCol[id_j];
+      const int j = m_idToCol_v[id_j];
 
       if (m_data(j, m_indexUnbreakable) >= 1)
         continue;
@@ -133,12 +133,9 @@ void PD_LPS_porosity_adrmc::evaluateStatic(int id, int i) {
 
       //            const double s = con.second[m_iStretch];
 
-      const double sx =
-          0.5 * (m_data(i, m_indexStress[0]) + m_data(j, m_indexStress[0]));
-      const double sy =
-          0.5 * (m_data(i, m_indexStress[1]) + m_data(j, m_indexStress[1]));
-      const double sxy =
-          0.5 * (m_data(i, m_indexStress[2]) + m_data(j, m_indexStress[2]));
+      const double sx = 0.5 * (m_data(i, m_indexStress[0]) + m_data(j, m_indexStress[0]));
+      const double sy = 0.5 * (m_data(i, m_indexStress[1]) + m_data(j, m_indexStress[1]));
+      const double sxy = 0.5 * (m_data(i, m_indexStress[2]) + m_data(j, m_indexStress[2]));
 
       const double first = 0.5 * (sx + sy);
       const double second = sqrt(0.25 * (sx - sy) * (sx - sy) + sxy * sxy);
@@ -185,7 +182,7 @@ void PD_LPS_porosity_adrmc::evaluateStatic(int id, int i) {
 
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int j = m_idToCol[id_j];
+      const int j = m_idToCol_v[id_j];
 
       if (m_data(j, m_indexUnbreakable) >= 1)
         continue;
@@ -193,20 +190,14 @@ void PD_LPS_porosity_adrmc::evaluateStatic(int id, int i) {
       if (con.second[m_indexConnected] <= 0.5)
         continue;
 
-      S(0, 0) =
-          0.5 * (m_data(i, m_indexStress[0]) + m_data(j, m_indexStress[0]));
-      S(1, 1) =
-          0.5 * (m_data(i, m_indexStress[1]) + m_data(j, m_indexStress[1]));
-      S(0, 1) =
-          0.5 * (m_data(i, m_indexStress[2]) + m_data(j, m_indexStress[2]));
+      S(0, 0) = 0.5 * (m_data(i, m_indexStress[0]) + m_data(j, m_indexStress[0]));
+      S(1, 1) = 0.5 * (m_data(i, m_indexStress[1]) + m_data(j, m_indexStress[1]));
+      S(0, 1) = 0.5 * (m_data(i, m_indexStress[2]) + m_data(j, m_indexStress[2]));
       S(1, 0) = S(0, 1);
-      S(2, 2) =
-          0.5 * (m_data(i, m_indexStress[3]) + m_data(j, m_indexStress[3]));
-      S(0, 2) =
-          0.5 * (m_data(i, m_indexStress[4]) + m_data(j, m_indexStress[4]));
+      S(2, 2) = 0.5 * (m_data(i, m_indexStress[3]) + m_data(j, m_indexStress[3]));
+      S(0, 2) = 0.5 * (m_data(i, m_indexStress[4]) + m_data(j, m_indexStress[4]));
       S(2, 0) = S(0, 2);
-      S(1, 2) =
-          0.5 * (m_data(i, m_indexStress[5]) + m_data(j, m_indexStress[5]));
+      S(1, 2) = 0.5 * (m_data(i, m_indexStress[5]) + m_data(j, m_indexStress[5]));
       S(2, 1) = S(1, 2);
 
 #if CALCULATE_NUMMERICAL_PRINCIPAL_STRESS

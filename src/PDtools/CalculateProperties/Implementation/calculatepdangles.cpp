@@ -21,7 +21,7 @@ void CalculatePdAngles::initialize() {
 
   // Calculating the initial angle
   const int nParticles = m_particles->nParticles();
-  std::unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   const arma::ivec &colToId = m_particles->colToId();
 
   const mat &R = m_particles->r0();
@@ -39,7 +39,7 @@ void CalculatePdAngles::initialize() {
         continue;
 
       const int id_j = con.first;
-      const int j = idToCol.at(id_j);
+      const int j = idToCol[id_j];
 
       for (int d = 0; d < m_dim; d++) {
         dr_ij[d] = R(j, d) - R(i, d);
@@ -52,9 +52,8 @@ void CalculatePdAngles::initialize() {
 //------------------------------------------------------------------------------
 void CalculatePdAngles::update() {
   const int nParticles = m_particles->nParticles();
-  std::unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   const arma::ivec &colToId = m_particles->colToId();
-
   const mat &R = m_particles->r();
 
   double dr_ij[m_dim];
@@ -70,7 +69,7 @@ void CalculatePdAngles::update() {
         continue;
 
       const int id_j = con.first;
-      const int j = idToCol.at(id_j);
+      const int j = idToCol[id_j];
 
       for (int d = 0; d < m_dim; d++) {
         dr_ij[d] = R(j, d) - R(i, d);

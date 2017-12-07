@@ -20,6 +20,7 @@ protected:
   int m_iForceScalingDilation;
   int m_iForceScalingBond;
   int m_iConnected;
+  int m_iColumn;
   int m_iMass;
   int m_iCompute;
   int m_indexBrokenNow;

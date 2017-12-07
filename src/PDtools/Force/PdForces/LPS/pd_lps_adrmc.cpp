@@ -34,7 +34,7 @@ void PD_LPS_adrmc::calculateForces(const int id, const int i) {
       continue;
 
     const int id_j = con.first;
-    const int j = m_idToCol.at(id_j);
+    const int j = m_idToCol_v[id_j];
 
     const double m_j = m_data(j, m_iMass);
     const double theta_j = m_data(j, m_iTheta);
@@ -97,7 +97,7 @@ void PD_LPS_adrmc::evaluateStatic(int id, int i) {
   if (m_dim == 2) {
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int j = m_idToCol[id_j];
+      const int j = m_idToCol_v[id_j];
 
       if (m_data(j, m_indexUnbreakable) >= 1)
         continue;
@@ -159,7 +159,7 @@ void PD_LPS_adrmc::evaluateStatic(int id, int i) {
 
     for (auto &con : PDconnections) {
       const int id_j = con.first;
-      const int j = m_idToCol[id_j];
+      const int j = m_idToCol_v[id_j];
 
       if (m_data(j, m_indexUnbreakable) >= 1)
         continue;

@@ -21,7 +21,7 @@ void PmbFracture::registerParticleParameters() {
   m_data = &m_particles->data();
   m_initialGhostParameters = {"s0"};
   m_ghostParameters = {"s0"};
-  m_idToCol = &m_particles->idToCol();
+  m_idToCol = &m_particles->getIdToCol_v();
 
   m_broken = m_particles->data().colptr(m_indexBrokenNow);
   m_s_tmp = m_particles->data().colptr(m_indexS_tmp);

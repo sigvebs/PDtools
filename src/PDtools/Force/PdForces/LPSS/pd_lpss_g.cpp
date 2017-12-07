@@ -51,7 +51,7 @@ void PD_LPSS_G::calculateForces(const int id_i, const int i) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       R2[0] = m_data(j, m_iR[0]); // 00
       R2[1] = m_data(j, m_iR[1]); // 10
@@ -132,7 +132,7 @@ void PD_LPSS_G::calculateForces(const int id_i, const int i) {
         continue;
 
       const int id_j = con.first;
-      const int j = m_idToCol.at(id_j);
+      const int j = m_idToCol_v[id_j];
 
       R2[0] = m_data(j, m_iR[0]); // 00
       R2[1] = m_data(j, m_iR[1]); // 10
@@ -196,7 +196,7 @@ void PD_LPSS_G::evaluateStepTwo(const int id_i, const int i) {
 
   for (auto &con : PDconnections) {
     const int id_j = con.first;
-    const int j = m_idToCol[id_j];
+    const int j = m_idToCol_v[id_j];
 
     if (m_data(j, m_iUnbreakable) >= 1)
       continue;

@@ -12,7 +12,6 @@
 #include "PDtools/SavePdData/savepddata.h"
 
 #include <limits> // TMP
-using namespace arma;
 
 namespace PDtools
 //------------------------------------------------------------------------------
@@ -486,14 +485,6 @@ void ADR::updateGridAndCommunication() {
 #endif
 
   //    updateElementQuadrature(*m_particles);
-  //    if(m_myRank == 2) {
-  //        mat & r = m_particles->r();
-  //        unordered_map<int, int>  & idToCol = m_particles->idToCol();
-  //        const int id_i = 14;
-  //        const int col = idToCol[id_i];
-  ////        updateGridAndCommunication();
-  //        cout << "now: " << r(col, 1) << " c:" << col <<  endl;
-  //    }
 }
 //------------------------------------------------------------------------------
 }

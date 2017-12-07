@@ -21,12 +21,12 @@ BoundaryStress::BoundaryStress(double appliedStress, double stressOrientation,
 }
 //------------------------------------------------------------------------------
 void BoundaryStress::evaluateStepOne() {
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+  const ivec &idToCol = m_particles->getIdToCol_v();
   arma::mat &F = m_particles->F();
   arma::mat &data = m_particles->data();
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
+    const int i = idToCol[id];
     const double radius = data(i, m_indexRadius);
     const double volume = data(i, m_indexVolume);
     const double area = M_PI * radius * radius;
@@ -45,13 +45,12 @@ void BoundaryStress::evaluateStepTwo() {
 }
 //------------------------------------------------------------------------------
 void BoundaryStress::staticEvaluation() {
-  const unordered_map<int, int> &idToCol = m_particles->idToCol();
+    const ivec &idToCol = m_particles->getIdToCol_v();
   arma::mat &F = m_particles->F();
   arma::mat &data = m_particles->data();
 
   for (const int &id : m_localParticleIds) {
-    const int i = idToCol.at(id);
-
+    const int i = idToCol[id];
     const double radius = data(i, m_indexRadius);
     const double area = M_PI * radius * radius;
     const double volume = data(i, m_indexVolume);

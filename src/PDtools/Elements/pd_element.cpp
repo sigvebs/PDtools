@@ -41,7 +41,7 @@ PD_Particles initializeElementPd(const PdMesh &msh, const Grid &grid,
   particles.initializeMatrices();
   particles.initializeElements(nTriangles, nQuads, quadratureDegree);
 
-  unordered_map<int, int> &idToCol = particles.idToCol();
+  ivec &idToCol = particles.getIdToCol_v();
   arma::ivec &get_id = particles.colToId();
   arma::mat &r0 = particles.r0();
   arma::mat &r = particles.r();
@@ -232,7 +232,7 @@ void updateElementQuadrature(PD_Particles &nodes) {
   // TODO: elements are not MPI ready - only the appropriate elements should be
   // updated
   const mat &R = nodes.r();
-  const unordered_map<int, int> &idToCol = nodes.idToCol();
+  const ivec &idToCol = nodes.getIdToCol_v();
   vector<PD_quadElement> &quadElements = nodes.getQuadElements();
   const mat &shapeFunction = nodes.getShapeFunction();
 
@@ -249,7 +249,7 @@ void updateElementQuadrature(PD_Particles &nodes) {
     mat &quadraturePoints = quadElement.guassianQuadraturePoints();
 
     for (size_t vId : verticeIds) {
-      const int i = idToCol.at(vId);
+      const int i = idToCol[vId];
       quad_x[j] = R(i, 0);
       quad_y[j] = R(i, 1);
       j++;

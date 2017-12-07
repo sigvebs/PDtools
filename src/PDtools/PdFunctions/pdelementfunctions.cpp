@@ -15,7 +15,7 @@ void setPdElementConnections(PD_Particles &discretization, Grid &grid,
   const unordered_map<int, GridPoint> &gridpoints = grid.gridpoints();
   const vector<int> &mygridPoints = grid.myGridPoints();
   const mat &R = discretization.r();
-  const unordered_map<int, int> &idToCol = discretization.idToCol();
+  const ivec &idToCol = discretization.getIdToCol_v();
   const vector<PD_quadElement> &quadElements = discretization.getQuadElements();
 
   // The order is important!
@@ -54,7 +54,7 @@ void setPdElementConnections(PD_Particles &discretization, Grid &grid,
         bool isInside = false;
 
         for (int k = 0; k < 4; k++) {
-          const int col_j = idToCol.at(pIds[k]);
+          const int col_j = idToCol[pIds[k]];
           pCols[k] = col_j;
           if (isInside)
             continue;
@@ -93,7 +93,7 @@ void setPdElementConnections(PD_Particles &discretization, Grid &grid,
           bool isInside = false;
 
           for (int k = 0; k < 4; k++) {
-            const int col_j = idToCol.at(pIds[k]);
+            const int col_j = idToCol[pIds[k]];
             pCols[k] = col_j;
             if (isInside)
               continue;
@@ -171,7 +171,7 @@ void setPdElementConnections(PD_Particles &discretization, Grid &grid,
           bool isInside = false;
 
           for (int k = 0; k < 4; k++) {
-            const int col_j = idToCol.at(pIds[k]);
+            const int col_j = idToCol[pIds[k]];
             pCols[k] = col_j;
             if (isInside)
               continue;
@@ -226,7 +226,7 @@ void setPdElementConnections(PD_Particles &discretization, Grid &grid,
             bool isInside = false;
 
             for (int k = 0; k < 4; k++) {
-              const int col_j = idToCol.at(pIds[k]);
+              const int col_j = idToCol[pIds[k]];
               pCols[k] = col_j;
               if (isInside)
                 continue;
